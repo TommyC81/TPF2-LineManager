@@ -72,7 +72,7 @@ function helper.getBusPassengerLinesData()
 	for _, line_id in pairs(lines) do
 		-- Check type of line first
 		local lineInfo = api.engine.getComponent(line_id, api.type.ComponentType.LINE)
-		if lineInfo and lineInfo.vehicleInfo and lineInfo.vehicleInfo.transportModes and lineInfo.vehicleInfo.transportModes[4] then
+		if lineInfo and lineInfo.vehicleInfo and lineInfo.vehicleInfo.transportModes and lineInfo.vehicleInfo.transportModes[4] == 1 then
 			local lineVehicleCount = 0
 			local lineCapacity = 0
 			local lineOccupancy = 0

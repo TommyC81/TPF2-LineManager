@@ -1,13 +1,13 @@
 local log = require 'cartok/logging'
 local helper = require 'cartok/helper'
 
-local time_prev_update = nil
 local time_prev_sample = nil
 -- Seems like the time is in ms, and 2 "seconds" pass per game day i.e. if the below is more than 730, then more than 365 game days have passed
-local update_interval = 365
 local sample_interval = 73
 local sample_size = 12
 local sampledLineData = {}
+local update_interval = 3 -- For every third sample, do an update
+local samples_since_last_update = 0
 
 local function removeVehicle(line_id)	
 	local lineVehicles = api.engine.system.transportVehicleSystem.getLineVehicles(line_id)
@@ -104,7 +104,6 @@ local function samplePassengerLines()
 			sampledLineData[line_id] = { samples = 1, vehicles = line_data.vehicles, capacity = line_data.capacity, occupancy = line_data.occupancy, demand = line_data.demand, usage = line_data.usage, rate = line_data.rate}
 		end
 	end
-	print(sampledLineData)
 end
 
 local function updatePassengerLines()
@@ -119,12 +118,14 @@ local function updatePassengerLines()
 			totalVehicleCount = totalVehicleCount + sampledLineData[line_id].vehicles			
 			
 			if sampledLineData[line_id].samples and sampledLineData[line_id].samples >= sample_size then
-				if sampledLineData[line_id].demand/sampledLineData[line_id].capacity > 2 or (sampledLineData[line_id].demand/sampledLineData[line_id].capacity > (sampledLineData[line_id].vehicles + 1) / sampledLineData[line_id].vehicles and sampledLineData[line_id].usage >= 90) then
+				if 2 * sampledLineData[line_id].rate < sampledLineData[line_id].demand or (sampledLineData[line_id].usage > 90 and ((sampledLineData[line_id].vehicles + 1) / sampledLineData[line_id].vehicles) * sampledLineData[line_id].rate < sampledLineData[line_id].demand) then
 					print("Line: " .. helper.getLineName(line_id) .. " (" .. line_id .. ") - Usage: " .. sampledLineData[line_id].usage .. "% (" .. sampledLineData[line_id].occupancy .. "/" .. sampledLineData[line_id].capacity .. ") Veh: " .. sampledLineData[line_id].vehicles .. " Demand: " .. sampledLineData[line_id].demand .. " Rate: " .. sampledLineData[line_id].rate)
-					addVehicle(line_id)			
-				elseif sampledLineData[line_id].vehicles > 1 and (sampledLineData[line_id].demand/sampledLineData[line_id].capacity < (sampledLineData[line_id].vehicles - 1) / sampledLineData[line_id].vehicles and sampledLineData[line_id].demand/sampledLineData[line_id].capacity < (sampledLineData[line_id].vehicles - 1) / sampledLineData[line_id].vehicles) then
+					addVehicle(line_id)
+					sampledLineData[line_id].samples = sample_size - 2 * sample_interval
+				elseif sampledLineData[line_id].vehicles > 1 and sampledLineData[line_id].usage < 50 and sampledLineData[line_id].demand < sampledLineData[line_id].rate then
 					print("Line: " .. helper.getLineName(line_id) .. " (" .. line_id .. ") - Usage: " .. sampledLineData[line_id].usage .. "% (" .. sampledLineData[line_id].occupancy .. "/" .. sampledLineData[line_id].capacity .. ") Veh: " .. sampledLineData[line_id].vehicles .. " Demand: " .. sampledLineData[line_id].demand .. " Rate: " .. sampledLineData[line_id].rate)
 					removeVehicle(line_id)
+					sampledLineData[line_id].samples = sample_size - 2 * sample_interval
 				end
 			end
 		end
@@ -133,8 +134,7 @@ local function updatePassengerLines()
 end
 
 local function checkIfUpdateIsDue()
-	if not time_prev_update then
-		time_prev_update = helper.getGameTime()
+	if not time_prev_sample then
 		time_prev_sample = helper.getGameTime()
 	end
 
@@ -143,12 +143,13 @@ local function checkIfUpdateIsDue()
 	if time_passed > sample_interval then
 		samplePassengerLines()
 		time_prev_sample = helper.getGameTime()
-	end
-	time_passed = math.floor((time-time_prev_update))
-	if time_passed > update_interval then
-		updatePassengerLines()
-		time_prev_update = helper.getGameTime()
-	end
+		
+		samples_since_last_update = samples_since_last_update + 1
+		if samples_since_last_update >= update_interval then
+			updatePassengerLines()			
+			samples_since_last_update = 0
+		end
+	end	
 end
 
 local function update()
