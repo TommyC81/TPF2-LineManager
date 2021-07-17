@@ -100,7 +100,7 @@ function helper.getBusPassengerLinesData()
 						lineOccupancy = lineOccupancy + 1
 					end
 				end
-				lineData[line_id] = {"capacity" = lineCapacity, "occupancy" = lineOccupancy, "demand" = lineTravellerCount, "rate" = helper.getLineRate(line_id)}		
+				lineData[line_id] = {capacity = lineCapacity, occupancy = lineOccupancy, demand = lineTravellerCount, rate = helper.getLineRate(line_id)}		
 			end			
 		end
 	end

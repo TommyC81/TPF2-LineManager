@@ -3,7 +3,7 @@ local helper = require 'cartok/helper'
 
 local time_prev_update = nil
 local time_prev_sample = nil
-local update_interval 365
+local update_interval = 365
 local samples = {}
 local samples_taken = 0
 local sample_size = 12
@@ -31,7 +31,7 @@ local function addVehicle(line_id)
 	local depot_id = nil
 	local stop_id = nil
 	local vehicleToDuplicate = nil
-	local purchaseTime = helper.getGameTime
+	local purchaseTime = helper.getGameTime()
 	
 	for _, vehicle_id in pairs(lineVehicles) do
 		api.cmd.sendCommand(api.cmd.make.sendToDepot(vehicle_id, false))
@@ -142,15 +142,16 @@ end
 
 local function checkIfUpdateIsDue()
 	if not time_prev_update then
-		time_prev_update = api.engine.getComponent(0,api.type.ComponentType.GAME_TIME).gameTime
+		time_prev_update = helper.getGameTime()
+		time_prev_sample = helper.getGameTime()
 	end
 
-	local time = api.engine.getComponent(0,api.type.ComponentType.GAME_TIME).gameTime
+	local time = helper.getGameTime()
 	-- Seems like the time is in ms, and 2 "seconds" pass per game day i.e. if the below is more than 730, then more than 365 game days have passed
 	local time_passed = math.floor((time-time_prev_update)/1000)
-	if time_passed > 365 then
+	if time_passed > update_interval then
 		checkPassengerLines()
-		time_prev_update = api.engine.getComponent(0,api.type.ComponentType.GAME_TIME).gameTime
+		time_prev_update = helper.getGameTime()
 	end
 end
 
