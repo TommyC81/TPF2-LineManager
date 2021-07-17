@@ -74,7 +74,9 @@ function helper.getBusPassengerLinesData()
 		local lineInfo = api.engine.getComponent(line_id, api.type.ComponentType.LINE)
 		if lineInfo and lineInfo.vehicleInfo and lineInfo.vehicleInfo.transportModes and lineInfo.vehicleInfo.transportModes[4] then
 			local lineVehicleCount = 0
-			local lineTravellerCount = 0		
+			local lineCapacity = 0
+			local lineOccupancy = 0
+			local lineTravellerCount = 0
 		
 			local lineTravellers = api.engine.system.simPersonSystem.getSimPersonsForLine(line_id)
 			for _, traveller_id in pairs(lineTravellers) do
@@ -82,29 +84,27 @@ function helper.getBusPassengerLinesData()
 			end
 			
 			if lineTravellerCount > 0 then
-				local lineCapacity = 0
-				local lineOccupancy = 0
-
 				local lineVehicles = api.engine.system.transportVehicleSystem.getLineVehicles(line_id)
-				for _, vehicle_id in pairs(lineVehicles) do			
+				for _, vehicle_id in pairs(lineVehicles) do		
 					local vehicleInfo = api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
 					if vehicleInfo and vehicleInfo.config and vehicleInfo.config.capacities[1] then
 						lineVehicleCount = lineVehicleCount + 1
 						lineCapacity = lineCapacity + vehicleInfo.config.capacities[1]
 					end
-				end
-				
-				for _, traveller_id in pairs(lineTravellers) do
-					local traveller = api.engine.getComponent(traveller_id, api.type.ComponentType.SIM_PERSON_AT_VEHICLE)
-					if traveller and traveller.vehicle and traveller.vehicle == vehicle_id then
-						lineOccupancy = lineOccupancy + 1
+					
+					for _, traveller_id in pairs(lineTravellers) do
+						local traveller = api.engine.getComponent(traveller_id, api.type.ComponentType.SIM_PERSON_AT_VEHICLE)
+						if traveller and traveller.vehicle == vehicle_id then	
+							lineOccupancy = lineOccupancy + 1
+						end
 					end
-				end
+				end				
+
 				lineData[line_id] = {vehicles = lineVehicleCount, capacity = lineCapacity, occupancy = lineOccupancy, demand = lineTravellerCount, usage = math.round(100*lineOccupancy/lineCapacity), rate = helper.getLineRate(line_id)}
 			end			
 		end
 	end
-	
+
 	return lineData
 end
 
