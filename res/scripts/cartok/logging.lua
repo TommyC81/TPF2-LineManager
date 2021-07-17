@@ -32,7 +32,7 @@ end
 
 function logging.log(level, message)
   if level >= currentLogLevel then
-    print('[Test_1][' .. os.date('%Y-%m-%d %H:%M:%S') .. '][' .. levelNames[level] .. '] ' .. message)
+    print('[LineManager][' .. os.date('%Y-%m-%d %H:%M:%S') .. '][' .. levelNames[level] .. '] ' .. message)
   end
 end
 
