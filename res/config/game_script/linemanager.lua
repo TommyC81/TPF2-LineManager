@@ -3,11 +3,11 @@ local helper = require 'cartok/helper'
 
 local time_prev_update = nil
 local time_prev_sample = nil
+-- Seems like the time is in ms, and 2 "seconds" pass per game day i.e. if the below is more than 730, then more than 365 game days have passed
 local update_interval = 365
-local samples = {}
-local samples_taken = 0
-local sample_size = 12
 local sample_interval = 73
+local sample_size = 12
+local sampledLineData = {}
 
 local function removeVehicle(line_id)	
 	local lineVehicles = api.engine.system.transportVehicleSystem.getLineVehicles(line_id)
@@ -76,10 +76,10 @@ local function addVehicle(line_id)
 		api.cmd.sendCommand(api.cmd.make.buyVehicle(api.engine.util.getPlayer(), depot_id, transportVehicleConfig))
 		local depot_vehicles = api.engine.system.transportVehicleSystem.getDepotVehicles(depot_id)
 		for _, depot_vehicle_id in pairs(depot_vehicles) do
-			depot_vehicle = api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
+			local depot_vehicle = api.engine.getComponent(depot_vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
 			if depot_vehicle.transportVehicleConfig.vehicles[1].purchaseTime == purchaseTime then			
-				api.cmd.sendCommand(api.cmd.make.setLine(new_vehicle_id, line_id, vehicleToDuplicate.stopIndex))
-				print("      Added vehicle: " .. new_vehicle_id .. " to line: " .. line_id .. " via depot: " .. depot_id)
+				api.cmd.sendCommand(api.cmd.make.setLine(depot_vehicle_id, line_id, vehicleToDuplicate.stopIndex))
+				print("      Added vehicle: " .. depot_vehicle_id .. " to line: " .. line_id .. " via depot: " .. depot_id)
 			end
 		end
 	else
@@ -89,51 +89,43 @@ end
 
 local function samplePassengerLines()
 	log.info("============ Sampling ============")
+	local lineData = helper.getBusPassengerLinesData()
+	
+	for line_id, line_data in pairs(lineData) do
+		if sampledLineData[line_id] then
+			sampledLineData[line_id].samples = sampledLineData[line_id].samples + 1
+			sampledLineData[line_id].vehicles = line_data.vehicles
+			sampledLineData[line_id].capacity = line_data.capacity
+			sampledLineData[line_id].occupancy = line_data.occupancy
+			sampledLineData[line_id].demand = math.round((sampledLineData[line_id].demand * (sample_size - 1) + line_data.demand)/sample_size)
+			sampledLineData[line_id].usage = math.round((sampledLineData[line_id].usage * (sample_size - 1) + line_data.usage)/sample_size)
+			sampledLineData[line_id].rate = line_data.rate
+		else
+			sampledLineData[line_id] = { samples = 1, vehicles = line_data.vehicles, capacity = line_data.capacity, occupancy = line_data.occupancy, demand = line_data.demand, usage = line_data.usage, rate = line_data.rate}
+		end
+	end
+	print(sampledLineData)
 end
 
-local function checkPassengerLines()
-	log.info("============ Checking ============")
+local function updatePassengerLines()
+	log.info("============ Updating ============")
 	local lines = api.engine.system.lineSystem.getLines()
 	local lineCount = 0
 	local totalVehicleCount = 0
 	
 	for _, line_id in pairs(lines) do
-		local lineVehicleCount = 0
-		local lineTravellerCount = 0		
-		
-		local lineTravellers = api.engine.system.simPersonSystem.getSimPersonsForLine(line_id)
-		for _, traveller_id in pairs(lineTravellers) do
-			lineTravellerCount = lineTravellerCount + 1
-		end
-		if lineTravellerCount > 0 then
+		if sampledLineData[line_id] then
 			lineCount = lineCount + 1
-		
-			local lineCapacity = 0
-			local lineOccupancy = 0
-
-			local lineVehicles = api.engine.system.transportVehicleSystem.getLineVehicles(line_id)
-			for _, vehicle_id in pairs(lineVehicles) do
-				lineVehicleCount = lineVehicleCount + 1
+			totalVehicleCount = totalVehicleCount + sampledLineData[line_id].vehicles			
 			
-				local vehicleInfo = api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)				
-				lineCapacity = lineCapacity + vehicleInfo.config.capacities[1]
-				
-				for _, traveller_id in pairs(lineTravellers) do
-					local traveller = api.engine.getComponent(traveller_id, api.type.ComponentType.SIM_PERSON_AT_VEHICLE)
-					if traveller and traveller.vehicle == vehicle_id then
-						lineOccupancy = lineOccupancy + 1
-					end
+			if sampledLineData[line_id].samples and sampledLineData[line_id].samples >= sample_size then
+				if sampledLineData[line_id].demand/sampledLineData[line_id].capacity > 2 or (sampledLineData[line_id].demand/sampledLineData[line_id].capacity > (sampledLineData[line_id].vehicles + 1) / sampledLineData[line_id].vehicles and sampledLineData[line_id].usage >= 90) then
+					print("Line: " .. helper.getLineName(line_id) .. " (" .. line_id .. ") - Usage: " .. sampledLineData[line_id].usage .. "% (" .. sampledLineData[line_id].occupancy .. "/" .. sampledLineData[line_id].capacity .. ") Veh: " .. sampledLineData[line_id].vehicles .. " Demand: " .. sampledLineData[line_id].demand .. " Rate: " .. sampledLineData[line_id].rate)
+					addVehicle(line_id)			
+				elseif sampledLineData[line_id].vehicles > 1 and (sampledLineData[line_id].demand/sampledLineData[line_id].capacity < (sampledLineData[line_id].vehicles - 1) / sampledLineData[line_id].vehicles and sampledLineData[line_id].demand/sampledLineData[line_id].capacity < (sampledLineData[line_id].vehicles - 1) / sampledLineData[line_id].vehicles) then
+					print("Line: " .. helper.getLineName(line_id) .. " (" .. line_id .. ") - Usage: " .. sampledLineData[line_id].usage .. "% (" .. sampledLineData[line_id].occupancy .. "/" .. sampledLineData[line_id].capacity .. ") Veh: " .. sampledLineData[line_id].vehicles .. " Demand: " .. sampledLineData[line_id].demand .. " Rate: " .. sampledLineData[line_id].rate)
+					removeVehicle(line_id)
 				end
-			end
-			
-			totalVehicleCount = totalVehicleCount + lineVehicleCount			
-			
-			if lineTravellerCount/lineCapacity > 2 or (lineTravellerCount/lineCapacity > (lineVehicleCount + 1) / lineVehicleCount and lineOccupancy/lineCapacity > 0.95) then
-				print("Line: " .. api.engine.getComponent(line_id, api.type.ComponentType.NAME).name .. " (" .. line_id .. ") - Usage: " .. math.round(100 * lineOccupancy/lineCapacity) .. "% (" .. lineOccupancy .. "/" .. lineCapacity .. ") Veh: " .. lineVehicleCount .. " Trav: " .. lineTravellerCount .. " Rate: " .. helper.getLineRate(line_id))
-				addVehicle(line_id)			
-			elseif lineVehicleCount > 1 and (lineTravellerCount/lineCapacity < (lineVehicleCount - 1) / lineVehicleCount and lineOccupancy/lineCapacity < (lineVehicleCount - 1) / lineVehicleCount) then
-				print("Line: " .. api.engine.getComponent(line_id, api.type.ComponentType.NAME).name .. " (" .. line_id .. ") - Usage: " .. math.round(100 * lineOccupancy/lineCapacity) .. "% (" .. lineOccupancy .. "/" .. lineCapacity .. ") Veh: " .. lineVehicleCount .. " Trav: " .. lineTravellerCount .. " Rate: " .. helper.getLineRate(line_id))
-				removeVehicle(line_id)
 			end
 		end
 	end
@@ -147,10 +139,14 @@ local function checkIfUpdateIsDue()
 	end
 
 	local time = helper.getGameTime()
-	-- Seems like the time is in ms, and 2 "seconds" pass per game day i.e. if the below is more than 730, then more than 365 game days have passed
-	local time_passed = math.floor((time-time_prev_update)/1000)
+	local time_passed = math.floor((time-time_prev_sample))
+	if time_passed > sample_interval then
+		samplePassengerLines()
+		time_prev_sample = helper.getGameTime()
+	end
+	time_passed = math.floor((time-time_prev_update))
 	if time_passed > update_interval then
-		checkPassengerLines()
+		updatePassengerLines()
 		time_prev_update = helper.getGameTime()
 	end
 end

@@ -63,7 +63,7 @@ end
 --      [16] = 0,
 --    },
 
--- returns Array, containing line_id, capacity, occupancy, demand and rate
+-- returns Array, containing line_id, vehicles, capacity, occupancy, usage, demand and rate
 function helper.getBusPassengerLinesData()
     local lines = api.engine.system.lineSystem.getLines()
 	local lineData = {}
@@ -100,7 +100,7 @@ function helper.getBusPassengerLinesData()
 						lineOccupancy = lineOccupancy + 1
 					end
 				end
-				lineData[line_id] = {capacity = lineCapacity, occupancy = lineOccupancy, demand = lineTravellerCount, rate = helper.getLineRate(line_id)}		
+				lineData[line_id] = {vehicles = lineVehicleCount, capacity = lineCapacity, occupancy = lineOccupancy, demand = lineTravellerCount, usage = math.round(100*lineOccupancy/lineCapacity), rate = helper.getLineRate(line_id)}
 			end			
 		end
 	end
