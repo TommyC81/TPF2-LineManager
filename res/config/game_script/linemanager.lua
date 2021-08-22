@@ -12,7 +12,7 @@ local samples_since_last_update = 0
 local function removeVehicle(line_id)	
 	local lineVehicles = api.engine.system.transportVehicleSystem.getLineVehicles(line_id)
 	local oldestVehicleId = 0
-	local oldestVehiclePurchaseTime = 99999999999
+	local oldestVehiclePurchaseTime = 999999999999
 	
 	for _, vehicle_id in pairs(lineVehicles) do
 		local vehicleInfo = api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
