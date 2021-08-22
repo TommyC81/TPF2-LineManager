@@ -124,14 +124,14 @@ local function updatePassengerLines()
 			
 			-- If a line has sufficient samples, then check whether vehicles should be added/removed.
 			if sampledLineData[line_id].samples and sampledLineData[line_id].samples >= sample_size then
-				--if (sampledLineData[line_id].usage > 70 and sampledLineData[line_id].demand > 2 * sampledLineData[line_id].rate) or (sampledLineData[line_id].usage > 95 and sampledLineData[line_id].demand > sampledLineData[line_id].rate) or (sampledLineData[line_id].usage > 85 and sampledLineData[line_id].demand > sampledLineData[line_id].rate * (sampledLineData[line_id].vehicles + 1) / sampledLineData[line_id].vehicles) then
-				if sampledLineData[line_id].usage > 95 then
+				-- Check if a vehicle should be added to a Line.
+				if (sampledLineData[line_id].usage > 95 and sampledLineData[line_id].demand > sampledLineData[line_id].rate) or (sampledLineData[line_id].usage > 80 and sampledLineData[line_id].demand > sampledLineData[line_id].rate * 2) then
 					print("Line: " .. helper.getLineName(line_id) .. " (" .. line_id .. ") - Usage: " .. sampledLineData[line_id].usage .. "% (" .. sampledLineData[line_id].occupancy .. "/" .. sampledLineData[line_id].capacity .. ") Veh: " .. sampledLineData[line_id].vehicles .. " Demand: " .. sampledLineData[line_id].demand .. " Rate: " .. sampledLineData[line_id].rate)
 					sampledLineData[line_id].samples = sample_restart
 					addVehicle(line_id)
 					totalVehicleCount = totalVehicleCount + 1
-				-- elseif (sampledLineData[line_id].vehicles > 1 and sampledLineData[line_id].usage < 50 and sampledLineData[line_id].demand < sampledLineData[line_id].rate) or (sampledLineData[line_id].vehicles > 2 and sampledLineData[line_id].usage < 75 and sampledLineData[line_id].demand < sampledLineData[line_id].rate * (sampledLineData[line_id].vehicles - 1) / sampledLineData[line_id].vehicles) then
-				elseif sampledLineData[line_id].vehicles > 1 and sampledLineData[line_id].usage < 90 * (sampledLineData[line_id].vehicles - 1) / sampledLineData[line_id].vehicles then
+				-- Check instead whether a vehicle should be removed from a Line.
+				elseif sampledLineData[line_id].vehicles > 1 and sampledLineData[line_id].usage < 90 * (sampledLineData[line_id].vehicles - 1) / sampledLineData[line_id].vehicles and sampledLineData[line_id].demand < sampledLineData[line_id].rate then
 					print("Line: " .. helper.getLineName(line_id) .. " (" .. line_id .. ") - Usage: " .. sampledLineData[line_id].usage .. "% (" .. sampledLineData[line_id].occupancy .. "/" .. sampledLineData[line_id].capacity .. ") Veh: " .. sampledLineData[line_id].vehicles .. " Demand: " .. sampledLineData[line_id].demand .. " Rate: " .. sampledLineData[line_id].rate)
 					sampledLineData[line_id].samples = sample_restart
 					removeVehicle(line_id)
