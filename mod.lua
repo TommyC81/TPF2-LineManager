@@ -2,7 +2,7 @@ function data()
 	return {
 		info = {
 			name = _("LineManager"),
-			description = _("A mod to manage vehicle numbers on lines."),
+			description = _("A mod to automatically manage number of vehicles on bus lines."),
 			minorVersion = 1,
 			severityAdd = "NONE",
 			severityRemove = "NONE",
@@ -14,7 +14,7 @@ function data()
 				},
 				{
 					name = "Celmi", -- author name
-					role = "BASED_ON", -- OPTIONAL "CREATOR", "CO_CREATOR", "TESTER" or "BASED_ON" or "OTHER"
+					role = "OTHER", -- OPTIONAL "CREATOR", "CO_CREATOR", "TESTER" or "BASED_ON" or "OTHER"
 				},
 			},
 		}
