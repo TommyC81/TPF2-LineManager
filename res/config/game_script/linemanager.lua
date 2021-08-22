@@ -121,10 +121,12 @@ local function updatePassengerLines()
 				if sampledLineData[line_id].demand > 2 * sampledLineData[line_id].rate or (sampledLineData[line_id].usage > 90 and sampledLineData[line_id].demand > sampledLineData[line_id].rate) or (sampledLineData[line_id].usage > 80 and sampledLineData[line_id].demand > sampledLineData[line_id].rate * (sampledLineData[line_id].vehicles + 1) / sampledLineData[line_id].vehicles) then
 					print("Line: " .. helper.getLineName(line_id) .. " (" .. line_id .. ") - Usage: " .. sampledLineData[line_id].usage .. "% (" .. sampledLineData[line_id].occupancy .. "/" .. sampledLineData[line_id].capacity .. ") Veh: " .. sampledLineData[line_id].vehicles .. " Demand: " .. sampledLineData[line_id].demand .. " Rate: " .. sampledLineData[line_id].rate)
 					addVehicle(line_id)
+					totalVehicleCount = totalVehicleCount + 1
 					sampledLineData[line_id].samples = sample_size - 2 * sample_interval
 				elseif sampledLineData[line_id].vehicles > 1 and ((sampledLineData[line_id].usage < 50 and sampledLineData[line_id].demand < sampledLineData[line_id].rate) or (sampledLineData[line_id].usage < 80 and sampledLineData[line_id].demand < sampledLineData[line_id].rate * (sampledLineData[line_id].vehicles - 1) / sampledLineData[line_id].vehicles)) then
 					print("Line: " .. helper.getLineName(line_id) .. " (" .. line_id .. ") - Usage: " .. sampledLineData[line_id].usage .. "% (" .. sampledLineData[line_id].occupancy .. "/" .. sampledLineData[line_id].capacity .. ") Veh: " .. sampledLineData[line_id].vehicles .. " Demand: " .. sampledLineData[line_id].demand .. " Rate: " .. sampledLineData[line_id].rate)
 					removeVehicle(line_id)
+					totalVehicleCount = totalVehicleCount - 1
 					sampledLineData[line_id].samples = sample_size - 2 * sample_interval
 				end
 			end
