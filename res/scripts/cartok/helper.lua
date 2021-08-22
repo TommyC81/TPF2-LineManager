@@ -1,3 +1,5 @@
+-- Contains code from https://github.com/IncredibleHannes/TPF2-Timetables
+
 local helper = {}
 
 ---@param line number | string
@@ -31,7 +33,7 @@ function helper.getLineName(line)
     end
 end
 
--- returns Number, current GameTime
+-- returns Number, current GameTime in milliseconds
 function helper.getGameTime()
     local time = api.engine.getComponent(0,api.type.ComponentType.GAME_TIME).gameTime
     if time then

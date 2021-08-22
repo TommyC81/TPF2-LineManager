@@ -15,6 +15,7 @@ local function removeVehicle(line_id)
 	local oldestVehicleId = 0
 	local oldestVehiclePurchaseTime = 999999999999
 	
+	-- Find the oldest vehicle on the line
 	for _, vehicle_id in pairs(lineVehicles) do
 		local vehicleInfo = api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
 		if vehicleInfo.transportVehicleConfig.vehicles[1].purchaseTime < oldestVehiclePurchaseTime then
@@ -23,6 +24,7 @@ local function removeVehicle(line_id)
 		end
 	end
 	
+	-- Remove/sell the oldest vehicle (instantly sells)
 	api.cmd.sendCommand(api.cmd.make.sellVehicle(oldestVehicleId))
 	print("      Removed vehicle: " .. oldestVehicleId .. " from line: " .. line_id)
 end
@@ -34,6 +36,8 @@ local function addVehicle(line_id)
 	local vehicleToDuplicate = nil
 	local purchaseTime = helper.getGameTime()
 	
+	-- TODO: Figure out a better way to find the closest depot.
+	-- This merely tries to send an existing vehicle on the line to the depot, checks if succeeds then cancel the depot call but uses the depot data.
 	for _, vehicle_id in pairs(lineVehicles) do
 		api.cmd.sendCommand(api.cmd.make.sendToDepot(vehicle_id, false))
 		vehicleToDuplicate = api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
@@ -73,7 +77,7 @@ local function addVehicle(line_id)
 		transportVehicleConfig.vehicleGroups = vehicleToDuplicate.transportVehicleConfig.vehicleGroups
 		
 		-- TODO: This doesn't return the id of the new vehicle, instead I check that the purchaseTime corresponds to the expected.
-		-- This is not perfecet, but shouldn't be a big issue.
+		-- This is not perfect, but shouldn't be a big issue. In the API documentation there is a similar function that should return the id of the new vehicle.
 		api.cmd.sendCommand(api.cmd.make.buyVehicle(api.engine.util.getPlayer(), depot_id, transportVehicleConfig))
 		local depot_vehicles = api.engine.system.transportVehicleSystem.getDepotVehicles(depot_id)
 		for _, depot_vehicle_id in pairs(depot_vehicles) do
@@ -118,6 +122,7 @@ local function updatePassengerLines()
 			lineCount = lineCount + 1
 			totalVehicleCount = totalVehicleCount + sampledLineData[line_id].vehicles			
 			
+			-- If a line has sufficient samples, then check whether vehicles should be added/removed.
 			if sampledLineData[line_id].samples and sampledLineData[line_id].samples >= sample_size then
 				--if (sampledLineData[line_id].usage > 70 and sampledLineData[line_id].demand > 2 * sampledLineData[line_id].rate) or (sampledLineData[line_id].usage > 95 and sampledLineData[line_id].demand > sampledLineData[line_id].rate) or (sampledLineData[line_id].usage > 85 and sampledLineData[line_id].demand > sampledLineData[line_id].rate * (sampledLineData[line_id].vehicles + 1) / sampledLineData[line_id].vehicles) then
 				if sampledLineData[line_id].usage > 95 then
@@ -143,11 +148,11 @@ local function checkIfUpdateIsDue()
 		time_prev_sample = helper.getGameTimeInSeconds()
 	end
 
-	local time = helper.getGameTimeInSeconds()
-	local time_passed = math.floor((time-time_prev_sample))
+	local current_time = helper.getGameTimeInSeconds()
+	local time_passed = current_time - time_prev_sample
 	if time_passed > sample_interval then
 		samplePassengerLines()
-		time_prev_sample = helper.getGameTimeInSeconds()
+		time_prev_sample = current_time
 		
 		samples_since_last_update = samples_since_last_update + 1
 		if samples_since_last_update >= update_interval then

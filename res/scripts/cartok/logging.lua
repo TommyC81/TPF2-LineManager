@@ -1,3 +1,5 @@
+-- From https://github.com/IncredibleHannes/TPF2-Timetables
+
 local logging = {}
 
 local TRACE = 1
