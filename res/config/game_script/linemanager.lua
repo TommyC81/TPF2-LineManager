@@ -6,7 +6,7 @@ local time_prev_sample = nil
 local sample_interval = 73
 local sample_size = 12
 local sampledLineData = {}
-local update_interval = 3 -- For every third sample, do an update
+local update_interval = 3 -- For every x sample, do a vehicle update (check if a vehicle should be added or removed)
 local samples_since_last_update = 0
 
 local function removeVehicle(line_id)	
