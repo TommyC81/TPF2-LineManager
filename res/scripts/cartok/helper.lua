@@ -31,8 +31,18 @@ function helper.getLineName(line)
     end
 end
 
--- returns Number, current GameTime in seconds
+-- returns Number, current GameTime
 function helper.getGameTime()
+    local time = api.engine.getComponent(0,api.type.ComponentType.GAME_TIME).gameTime
+    if time then
+        return time
+    else
+        return 0
+    end
+end
+
+-- returns Number, current GameTime in seconds
+function helper.getGameTimeInSeconds()
     local time = api.engine.getComponent(0,api.type.ComponentType.GAME_TIME).gameTime
     if time then
         time = math.floor(time/1000)

@@ -137,14 +137,14 @@ end
 
 local function checkIfUpdateIsDue()
 	if not time_prev_sample then
-		time_prev_sample = helper.getGameTime()
+		time_prev_sample = helper.getGameTimeInSeconds()
 	end
 
-	local time = helper.getGameTime()
+	local time = helper.getGameTimeInSeconds()
 	local time_passed = math.floor((time-time_prev_sample))
 	if time_passed > sample_interval then
 		samplePassengerLines()
-		time_prev_sample = helper.getGameTime()
+		time_prev_sample = helper.getGameTimeInSeconds()
 		
 		samples_since_last_update = samples_since_last_update + 1
 		if samples_since_last_update >= update_interval then
