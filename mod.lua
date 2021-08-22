@@ -3,7 +3,7 @@ function data()
 		info = {
 			name = _("LineManager"),
 			description = _("A mod to automatically manage number of vehicles on bus lines."),
-			minorVersion = 1,
+			minorVersion = 2,
 			severityAdd = "NONE",
 			severityRemove = "NONE",
 			tags = { "Script Mod" },
