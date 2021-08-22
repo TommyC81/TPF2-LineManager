@@ -4,9 +4,10 @@ local helper = require 'cartok/helper'
 local time_prev_sample = nil
 -- Seems like the time is in ms, and 2 "seconds" pass per game day i.e. if the below is more than 730, then more than 365 game days have passed
 local sample_interval = 73
-local sample_size = 12
+local sample_size = 6
 local sampledLineData = {}
-local update_interval = 3 -- For every x sample, do a vehicle update (check if a vehicle should be added or removed)
+local update_interval = 2 -- For every x sampling, do a vehicle update (check if a vehicle should be added or removed)
+local sample_restart = 2 -- Following an update of a Line, the number of recorded samples will be reset to this value for the line to delay an update until sufficient data is available
 local samples_since_last_update = 0
 
 local function removeVehicle(line_id)	
@@ -118,16 +119,18 @@ local function updatePassengerLines()
 			totalVehicleCount = totalVehicleCount + sampledLineData[line_id].vehicles			
 			
 			if sampledLineData[line_id].samples and sampledLineData[line_id].samples >= sample_size then
-				if (sampledLineData[line_id].usage > 70 and sampledLineData[line_id].demand > 2 * sampledLineData[line_id].rate) or (sampledLineData[line_id].usage > 95 and sampledLineData[line_id].demand > sampledLineData[line_id].rate) or (sampledLineData[line_id].usage > 85 and sampledLineData[line_id].demand > sampledLineData[line_id].rate * (sampledLineData[line_id].vehicles + 1) / sampledLineData[line_id].vehicles) then
+				--if (sampledLineData[line_id].usage > 70 and sampledLineData[line_id].demand > 2 * sampledLineData[line_id].rate) or (sampledLineData[line_id].usage > 95 and sampledLineData[line_id].demand > sampledLineData[line_id].rate) or (sampledLineData[line_id].usage > 85 and sampledLineData[line_id].demand > sampledLineData[line_id].rate * (sampledLineData[line_id].vehicles + 1) / sampledLineData[line_id].vehicles) then
+				if sampledLineData[line_id].usage > 95 then
 					print("Line: " .. helper.getLineName(line_id) .. " (" .. line_id .. ") - Usage: " .. sampledLineData[line_id].usage .. "% (" .. sampledLineData[line_id].occupancy .. "/" .. sampledLineData[line_id].capacity .. ") Veh: " .. sampledLineData[line_id].vehicles .. " Demand: " .. sampledLineData[line_id].demand .. " Rate: " .. sampledLineData[line_id].rate)
+					sampledLineData[line_id].samples = sample_restart
 					addVehicle(line_id)
 					totalVehicleCount = totalVehicleCount + 1
-				elseif (sampledLineData[line_id].vehicles > 1 and sampledLineData[line_id].usage < 50 and sampledLineData[line_id].demand < sampledLineData[line_id].rate) or (sampledLineData[line_id].vehicles > 2 and sampledLineData[line_id].usage < 75 and sampledLineData[line_id].demand < sampledLineData[line_id].rate * (sampledLineData[line_id].vehicles - 1) / sampledLineData[line_id].vehicles) then
-					sampledLineData[line_id].samples = sample_size - 2 * update_interval
+				-- elseif (sampledLineData[line_id].vehicles > 1 and sampledLineData[line_id].usage < 50 and sampledLineData[line_id].demand < sampledLineData[line_id].rate) or (sampledLineData[line_id].vehicles > 2 and sampledLineData[line_id].usage < 75 and sampledLineData[line_id].demand < sampledLineData[line_id].rate * (sampledLineData[line_id].vehicles - 1) / sampledLineData[line_id].vehicles) then
+				elseif sampledLineData[line_id].vehicles > 1 and sampledLineData[line_id].usage < 90 * (sampledLineData[line_id].vehicles - 1) / sampledLineData[line_id].vehicles then
 					print("Line: " .. helper.getLineName(line_id) .. " (" .. line_id .. ") - Usage: " .. sampledLineData[line_id].usage .. "% (" .. sampledLineData[line_id].occupancy .. "/" .. sampledLineData[line_id].capacity .. ") Veh: " .. sampledLineData[line_id].vehicles .. " Demand: " .. sampledLineData[line_id].demand .. " Rate: " .. sampledLineData[line_id].rate)
+					sampledLineData[line_id].samples = sample_restart
 					removeVehicle(line_id)
 					totalVehicleCount = totalVehicleCount - 1
-					sampledLineData[line_id].samples = sample_size - 2 * update_interval
 				end
 			end
 		end
