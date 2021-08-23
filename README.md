@@ -3,7 +3,7 @@
  GitHub repository is located here: https://github.com/TommyC81/TPF2-LineManager.
  Inspired by and uses some functionality from https://github.com/IncredibleHannes/TPF2-Timetables.
 
-This mod can be added/removed to existing games as desired - it only measures load factor and demand and adds/removes vehicles on bus lines accordingly. Only live data is used.
+ This mod can be added/removed to existing games as desired - it only measures load factor and demand and adds/removes vehicles on bus lines accordingly. Only live data is used.
  
 ## Quick start
  1. Create a bus line.
