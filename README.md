@@ -1,8 +1,8 @@
 # TPF2-LineManager
  A mod for Transport Fever 2 to automatically the manage number of vehicles on bus lines.
- Inspired by and uses functionality from https://github.com/IncredibleHannes/TPF2-Timetables
+ GitHub repository is located here: https://github.com/TommyC81/TPF2-LineManager
+ Inspired by and uses some functionality from https://github.com/IncredibleHannes/TPF2-Timetables
  
-
 ## Get started
  1. Create a bus line.
  2. Add one bus to the bus line.
@@ -12,4 +12,4 @@
  The mode will add/remove i.e. buy/sell buses of the same type according to line utilization and demand.
 
 ## Future plans
- * None, expect making this stable and add some general coding improvements.
+ * None, except making this stable and add some general coding improvements.
