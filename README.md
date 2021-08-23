@@ -6,7 +6,7 @@
 ## Get started
  1. Create a bus line.
  2. Add one bus to the bus line.
- 3. Make sure  depot is accessible for the buses on the bus line
+ 3. Make sure a depot is accessible for the buses on the bus line
  4. Make sure you have cash available for buying buses.
 
  The mode will add/remove i.e. buy/sell buses of the same type according to line utilization and demand.
