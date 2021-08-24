@@ -1,9 +1,7 @@
 local log = require 'cartok/logging'
 local helper = require 'cartok/helper'
 
-local time_prev_sample = nil
--- Seems like the time is in ms, and 2 "seconds" pass per game day i.e. if the below is more than 730, then more than 365 game days have passed
-local sample_interval = 73
+local last_sampled_month = -1 -- Keeps track of what month number the last sample was taken.
 local sample_size = 6
 local sampledLineData = {}
 local update_interval = 2 -- For every x sampling, do a vehicle update (check if a vehicle should be added or removed)
@@ -78,6 +76,7 @@ local function addVehicle(line_id)
 		
 		-- TODO: This doesn't return the id of the new vehicle, instead I check that the purchaseTime corresponds to the expected.
 		-- This is not perfect, but shouldn't be a big issue. In the API documentation there is a similar function that should return the id of the new vehicle.
+		-- api.type.BuyVehicle(playerEntity, depotEntity, config) return resultVehicleEntity
 		api.cmd.sendCommand(api.cmd.make.buyVehicle(api.engine.util.getPlayer(), depot_id, transportVehicleConfig))
 		local depot_vehicles = api.engine.system.transportVehicleSystem.getDepotVehicles(depot_id)
 		for _, depot_vehicle_id in pairs(depot_vehicles) do
@@ -126,13 +125,13 @@ local function updatePassengerLines()
 			if sampledLineData[line_id].samples and sampledLineData[line_id].samples >= sample_size then
 				-- Check if a vehicle should be added to a Line.
 				if (sampledLineData[line_id].usage > 95 and sampledLineData[line_id].demand > sampledLineData[line_id].rate) or (sampledLineData[line_id].usage > 80 and sampledLineData[line_id].demand > sampledLineData[line_id].rate * 2) then
-					print("Line: " .. helper.getLineName(line_id) .. " (" .. line_id .. ") - Usage: " .. sampledLineData[line_id].usage .. "% (" .. sampledLineData[line_id].occupancy .. "/" .. sampledLineData[line_id].capacity .. ") Veh: " .. sampledLineData[line_id].vehicles .. " Demand: " .. sampledLineData[line_id].demand .. " Rate: " .. sampledLineData[line_id].rate)
+					print("Line: " .. helper.getEntityName(line_id) .. " (" .. line_id .. ") - Usage: " .. sampledLineData[line_id].usage .. "% (" .. sampledLineData[line_id].occupancy .. "/" .. sampledLineData[line_id].capacity .. ") Veh: " .. sampledLineData[line_id].vehicles .. " Demand: " .. sampledLineData[line_id].demand .. " Rate: " .. sampledLineData[line_id].rate)
 					sampledLineData[line_id].samples = sample_restart
 					addVehicle(line_id)
 					totalVehicleCount = totalVehicleCount + 1
 				-- Check instead whether a vehicle should be removed from a Line.
 				elseif sampledLineData[line_id].vehicles > 1 and sampledLineData[line_id].usage < 90 * (sampledLineData[line_id].vehicles - 1) / sampledLineData[line_id].vehicles and sampledLineData[line_id].demand < sampledLineData[line_id].rate then
-					print("Line: " .. helper.getLineName(line_id) .. " (" .. line_id .. ") - Usage: " .. sampledLineData[line_id].usage .. "% (" .. sampledLineData[line_id].occupancy .. "/" .. sampledLineData[line_id].capacity .. ") Veh: " .. sampledLineData[line_id].vehicles .. " Demand: " .. sampledLineData[line_id].demand .. " Rate: " .. sampledLineData[line_id].rate)
+					print("Line: " .. helper.getEntityName(line_id) .. " (" .. line_id .. ") - Usage: " .. sampledLineData[line_id].usage .. "% (" .. sampledLineData[line_id].occupancy .. "/" .. sampledLineData[line_id].capacity .. ") Veh: " .. sampledLineData[line_id].vehicles .. " Demand: " .. sampledLineData[line_id].demand .. " Rate: " .. sampledLineData[line_id].rate)
 					sampledLineData[line_id].samples = sample_restart
 					removeVehicle(line_id)
 					totalVehicleCount = totalVehicleCount - 1
@@ -140,21 +139,19 @@ local function updatePassengerLines()
 			end
 		end
 	end
-	log.info("Total number of lines: " .. lineCount .. " Total number of vehicles: " .. totalVehicleCount)
+	log.info("Total Lines: " .. lineCount .. " Total Vehicles: " .. totalVehicleCount)
 end
 
 local function checkIfUpdateIsDue()
-	if not time_prev_sample then
-		time_prev_sample = helper.getGameTimeInSeconds()
-	end
-
-	local current_time = helper.getGameTimeInSeconds()
-	local time_passed = current_time - time_prev_sample
-	if time_passed > sample_interval then
-		samplePassengerLines()
-		time_prev_sample = current_time
+	local current_month = helper.getGameMonth()
+	
+	-- Check if the month has changed since last sample. If so, do another sample. 1 sample/month.
+	if last_sampled_month ~= current_month then
+		last_sampled_month = current_month
 		
+		samplePassengerLines()
 		samples_since_last_update = samples_since_last_update + 1
+		
 		if samples_since_last_update >= update_interval then
 			updatePassengerLines()			
 			samples_since_last_update = 0

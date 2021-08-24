@@ -2,13 +2,13 @@
 
 local helper = {}
 
----@param line number | string
+---@param line_id Number | String
 -- returns lineRate : Number
-function helper.getLineRate(line)
-    if type(line) == "string" then line = tonumber(line) end
-    if not(type(line) == "number") then return 0 end
+function helper.getLineRate(line_id)
+    if type(line_id) == "string" then line_id = tonumber(line_id) end
+    if not(type(line_id) == "number") then return 0 end
 
-    local lineEntity = game.interface.getEntity(line)
+    local lineEntity = game.interface.getEntity(line_id)
     if lineEntity and lineEntity.rate then
         return lineEntity.rate
     else
@@ -16,38 +16,31 @@ function helper.getLineRate(line)
     end
 end
 
----@param line number | string
+-- returns gameMonth : Number
+function helper.getGameMonth()
+	return game.interface.getGameTime().date.month
+end
+
+---@param entity_id Number | String
 -- returns lineName : String
-function helper.getLineName(line)
-    if type(line) == "string" then line = tonumber(line) end
-    if not(type(line) == "number") then return "ERROR" end
+function helper.getEntityName(entity_id)
+    if type(entity_id) == "string" then entity_id = tonumber(entity_id) end
+    if not(type(entity_id) == "number") then return "ERROR" end
 
     local err, res = pcall(function()
-        return api.engine.getComponent(line, api.type.ComponentType.NAME)
+        return api.engine.getComponent(entity_id, api.type.ComponentType.NAME)
     end)
-    local component = res
-    if err and component and component.name then
-        return component.name
+    if err and res and res.name then
+        return res.name
     else
         return "ERROR"
     end
 end
 
--- returns Number, current GameTime in milliseconds
+-- returns Number, current GameTime (milliseconds)
 function helper.getGameTime()
     local time = api.engine.getComponent(0,api.type.ComponentType.GAME_TIME).gameTime
     if time then
-        return time
-    else
-        return 0
-    end
-end
-
--- returns Number, current GameTime in seconds
-function helper.getGameTimeInSeconds()
-    local time = api.engine.getComponent(0,api.type.ComponentType.GAME_TIME).gameTime
-    if time then
-        time = math.floor(time/1000)
         return time
     else
         return 0
