@@ -1,8 +1,8 @@
 function data()
 	return {
 		info = {
-			name = _("LineManager"),
-			description = _("A mod to automatically manage number of vehicles on bus lines."),
+			name = _("Name"),
+			description = _("Description"),
 			minorVersion = 2,
 			severityAdd = "NONE",
 			severityRemove = "NONE",
