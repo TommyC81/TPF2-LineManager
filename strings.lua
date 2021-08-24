@@ -1,7 +1,7 @@
 function data()
   return {
     en = {
-      Name = '(Bus) LineManager',
+      Name = 'LineManager',
       Description = 'A mod to automatically manage the number of buses on bus lines.\n'
                  .. '\n'
                  .. 'Taking into account the loadfactor over time, and demand on the line, this mod will buy/sell buses accordingly.\n'
