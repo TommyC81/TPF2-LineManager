@@ -43,36 +43,19 @@ local function addVehicle(line_id)
 		if vehicleToDuplicate.state == 3 then
 			depot_id = vehicleToDuplicate.depot
 			stop_id = vehicleToDuplicate.stopIndex
-			api.cmd.sendCommand(api.cmd.make.setLine(vehicle_id, line_id, vehicleToDuplicate.stopIndex))
+			api.cmd.sendCommand(api.cmd.make.setLine(vehicle_id, line_id, stop_id))
  			break
 		end
 	end
 
 	if depot_id then
-		local transportVehicleConfig = api.type.TransportVehicleConfig.new()
-		local vehicleCount = 0
+		local transportVehicleConfig = vehicleToDuplicate.transportVehicleConfig
 		
-		for _, vehicle_section in pairs(vehicleToDuplicate.transportVehicleConfig.vehicles) do
-			vehicleCount = vehicleCount + 1
-			
-			local vehicle = api.type.TransportVehiclePart.new()
+		-- Reset applicable parts of the transportVehicleConfig
+		for _, vehicle in pairs(transportVehicleConfig.vehicles) do
 			vehicle.purchaseTime = purchaseTime
 			vehicle.maintenanceState = 1
-			vehicle.targetMaintenanceState = vehicle_section.targetMaintenanceState
-			vehicle.autoLoadConfig = { 1 }
-						
-			local part = api.type.VehiclePart.new()
-			part.modelId = vehicle_section.part.modelId
-			part.reversed = vehicle_section.part.reversed
-			part.loadConfig[1] = vehicle_section.part.loadConfig[1]
-			part.color = vehicle_section.part.color
-			part.logo = vehicle_section.part.logo
-			vehicle.part = part
-			
-			transportVehicleConfig.vehicles[vehicleCount] = vehicle
 		end
-	
-		transportVehicleConfig.vehicleGroups = vehicleToDuplicate.transportVehicleConfig.vehicleGroups
 		
 		-- TODO: This doesn't return the id of the new vehicle, instead I check that the purchaseTime corresponds to the expected.
 		-- This is not perfect, but shouldn't be a big issue. In the API documentation there is a similar function that should return the id of the new vehicle.
