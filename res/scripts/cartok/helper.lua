@@ -5,15 +5,29 @@ local helper = {}
 ---@param line_id Number | String
 -- returns lineRate : Number
 function helper.getLineRate(line_id)
-    if type(line_id) == "string" then line_id = tonumber(line_id) end
-    if not(type(line_id) == "number") then return 0 end
+	if type(line_id) == "string" then line_id = tonumber(line_id) end
+	if not(type(line_id) == "number") then return 0 end
 
-    local lineEntity = game.interface.getEntity(line_id)
-    if lineEntity and lineEntity.rate then
-        return lineEntity.rate
-    else
-        return 0
-    end
+	local lineEntity = game.interface.getEntity(line_id)
+	if lineEntity and lineEntity.rate then
+		return lineEntity.rate
+	else
+		return 0
+	end
+end
+
+---@param vehicle_id Number | String
+-- returns transportsPassengers : Boolean
+function helper.vehicleTransportsPassengers(vehicle_id)
+	if type(vehicle_id) == "string" then vehicle_id = tonumber(vehicle_id) end
+	if not(type(vehicle_id) == "number") then return false end
+
+    local vehicleInfo = api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
+	if vehicleInfo and vehicleInfo.config and vehicleInfo.config.capacities[1] and vehicleInfo.config.capacities[1] > 0 then
+		return true
+	else
+		return false
+	end
 end
 
 -- returns gameMonth : Number
@@ -22,29 +36,29 @@ function helper.getGameMonth()
 end
 
 ---@param entity_id Number | String
--- returns lineName : String
+-- returns entityName : String
 function helper.getEntityName(entity_id)
-    if type(entity_id) == "string" then entity_id = tonumber(entity_id) end
-    if not(type(entity_id) == "number") then return "ERROR" end
+	if type(entity_id) == "string" then entity_id = tonumber(entity_id) end
+	if not(type(entity_id) == "number") then return "ERROR" end
 
-    local err, res = pcall(function()
-        return api.engine.getComponent(entity_id, api.type.ComponentType.NAME)
-    end)
-    if err and res and res.name then
-        return res.name
-    else
-        return "ERROR"
-    end
+	local err, res = pcall(function()
+		return api.engine.getComponent(entity_id, api.type.ComponentType.NAME)
+	end)
+	if err and res and res.name then
+		return res.name
+	else
+		return "ERROR"
+	end
 end
 
 -- returns Number, current GameTime (milliseconds)
 function helper.getGameTime()
-    local time = api.engine.getComponent(0,api.type.ComponentType.GAME_TIME).gameTime
-    if time then
-        return time
-    else
-        return 0
-    end
+	local time = api.engine.getComponent(0,api.type.ComponentType.GAME_TIME).gameTime
+	if time then
+		return time
+	else
+		return 0
+	end
 end
 
 -- api.engine.getComponent(line_id, api.type.ComponentType.LINE)
@@ -53,12 +67,33 @@ end
 --      [1] = 0,
 --      [2] = 0,
 --      [3] = 0,
---      [4] = 0, BUS
+--      [4] = 0, ROAD
+--      [5] = 0,
+--      [6] = 0,
+--      [7] = 0, TRAM
+--      [8] = 0,
+--      [9] = 0, TRAIN
+--      [10] = 0,
+--      [11] = 0,
+--      [12] = 0, AIR
+--      [13] = 0, SEA
+--      [14] = 0,
+--      [15] = 0,
+--      [16] = 0,
+--    },
+--
+-- api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
+-- config = {
+--    capacities = {
+--      [1] = 0, PASSENGERS
+--      [2] = 0,
+--      [3] = 0,
+--      [4] = 0,
 --      [5] = 0,
 --      [6] = 0,
 --      [7] = 0,
 --      [8] = 0,
---      [9] = 1,  TRAIN
+--      [9] = 0,
 --      [10] = 0,
 --      [11] = 0,
 --      [12] = 0,
@@ -66,18 +101,20 @@ end
 --      [14] = 0,
 --      [15] = 0,
 --      [16] = 0,
+--      [17] = 0,
 --    },
-
+ 
+ 
 -- returns Array, containing line_id, vehicles, capacity, occupancy, usage, demand and rate
-function helper.getBusPassengerLinesData()
-    local lines = api.engine.system.lineSystem.getLines()
+function helper.getLineData()
+	local lines = api.engine.system.lineSystem.getLinesForPlayer(api.engine.util.getPlayer())
 	local lineData = {}
 	local totalVehicleCount = 0
 	
 	for _, line_id in pairs(lines) do
 		-- Check type of line first
-		local lineInfo = api.engine.getComponent(line_id, api.type.ComponentType.LINE)
-		if lineInfo and lineInfo.vehicleInfo and lineInfo.vehicleInfo.transportModes and lineInfo.vehicleInfo.transportModes[4] == 1 then
+		local line = api.engine.getComponent(line_id, api.type.ComponentType.LINE)
+		if line and line.vehicleInfo and line.vehicleInfo.transportModes and (line.vehicleInfo.transportModes[4] == 1 or line.vehicleInfo.transportModes[7] == 1) then
 			local lineVehicleCount = 0
 			local lineCapacity = 0
 			local lineOccupancy = 0
@@ -91,15 +128,15 @@ function helper.getBusPassengerLinesData()
 			if lineTravellerCount > 0 then
 				local lineVehicles = api.engine.system.transportVehicleSystem.getLineVehicles(line_id)
 				for _, vehicle_id in pairs(lineVehicles) do		
-					local vehicleInfo = api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
-					if vehicleInfo and vehicleInfo.config and vehicleInfo.config.capacities[1] then
+					local vehicle = api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
+					if vehicle and vehicle.config and vehicle.config.capacities[1] and vehicle.config.capacities[1] > 0 then
 						lineVehicleCount = lineVehicleCount + 1
-						lineCapacity = lineCapacity + vehicleInfo.config.capacities[1]
+						lineCapacity = lineCapacity + vehicle.config.capacities[1]
 					end
 					
 					for _, traveller_id in pairs(lineTravellers) do
 						local traveller = api.engine.getComponent(traveller_id, api.type.ComponentType.SIM_PERSON_AT_VEHICLE)
-						if traveller and traveller.vehicle == vehicle_id then	
+						if traveller and traveller.vehicle and traveller.vehicle == vehicle_id then	
 							lineOccupancy = lineOccupancy + 1
 						end
 					end

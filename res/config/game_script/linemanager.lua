@@ -38,6 +38,7 @@ local function addVehicle(line_id)
 	-- This merely tries to send an existing vehicle on the line to the depot, checks if succeeds then cancel the depot call but uses the depot data.
 	-- Unfortunately sending a vehicle to a depot empties the vechicle.
 	for _, vehicle_id in pairs(lineVehicles) do
+		-- TODO: Need to check that it is a passenger vehicle (in case of mixed vehicles on a line).
 		api.cmd.sendCommand(api.cmd.make.sendToDepot(vehicle_id, false))
 		vehicleToDuplicate = api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
 		
@@ -59,7 +60,7 @@ local function addVehicle(line_id)
 		end
 		
 		-- TODO: This doesn't return the id of the new vehicle, instead I check that the purchaseTime corresponds to the expected.
-		-- This is not perfect, but shouldn't be a big issue. In the API documentation there is a similar function that should return the id of the new vehicle.
+		-- This is not perfect, but shouldn't be a big issue. In the API documentation this should return an id.
 		-- api.type.BuyVehicle(playerEntity, depotEntity, config) return resultVehicleEntity
 		api.cmd.sendCommand(api.cmd.make.buyVehicle(api.engine.util.getPlayer(), depot_id, transportVehicleConfig))
 		local depot_vehicles = api.engine.system.transportVehicleSystem.getDepotVehicles(depot_id)
@@ -75,9 +76,9 @@ local function addVehicle(line_id)
 	end	
 end
 
-local function samplePassengerLines()
+local function sampleLines()
 	log.info("============ Sampling ============")
-	local lineData = helper.getBusPassengerLinesData()
+	local lineData = helper.getLineData()
 	
 	for line_id, line_data in pairs(lineData) do
 		if sampledLineData[line_id] then
@@ -94,13 +95,14 @@ local function samplePassengerLines()
 	end
 end
 
-local function updatePassengerLines()
+local function updateLines()
 	log.info("============ Updating ============")
 	local lines = api.engine.system.lineSystem.getLines()
 	local lineCount = 0
 	local totalVehicleCount = 0
 	
 	for _, line_id in pairs(lines) do
+		-- TODO: Need to check that the line still exists, and still transports passengers.
 		if sampledLineData[line_id] then
 			lineCount = lineCount + 1
 			totalVehicleCount = totalVehicleCount + sampledLineData[line_id].vehicles			
@@ -133,11 +135,11 @@ local function checkIfUpdateIsDue()
 	if last_sampled_month ~= current_month then
 		last_sampled_month = current_month
 		
-		samplePassengerLines()
+		sampleLines()
 		samples_since_last_update = samples_since_last_update + 1
 		
 		if samples_since_last_update >= update_interval then
-			updatePassengerLines()			
+			updateLines()			
 			samples_since_last_update = 0
 		end
 	end	
