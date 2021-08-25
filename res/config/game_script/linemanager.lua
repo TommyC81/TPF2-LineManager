@@ -34,8 +34,9 @@ local function addVehicle(line_id)
 	local vehicleToDuplicate = nil
 	local purchaseTime = helper.getGameTime()
 	
-	-- TODO: Figure out a better way to find the closest depot.
+	-- TODO: Figure out a better way to find the closest depot (or one at all).
 	-- This merely tries to send an existing vehicle on the line to the depot, checks if succeeds then cancel the depot call but uses the depot data.
+	-- Unfortunately sending a vehicle to a depot empties the vechicle.
 	for _, vehicle_id in pairs(lineVehicles) do
 		api.cmd.sendCommand(api.cmd.make.sendToDepot(vehicle_id, false))
 		vehicleToDuplicate = api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
