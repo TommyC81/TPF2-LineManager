@@ -46,7 +46,7 @@ local function addVehicle(line_id)
 		
 			if vehicleToDuplicate.state == api.type.enum.TransportVehicleState.GOING_TO_DEPOT then
 				depot_id = vehicleToDuplicate.depot
-				api.cmd.sendCommand(api.cmd.make.setLine(vehicle_id, line_id, vehicleToDuplicate.stopIndex)
+				api.cmd.sendCommand(api.cmd.make.setLine(vehicle_id, line_id, vehicleToDuplicate.stopIndex))
 				break
 			end
 		end
