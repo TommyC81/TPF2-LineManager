@@ -61,49 +61,6 @@ function helper.getGameTime()
 	end
 end
 
--- api.engine.getComponent(line_id, api.type.ComponentType.LINE)
--- vehicleInfo = {
---    transportModes = {
---      [1] = 0,
---      [2] = 0,
---      [3] = 0,
---      [4] = 0, ROAD
---      [5] = 0,
---      [6] = 0,
---      [7] = 0, TRAM
---      [8] = 0,
---      [9] = 0, TRAIN
---      [10] = 0,
---      [11] = 0,
---      [12] = 0, AIR
---      [13] = 0, SEA
---      [14] = 0,
---      [15] = 0,
---      [16] = 0,
---    },
---
--- api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
--- config = {
---    capacities = {
---      [1] = 0, PASSENGERS
---      [2] = 0,
---      [3] = 0,
---      [4] = 0,
---      [5] = 0,
---      [6] = 0,
---      [7] = 0,
---      [8] = 0,
---      [9] = 0,
---      [10] = 0,
---      [11] = 0,
---      [12] = 0,
---      [13] = 0,
---      [14] = 0,
---      [15] = 0,
---      [16] = 0,
---      [17] = 0,
---    },
- 
 ---@param line_id  number | string
 ---@param lineType string, eg "RAIL", "ROAD", "TRAM", "WATER", "AIR"
 -- returns Bool
@@ -120,8 +77,7 @@ function helper.lineHasType(line_id, lineType)
 	end
 	return false
 end
-  
- 
+
 -- returns Array, containing line_id, vehicles, capacity, occupancy, usage, demand and rate
 function helper.getLineData()
 	local lines = api.engine.system.lineSystem.getLinesForPlayer(api.engine.util.getPlayer())
@@ -131,6 +87,7 @@ function helper.getLineData()
 	for _, line_id in pairs(lines) do
 		-- Check type of line first
 		local line = api.engine.getComponent(line_id, api.type.ComponentType.LINE)
+		-- transportModes[4] = ROAD, transportModes[7] = TRAM
 		if line and line.vehicleInfo and line.vehicleInfo.transportModes and (line.vehicleInfo.transportModes[4] == 1 or line.vehicleInfo.transportModes[7] == 1) then
 			local lineVehicleCount = 0
 			local lineCapacity = 0
@@ -168,3 +125,46 @@ function helper.getLineData()
 end
 
 return helper
+
+-- api.engine.getComponent(line_id, api.type.ComponentType.LINE)
+-- vehicleInfo = {
+--    transportModes = {
+--      [1] = 0,
+--      [2] = 0,
+--      [3] = 0,
+--      [4] = 0, ROAD
+--      [5] = 0,
+--      [6] = 0,
+--      [7] = 0, TRAM
+--      [8] = 0,
+--      [9] = 0, RAIL
+--      [10] = 0,
+--      [11] = 0,
+--      [12] = 0, AIR
+--      [13] = 0, WATER
+--      [14] = 0,
+--      [15] = 0,
+--      [16] = 0,
+--    },
+--
+-- api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
+-- config = {
+--    capacities = {
+--      [1] = 0, PASSENGERS
+--      [2] = 0,
+--      [3] = 0,
+--      [4] = 0,
+--      [5] = 0,
+--      [6] = 0,
+--      [7] = 0,
+--      [8] = 0,
+--      [9] = 0,
+--      [10] = 0,
+--      [11] = 0,
+--      [12] = 0,
+--      [13] = 0,
+--      [14] = 0,
+--      [15] = 0,
+--      [16] = 0,
+--      [17] = 0,
+--    },
