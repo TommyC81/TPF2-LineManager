@@ -104,6 +104,23 @@ end
 --      [17] = 0,
 --    },
  
+---@param line_id  number | string
+---@param lineType string, eg "RAIL", "ROAD", "TRAM", "WATER", "AIR"
+-- returns Bool
+function helper.lineHasType(line_id, lineType)
+	if type(line_id) == "string" then line_id = tonumber(line_id) end
+	if not(type(line_id) == "number") then print("Expected String or Number") return -1 end
+
+	local vehicles = api.engine.system.transportVehicleSystem.getLineVehicles(line_id)
+	if vehicles and vehicles[1] then
+		local component = api.engine.getComponent(vehicles[1], api.type.ComponentType.TRANSPORT_VEHICLE)
+		if component and component.carrier then
+			return component.carrier  == api.type.enum.Carrier[lineType]
+		end
+	end
+	return false
+end
+  
  
 -- returns Array, containing line_id, vehicles, capacity, occupancy, usage, demand and rate
 function helper.getLineData()
