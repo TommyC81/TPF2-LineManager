@@ -38,15 +38,18 @@ local function addVehicle(line_id)
 	-- This merely tries to send an existing vehicle on the line to the depot, checks if succeeds then cancel the depot call but uses the depot data.
 	-- Unfortunately sending a vehicle to a depot empties the vechicle.
 	for _, vehicle_id in pairs(lineVehicles) do
-		-- TODO: Need to check that it is a passenger vehicle (in case of mixed vehicles on a line).
-		api.cmd.sendCommand(api.cmd.make.sendToDepot(vehicle_id, false))
-		vehicleToDuplicate = api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
+		-- For now filter this to passenger transportation only.
+		-- TODO: Extend to further types of cargo.
+		if helper.vehicleTransportsPassengers(vehicle_id) then
+			api.cmd.sendCommand(api.cmd.make.sendToDepot(vehicle_id, false))
+			vehicleToDuplicate = api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
 		
-		if vehicleToDuplicate.state == api.type.enum.TransportVehicleState.GOING_TO_DEPOT then
-			depot_id = vehicleToDuplicate.depot
-			stop_id = vehicleToDuplicate.stopIndex
-			api.cmd.sendCommand(api.cmd.make.setLine(vehicle_id, line_id, stop_id))
- 			break
+			if vehicleToDuplicate.state == api.type.enum.TransportVehicleState.GOING_TO_DEPOT then
+				depot_id = vehicleToDuplicate.depot
+				stop_id = vehicleToDuplicate.stopIndex
+				api.cmd.sendCommand(api.cmd.make.setLine(vehicle_id, line_id, stop_id))
+				break
+			end
 		end
 	end
 
@@ -82,17 +85,20 @@ local function sampleLines()
 	
 	for line_id, line_data in pairs(lineData) do
 		if sampledLineData[line_id] then
-			sampledLineData[line_id].samples = sampledLineData[line_id].samples + 1
-			sampledLineData[line_id].vehicles = line_data.vehicles
-			sampledLineData[line_id].capacity = line_data.capacity
-			sampledLineData[line_id].occupancy = line_data.occupancy
-			sampledLineData[line_id].demand = math.round(((sampledLineData[line_id].demand * (sample_size - 1)) + line_data.demand)/sample_size)
-			sampledLineData[line_id].usage = math.round(((sampledLineData[line_id].usage * (sample_size - 1)) + line_data.usage)/sample_size)
-			sampledLineData[line_id].rate = line_data.rate
+			lineData[line_id].samples = sampledLineData[line_id].samples + 1
+			-- lineData[line_id].vehicles = line_data.vehicles
+			-- lineData[line_id].capacity = line_data.capacity
+			-- lineData[line_id].occupancy = line_data.occupancy
+			lineData[line_id].demand = math.round(((sampledLineData[line_id].demand * (sample_size - 1)) + line_data.demand)/sample_size)
+			lineData[line_id].usage = math.round(((sampledLineData[line_id].usage * (sample_size - 1)) + line_data.usage)/sample_size)
+			lineData[line_id].rate = line_data.rate
 		else
-			sampledLineData[line_id] = { samples = 1, vehicles = line_data.vehicles, capacity = line_data.capacity, occupancy = line_data.occupancy, demand = line_data.demand, usage = line_data.usage, rate = line_data.rate}
+			lineData[line_id].samples = 1
 		end
 	end
+	
+	-- By initially just using the fresh lineData, no longer existing lines are removed. Does this cause increased memory/CPU usage?
+	sampledLineData = lineData
 end
 
 local function updateLines()
@@ -102,7 +108,7 @@ local function updateLines()
 	local totalVehicleCount = 0
 	
 	for _, line_id in pairs(lines) do
-		-- TODO: Need to check that the line still exists, and still transports passengers.
+		-- TODO: Should check that the line still exists, and still transports passengers.
 		if sampledLineData[line_id] then
 			lineCount = lineCount + 1
 			totalVehicleCount = totalVehicleCount + sampledLineData[line_id].vehicles			
