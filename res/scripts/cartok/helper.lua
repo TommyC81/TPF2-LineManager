@@ -78,17 +78,22 @@ function helper.lineHasType(line_id, lineType)
 	return false
 end
 
+-- Returns all lines for the Player
+function helper.getPlayerLines()
+	return api.engine.system.lineSystem.getLinesForPlayer(api.engine.util.getPlayer())
+end
+
 -- returns Array, containing line_id, vehicles, capacity, occupancy, usage, demand and rate
 function helper.getLineData()
-	local lines = api.engine.system.lineSystem.getLinesForPlayer(api.engine.util.getPlayer())
+	local lines = helper.getPlayerLines()
 	local lineData = {}
 	local totalVehicleCount = 0
 	
 	for _, line_id in pairs(lines) do
 		-- Check type of line first
 		local line = api.engine.getComponent(line_id, api.type.ComponentType.LINE)
-		-- transportModes[4] = ROAD, transportModes[7] = TRAM
-		if line and line.vehicleInfo and line.vehicleInfo.transportModes and (line.vehicleInfo.transportModes[4] == 1 or line.vehicleInfo.transportModes[7] == 1) then
+		-- transportModes[4] = ROAD, transportModes[7] = TRAM, transportModes[10] = AIR, transportModes[13] = WATER
+		if line and line.vehicleInfo and line.vehicleInfo.transportModes and (line.vehicleInfo.transportModes[4] == 1 or line.vehicleInfo.transportModes[7] == 1 or line.vehicleInfo.transportModes[10] == 1 or line.vehicleInfo.transportModes[13] == 1) then
 			local lineVehicleCount = 0
 			local lineCapacity = 0
 			local lineOccupancy = 0
@@ -138,9 +143,9 @@ return helper
 --      [7] = 0, TRAM
 --      [8] = 0,
 --      [9] = 0, RAIL
---      [10] = 0,
+--      [10] = 0, AIR
 --      [11] = 0,
---      [12] = 0, AIR
+--      [12] = 0, 
 --      [13] = 0, WATER
 --      [14] = 0,
 --      [15] = 0,

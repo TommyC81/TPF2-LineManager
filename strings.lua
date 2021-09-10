@@ -2,9 +2,9 @@ function data()
   return {
     en = {
       Name = 'LineManager',
-      Description = 'A mod to automatically manage the number of buses/trams on passenger lines.\n'
+      Description = 'A mod to automatically manage the number of buses/trams/aircraft/ships on passenger lines.\n'
                  .. '\n'
-                 .. 'Taking into account the load-factor over time, and demand on the line, this mod will buy/sell buses/trams accordingly, effectively increasing/decreasing capacity on a line as per the actual demand.\n'
+                 .. 'Taking into account the load-factor over time, and demand on the line, this mod will buy/sell buses/trams/aircraft/ships accordingly, effectively increasing/decreasing capacity on a line as per the actual demand.\n'
 				 .. 'This mod will greatly assist in addressing the tedious micro-management of bus/tram lines when updating road/tram infrastructure, adding more destinations, and in general updating the overall transport network. The mod in fact completely eliminates the bus/tram micro-management and will let you focus on the more fun overall design of the transport network.\n'
                  .. 'This mod can be added/removed to new and existing games as desired without issue.\n'
 				 .. '\n'
@@ -12,10 +12,10 @@ function data()
 				 .. '1. Create a bus/tram line.\n'
 				 .. '2. Add one bus/tram to the bus/tram line.\n'
 				 .. '3. Make sure a depot is accessible for the bus/tram on the line.\n'
-				 .. '4. Make sure you have cash available for buying further buses/trams (when the mod determines it required).\n'
+				 .. '4. Make sure you have cash available for buying further buses/trams/aircraft/ships (when the mod determines it required).\n'
 				 .. '\n'
 				 .. 'What the mod does:\n'
-				 .. '* The mod will add/remove i.e. buy/sell buses/trams of the same type according to line utilization and demand.\n'
+				 .. '* The mod will add/remove i.e. buy/sell buses/trams/aircraft/ships of the same type according to line utilization and demand.\n'
 				 .. '* When line utilization (load-factor over time) goes above/below different thresholds along with sufficient/insufficient demand on the route, a line vehicle will be bought/sold accordingly.\n'
 				 .. '* When a vehicle is sold, it will sell the oldest vehicle on the line. The mod will ensure there is at least 1 vehicle remaining on a line.\n'
 				 .. '\n'
@@ -26,7 +26,10 @@ function data()
 				 .. 'Performance:\n'
 				 .. '* The mod takes one usage, rate and demand sample per line per in-game month.\n'
 				 .. '* Every second in-game month, lines are updated to add/remove vehicles as appropriate.\n'
-				 .. '* Thus, performance impact should be negligble. This has not been studied in-depth, but no effect of the sampling/updates has been observed in games with hundreds of lines/buses/trams.\n'
+				 .. '* Thus, performance impact should be negligble. This has not been studied in-depth, but no effect of the sampling/updates has been observed in games with hundreds of lines/buses/trams/aircraft/ships.\n'
+				 .. '\n'
+				 .. 'Known stuff:\n'
+				 .. '* Until someone can suggest a reasonable way to locate available depots, the mod makes use of sending an existing vehicle to a depot to see if one is available - the depot order is immediately cancelled if succesful, however, this still empty the tested vehicle.\n'
 				 .. '\n'
 				 .. 'Untested:\n'
 				 .. '* If there is not enough cash available to add/buy a bus/tram to a line - not sure what will happen, but assume a silent failure.\n'
@@ -34,6 +37,7 @@ function data()
 				 .. '\n'
 				 .. 'Future plans:\n'
 				 .. '* None, except making this stable and add some general coding improvements.\n'
+				 .. '* Specific note that trains will not be added, things get complicated quickly.\n'
 				 .. '\n'
                  .. 'The source code can be found [url=https://github.com/TommyC81/TPF2-LineManager]here[/url].',
     }

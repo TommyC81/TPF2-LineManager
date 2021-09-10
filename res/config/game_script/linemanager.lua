@@ -102,7 +102,7 @@ end
 
 local function updateLines()
 	log.info("============ Updating ============")
-	local lines = api.engine.system.lineSystem.getLines()
+	local lines = helper.getPlayerLines()
 	local lineCount = 0
 	local totalVehicleCount = 0
 	
