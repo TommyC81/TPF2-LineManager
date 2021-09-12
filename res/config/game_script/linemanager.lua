@@ -46,7 +46,8 @@ local function addVehicle(line_id)
 		
 			if vehicleToDuplicate.state == api.type.enum.TransportVehicleState.GOING_TO_DEPOT then
 				depot_id = vehicleToDuplicate.depot
-				api.cmd.sendCommand(api.cmd.make.setLine(vehicle_id, line_id, vehicleToDuplicate.stopIndex))
+				stop_id = vehicleToDuplicate.stopIndex
+				api.cmd.sendCommand(api.cmd.make.setLine(vehicle_id, line_id, stop_id))
 				break
 			end
 		end
@@ -69,7 +70,7 @@ local function addVehicle(line_id)
 		for _, depot_vehicle_id in pairs(depot_vehicles) do
 			local depot_vehicle = api.engine.getComponent(depot_vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
 			if depot_vehicle.transportVehicleConfig.vehicles[1].purchaseTime == purchaseTime then			
-				api.cmd.sendCommand(api.cmd.make.setLine(depot_vehicle_id, line_id, 1))
+				api.cmd.sendCommand(api.cmd.make.setLine(depot_vehicle_id, line_id, stop_id))
 				print("      Added vehicle: " .. depot_vehicle_id .. " to line: " .. line_id .. " via depot: " .. depot_id)
 			end
 		end
