@@ -2,7 +2,7 @@
 
 local helper = {}
 
----@param line_id Number | String
+---@param line_id number | string
 -- returns lineRate : Number
 function helper.getLineRate(line_id)
 	if type(line_id) == "string" then line_id = tonumber(line_id) end
@@ -16,7 +16,7 @@ function helper.getLineRate(line_id)
 	end
 end
 
----@param vehicle_id Number | String
+---@param vehicle_id number | string
 -- returns transportsPassengers : Boolean
 function helper.vehicleTransportsPassengers(vehicle_id)
 	if type(vehicle_id) == "string" then vehicle_id = tonumber(vehicle_id) end
@@ -35,7 +35,7 @@ function helper.getGameMonth()
 	return game.interface.getGameTime().date.month
 end
 
----@param entity_id Number | String
+---@param entity_id number | string
 -- returns entityName : String
 function helper.getEntityName(entity_id)
 	if type(entity_id) == "string" then entity_id = tonumber(entity_id) end
@@ -87,6 +87,7 @@ end
 function helper.getLineData()
 	local lines = helper.getPlayerLines()
 	local lineData = {}
+	---@type any
 	local totalVehicleCount = 0
 	
 	for _, line_id in pairs(lines) do
@@ -130,6 +131,17 @@ function helper.getLineData()
 end
 
 return helper
+
+--- @param line
+-- return usage data of line
+
+function helper.lineData(data)
+	return "Usage: " .. data.usage .. "% "..
+			"(" .. data.occupancy .. "/" .. data.capacity .. ") "..
+			"Veh: " .. data.vehicles .. " "..
+			"Demand: " .. data.demand .. " "..
+			"Rate: " .. data.rate
+end
 
 -- api.engine.getComponent(line_id, api.type.ComponentType.LINE)
 -- vehicleInfo = {

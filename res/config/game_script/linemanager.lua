@@ -8,6 +8,9 @@ local update_interval = 2 -- For every x sampling, do a vehicle update (check if
 local sample_restart = 2 -- Following an update of a Line, the number of recorded samples will be reset to this value for the line to delay an update until sufficient data is available
 local samples_since_last_update = 0
 
+local minUtil = 40 --minimum utilization of a line before it gets slated for reduction
+local maxUtil = 90 --maximum utilization of a line before it triggers a vehicle increase
+
 local function removeVehicle(line_id)	
 	local lineVehicles = api.engine.system.transportVehicleSystem.getLineVehicles(line_id)
 	local oldestVehicleId = 0
@@ -84,16 +87,17 @@ local function sampleLines()
 	local lineData = helper.getLineData()
 	
 	for line_id, line_data in pairs(lineData) do
-		if sampledLineData[line_id] then
-			lineData[line_id].samples = sampledLineData[line_id].samples + 1
-			-- lineData[line_id].vehicles = line_data.vehicles
-			-- lineData[line_id].capacity = line_data.capacity
-			-- lineData[line_id].occupancy = line_data.occupancy
-			lineData[line_id].demand = math.round(((sampledLineData[line_id].demand * (sample_size - 1)) + line_data.demand)/sample_size)
-			lineData[line_id].usage = math.round(((sampledLineData[line_id].usage * (sample_size - 1)) + line_data.usage)/sample_size)
-			lineData[line_id].rate = line_data.rate
+		local data = sampledLineData[line_id]
+		if data then
+			data.samples = data.samples + 1
+			-- data.vehicles = line_data.vehicles
+			-- data.capacity = line_data.capacity
+			-- data.occupancy = line_data.occupancy
+			data.demand = math.round(((data.demand * (sample_size - 1)) + line_data.demand)/sample_size)
+			data.usage = math.round(((data.usage * (sample_size - 1)) + line_data.usage)/sample_size)
+			data.rate = line_data.rate
 		else
-			lineData[line_id].samples = 1
+			data.samples = 1
 		end
 	end
 	
@@ -109,22 +113,27 @@ local function updateLines()
 	
 	for _, line_id in pairs(lines) do
 		-- TODO: Should check that the line still exists, and still transports passengers.
-		if sampledLineData[line_id] then
+
+		local data=sampledLineData[line_id]
+
+		if data then
 			lineCount = lineCount + 1
-			totalVehicleCount = totalVehicleCount + sampledLineData[line_id].vehicles			
+			totalVehicleCount = totalVehicleCount + data.vehicles
 			
 			-- If a line has sufficient samples, then check whether vehicles should be added/removed.
-			if sampledLineData[line_id].samples and sampledLineData[line_id].samples >= sample_size then
+			if data.samples and data.samples >= sample_size then
 				-- Check if a vehicle should be added to a Line.
-				if (sampledLineData[line_id].usage > 50 and sampledLineData[line_id].demand > sampledLineData[line_id].rate * 2) or (sampledLineData[line_id].usage > 80 and sampledLineData[line_id].demand > sampledLineData[line_id].rate * (sampledLineData[line_id].vehicles + 1) / sampledLineData[line_id].vehicles) then
-					print("Line: " .. helper.getEntityName(line_id) .. " (" .. line_id .. ") - Usage: " .. sampledLineData[line_id].usage .. "% (" .. sampledLineData[line_id].occupancy .. "/" .. sampledLineData[line_id].capacity .. ") Veh: " .. sampledLineData[line_id].vehicles .. " Demand: " .. sampledLineData[line_id].demand .. " Rate: " .. sampledLineData[line_id].rate)
-					sampledLineData[line_id].samples = sample_restart
+				if (data.usage > maxUtil or -- enough demand to warrant another vehicle for relief
+						data.usage > 50 and data.demand > data.rate * 2) or
+						(data.usage > 80 and data.demand > data.rate * (data.vehicles + 1) / data.vehicles) then
+					print("Line: " .. helper.getEntityName(line_id) .. " (" .. line_id .. ") - " .. helper.lineData(line))
+					data.samples = sample_restart
 					addVehicle(line_id)
 					totalVehicleCount = totalVehicleCount + 1
 				-- Check instead whether a vehicle should be removed from a Line.
-				elseif sampledLineData[line_id].vehicles > 1 and sampledLineData[line_id].usage < 70 and sampledLineData[line_id].demand < sampledLineData[line_id].rate * (sampledLineData[line_id].vehicles - 1) / sampledLineData[line_id].vehicles then
-					print("Line: " .. helper.getEntityName(line_id) .. " (" .. line_id .. ") - Usage: " .. sampledLineData[line_id].usage .. "% (" .. sampledLineData[line_id].occupancy .. "/" .. sampledLineData[line_id].capacity .. ") Veh: " .. sampledLineData[line_id].vehicles .. " Demand: " .. sampledLineData[line_id].demand .. " Rate: " .. sampledLineData[line_id].rate)
-					sampledLineData[line_id].samples = sample_restart
+				elseif data.vehicles > 1 and data.usage < minUtil and data.demand < data.rate * (data.vehicles - 1) / data.vehicles then
+					print("Line: " .. helper.getEntityName(line_id) .. " (" .. line_id .. ") -" .. helper.lineData(line))
+					data.samples = sample_restart
 					removeVehicle(line_id)
 					totalVehicleCount = totalVehicleCount - 1
 				end
