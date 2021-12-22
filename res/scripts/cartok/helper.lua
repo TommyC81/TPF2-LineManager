@@ -116,7 +116,6 @@ end
 function helper.getLineData()
     local lines = helper.getPlayerLines()
     local lineData = {}
-    ---@type number
     local totalVehicleCount = 0
 
     for _, line_id in pairs(lines) do
