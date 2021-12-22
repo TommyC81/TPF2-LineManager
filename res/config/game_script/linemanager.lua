@@ -11,6 +11,9 @@ local samples_since_last_update = 0
 local minUtil = 40 --minimum utilization of a line before it gets slated for reduction
 local maxUtil = 90 --maximum utilization of a line before it triggers a vehicle increase
 
+--- @param line_id number
+--- sells the oldest vehicle on line_id
+
 local function removeVehicle(line_id)
     local lineVehicles = api.engine.system.transportVehicleSystem.getLineVehicles(line_id)
     local oldestVehicleId = 0
@@ -29,6 +32,9 @@ local function removeVehicle(line_id)
     api.cmd.sendCommand(api.cmd.make.sellVehicle(oldestVehicleId))
     print("      Removed vehicle: " .. oldestVehicleId .. " from line: " .. line_id)
 end
+
+--- @param line_id number
+--- clones a vehicle on line iif possible
 
 local function addVehicle(line_id)
     local lineVehicles = api.engine.system.transportVehicleSystem.getLineVehicles(line_id)
@@ -82,22 +88,23 @@ local function addVehicle(line_id)
     end
 end
 
+--- samples all appropriate lines for usage data
+
 local function sampleLines()
     log.info("============ Sampling ============")
     local lineData = helper.getLineData()
 
     for line_id, line_data in pairs(lineData) do
-        local data = sampledLineData[line_id]
-        if data then
-            data.samples = data.samples + 1
-            -- data.vehicles = line_data.vehicles
-            -- data.capacity = line_data.capacity
-            -- data.occupancy = line_data.occupancy
-            data.demand = math.round(((data.demand * (sample_size - 1)) + line_data.demand) / sample_size)
-            data.usage = math.round(((data.usage * (sample_size - 1)) + line_data.usage) / sample_size)
-            data.rate = line_data.rate
+        if sampledLineData[line_id] then
+            sampledLineData[line_id].samples = sampledLineData[line_id].samples + 1
+            -- sampledLineData[line_id].vehicles = line_data.vehicles
+            -- sampledLineData[line_id].capacity = line_data.capacity
+            -- sampledLineData[line_id].occupancy = line_data.occupancy
+            sampledLineData[line_id].demand = math.round(((sampledLineData[line_id].demand * (sample_size - 1)) + line_data.demand) / sample_size)
+            sampledLineData[line_id].usage = math.round(((sampledLineData[line_id].usage * (sample_size - 1)) + line_data.usage) / sample_size)
+            sampledLineData[line_id].rate = line_data.rate
         else
-            data.samples = 1
+            sampledLineData[line_id].samples = 1
         end
     end
 
