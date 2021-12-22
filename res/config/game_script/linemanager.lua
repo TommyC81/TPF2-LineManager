@@ -32,14 +32,14 @@ end
 	
 local function addVehicle(line_id)
 	local lineVehicles = api.engine.system.transportVehicleSystem.getLineVehicles(line_id)
-	local depot_id = nil
-	local stop_id = nil
-	local vehicleToDuplicate = nil
+	local depot_id
+	local stop_id
+	local vehicleToDuplicate
 	local purchaseTime = helper.getGameTime()
 	
 	-- TODO: Figure out a better way to find the closest depot (or one at all).
 	-- This merely tries to send an existing vehicle on the line to the depot, checks if succeeds then cancel the depot call but uses the depot data.
-	-- Unfortunately sending a vehicle to a depot empties the vechicle.
+	-- Unfortunately sending a vehicle to a depot empties the vehicle.
 	for _, vehicle_id in pairs(lineVehicles) do
 		-- For now filter this to passenger transportation only.
 		-- TODO: Extend to further types of cargo.
@@ -126,13 +126,13 @@ local function updateLines()
 				if (data.usage > maxUtil or -- enough demand to warrant another vehicle for relief
 						data.usage > 50 and data.demand > data.rate * 2) or
 						(data.usage > 80 and data.demand > data.rate * (data.vehicles + 1) / data.vehicles) then
-					print("Line: " .. helper.getEntityName(line_id) .. " (" .. line_id .. ") - " .. helper.lineData(line))
+					print("Line: " .. helper.getEntityName(line_id) .. " (" .. line_id .. ") - " .. helper.getLineDataDump(line))
 					data.samples = sample_restart
 					addVehicle(line_id)
 					totalVehicleCount = totalVehicleCount + 1
 				-- Check instead whether a vehicle should be removed from a Line.
 				elseif data.vehicles > 1 and data.usage < minUtil and data.demand < data.rate * (data.vehicles - 1) / data.vehicles then
-					print("Line: " .. helper.getEntityName(line_id) .. " (" .. line_id .. ") -" .. helper.lineData(line))
+					print("Line: " .. helper.getEntityName(line_id) .. " (" .. line_id .. ") -" .. helper.getLineDataDump(line))
 					data.samples = sample_restart
 					removeVehicle(line_id)
 					totalVehicleCount = totalVehicleCount - 1
