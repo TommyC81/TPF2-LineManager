@@ -1,4 +1,6 @@
 -- Contains code from https://github.com/IncredibleHannes/TPF2-Timetables
+---@author Cartok wrote the bulk of the code while
+---@author RusteyBucket rearranged it for readability with minor logic modifications where necessary for largely debug
 
 local helper = {}
 
