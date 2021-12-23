@@ -2,7 +2,7 @@
 
 local helper = {}
 
----@param line_id Number | String
+---@param line_id number | string
 -- returns lineRate : Number
 function helper.getLineRate(line_id)
     if type(line_id) == "string" then
@@ -20,7 +20,7 @@ function helper.getLineRate(line_id)
     end
 end
 
----@param vehicle_id Number | String
+---@param vehicle_id number | string
 -- returns transportsPassengers : Boolean
 function helper.vehicleTransportsPassengers(vehicle_id)
     if type(vehicle_id) == "string" then
@@ -43,7 +43,7 @@ function helper.getGameMonth()
     return game.interface.getGameTime().date.month
 end
 
----@param entity_id Number | String
+---@param entity_id number | string
 -- returns entityName : String
 function helper.getEntityName(entity_id)
     if type(entity_id) == "string" then

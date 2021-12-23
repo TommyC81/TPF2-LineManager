@@ -29,14 +29,14 @@ end
 
 local function addVehicle(line_id)
     local lineVehicles = api.engine.system.transportVehicleSystem.getLineVehicles(line_id)
-    local depot_id = nil
-    local stop_id = nil
-    local vehicleToDuplicate = nil
+    local depot_id
+    local stop_id
+    local vehicleToDuplicate
     local purchaseTime = helper.getGameTime()
 
     -- TODO: Figure out a better way to find the closest depot (or one at all).
     -- This merely tries to send an existing vehicle on the line to the depot, checks if succeeds then cancel the depot call but uses the depot data.
-    -- Unfortunately sending a vehicle to a depot empties the vechicle.
+    -- Unfortunately sending a vehicle to a depot empties the vehicle.
     for _, vehicle_id in pairs(lineVehicles) do
         -- For now filter this to passenger transportation only.
         -- TODO: Extend to further types of cargo.
