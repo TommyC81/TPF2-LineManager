@@ -22,7 +22,7 @@ function helper.vehicleTransportsPassengers(vehicle_id)
 	if type(vehicle_id) == "string" then vehicle_id = tonumber(vehicle_id) end
 	if not(type(vehicle_id) == "number") then return false end
 
-    local vehicleInfo = api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
+	local vehicleInfo = api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
 	if vehicleInfo and vehicleInfo.config and vehicleInfo.config.capacities[1] and vehicleInfo.config.capacities[1] > 0 then
 		return true
 	else
@@ -72,52 +72,57 @@ function helper.lineHasType(line_id, lineType)
 	if vehicles and vehicles[1] then
 		local component = api.engine.getComponent(vehicles[1], api.type.ComponentType.TRANSPORT_VEHICLE)
 		if component and component.carrier then
-			return component.carrier  == api.type.enum.Carrier[lineType]
+			return component.carrier == api.type.enum.Carrier[lineType]
 		end
 	end
 	return false
 end
 
+-- Returns all lines for the Player
+function helper.getPlayerLines()
+	return api.engine.system.lineSystem.getLinesForPlayer(api.engine.util.getPlayer())
+end
+
 -- returns Array, containing line_id, vehicles, capacity, occupancy, usage, demand and rate
 function helper.getLineData()
-	local lines = api.engine.system.lineSystem.getLinesForPlayer(api.engine.util.getPlayer())
+	local lines = helper.getPlayerLines()
 	local lineData = {}
 	local totalVehicleCount = 0
-	
+
 	for _, line_id in pairs(lines) do
 		-- Check type of line first
 		local line = api.engine.getComponent(line_id, api.type.ComponentType.LINE)
-		-- transportModes[4] = ROAD, transportModes[7] = TRAM
-		if line and line.vehicleInfo and line.vehicleInfo.transportModes and (line.vehicleInfo.transportModes[4] == 1 or line.vehicleInfo.transportModes[7] == 1) then
+		-- transportModes[4] = ROAD, transportModes[7] = TRAM, transportModes[10] = AIR, transportModes[13] = WATER
+		if line and line.vehicleInfo and line.vehicleInfo.transportModes and (line.vehicleInfo.transportModes[4] == 1 or line.vehicleInfo.transportModes[7] == 1 or line.vehicleInfo.transportModes[10] == 1 or line.vehicleInfo.transportModes[13] == 1) then
 			local lineVehicleCount = 0
 			local lineCapacity = 0
 			local lineOccupancy = 0
 			local lineTravellerCount = 0
-		
+
 			local lineTravellers = api.engine.system.simPersonSystem.getSimPersonsForLine(line_id)
 			for _, traveller_id in pairs(lineTravellers) do
 				lineTravellerCount = lineTravellerCount + 1
 			end
-			
+
 			if lineTravellerCount > 0 then
 				local lineVehicles = api.engine.system.transportVehicleSystem.getLineVehicles(line_id)
-				for _, vehicle_id in pairs(lineVehicles) do		
+				for _, vehicle_id in pairs(lineVehicles) do
 					local vehicle = api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
 					if vehicle and vehicle.config and vehicle.config.capacities[1] and vehicle.config.capacities[1] > 0 then
 						lineVehicleCount = lineVehicleCount + 1
 						lineCapacity = lineCapacity + vehicle.config.capacities[1]
 					end
-					
+
 					for _, traveller_id in pairs(lineTravellers) do
 						local traveller = api.engine.getComponent(traveller_id, api.type.ComponentType.SIM_PERSON_AT_VEHICLE)
-						if traveller and traveller.vehicle and traveller.vehicle == vehicle_id then	
+						if traveller and traveller.vehicle and traveller.vehicle == vehicle_id then
 							lineOccupancy = lineOccupancy + 1
 						end
 					end
-				end				
+				end
 
 				lineData[line_id] = {vehicles = lineVehicleCount, capacity = lineCapacity, occupancy = lineOccupancy, demand = lineTravellerCount, usage = math.round(100*lineOccupancy/lineCapacity), rate = helper.getLineRate(line_id)}
-			end			
+			end
 		end
 	end
 
@@ -138,9 +143,9 @@ return helper
 --      [7] = 0, TRAM
 --      [8] = 0,
 --      [9] = 0, RAIL
---      [10] = 0,
+--      [10] = 0, AIR
 --      [11] = 0,
---      [12] = 0, AIR
+--      [12] = 0,
 --      [13] = 0, WATER
 --      [14] = 0,
 --      [15] = 0,
