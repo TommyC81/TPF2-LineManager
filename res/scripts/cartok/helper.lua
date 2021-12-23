@@ -4,6 +4,21 @@
 
 local helper = {}
 
+---@param data userdata
+---@param id number
+---@return string
+---returns usage data string
+function helper.lineDump(data, id)
+	local use = "Usage: " .. data[id].usage .. "% "
+	use       = use .. "(" .. data[id].occupancy .. "/" .. data[id].capacity .. ") "
+	use       = use .. "Veh: " .. data[id].vehicles .. " "
+	use       = use .. "Demand: " .. data[id].demand .. " "
+	use       = use .. "Rate: " .. data[id].rate
+	return use
+end
+
+
+
 ---@param line_id number | string
 ---@return number : lineRate
 function helper.getLineRate(line_id)

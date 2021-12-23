@@ -13,6 +13,8 @@ local samples_since_last_update = 0
 
 local debugging                 = true --Enables additional printouts in order to make debugging easier
 
+
+
 --- @param lineVehicles userdata
 --- @return number
 --- finds the oldest vehicle on a line
@@ -121,9 +123,21 @@ local function sampleLines()
 
 	-- By initially just using the fresh lineData, no longer existing lines are removed. Does this cause increased memory/CPU usage?
 	sampledLineData = lineData
+
+	-- printing the list of lines sampled for additional debug info
 	if debugging then
 		log.info(sampled)
 	end
+end
+
+---@param line_id number
+---@return string
+---returns the output string of a successful line adjustment
+local function linePrint(line_id)
+	local res = "Line: " .. helper.getEntityName(line_id)
+	res       = res .. " (" .. line_id .. ") - "
+	res       = res .. helper.lineDump(sampledLineData, line_id)
+	return res
 end
 
 --- updates vehicle amount if applicable and line list in general
@@ -143,13 +157,13 @@ local function updateLines()
 			if sampledLineData[line_id].samples and sampledLineData[line_id].samples >= sample_size then
 				-- Check if a vehicle should be added to a Line.
 				if (sampledLineData[line_id].usage > 50 and sampledLineData[line_id].demand > sampledLineData[line_id].rate * 2) or (sampledLineData[line_id].usage > 80 and sampledLineData[line_id].demand > sampledLineData[line_id].rate * (sampledLineData[line_id].vehicles + 1) / sampledLineData[line_id].vehicles) then
-					print("Line: " .. helper.getEntityName(line_id) .. " (" .. line_id .. ") - Usage: " .. sampledLineData[line_id].usage .. "% (" .. sampledLineData[line_id].occupancy .. "/" .. sampledLineData[line_id].capacity .. ") Veh: " .. sampledLineData[line_id].vehicles .. " Demand: " .. sampledLineData[line_id].demand .. " Rate: " .. sampledLineData[line_id].rate)
+					print(linePrint(line_id))
 					sampledLineData[line_id].samples = sample_restart
 					addVehicle(line_id)
 					totalVehicleCount = totalVehicleCount + 1
 					-- Check instead whether a vehicle should be removed from a Line.
 				elseif sampledLineData[line_id].vehicles > 1 and sampledLineData[line_id].usage < 70 and sampledLineData[line_id].demand < sampledLineData[line_id].rate * (sampledLineData[line_id].vehicles - 1) / sampledLineData[line_id].vehicles then
-					print("Line: " .. helper.getEntityName(line_id) .. " (" .. line_id .. ") - Usage: " .. sampledLineData[line_id].usage .. "% (" .. sampledLineData[line_id].occupancy .. "/" .. sampledLineData[line_id].capacity .. ") Veh: " .. sampledLineData[line_id].vehicles .. " Demand: " .. sampledLineData[line_id].demand .. " Rate: " .. sampledLineData[line_id].rate)
+					print(linePrint(line_id))
 					sampledLineData[line_id].samples = sample_restart
 					removeVehicle(line_id)
 					totalVehicleCount = totalVehicleCount - 1
