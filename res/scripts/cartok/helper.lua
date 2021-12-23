@@ -149,7 +149,7 @@ function helper.getLineData()
 									  occupancy = lineOccupancy,
 									  demand    = lineTravellerCount,
 									  usage     = math.round(100 * lineOccupancy / lineCapacity),
-									  rate = helper.getLineRate(line_id),
+									  rate      = helper.getLineRate(line_id),
 									  name      = helper.getEntityName(line_id)
 				}
 			end

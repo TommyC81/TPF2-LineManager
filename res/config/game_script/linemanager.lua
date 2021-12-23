@@ -8,16 +8,15 @@ local update_interval           = 2 -- For every x sampling, do a vehicle update
 local sample_restart            = 2 -- Following an update of a Line, the number of recorded samples will be reset to this value for the line to delay an update until sufficient data is available
 local samples_since_last_update = 0
 
-local debugging                 = false --Enables additional printouts in order to make debugging easier
+local debugging                 = true --Enables additional printouts in order to make debugging easier
 
----@param line_id number
----removes oldest vehicle from said line
-local function removeVehicle(line_id)
-	local lineVehicles              = api.engine.system.transportVehicleSystem.getLineVehicles(line_id)
+--- @param lineVehicles userdata
+--- @return number
+--- finds the oldest vehicle on a line
+local function getOldestVehicle(lineVehicles)
 	local oldestVehicleId           = 0
 	local oldestVehiclePurchaseTime = 999999999999
 
-	-- Find the oldest vehicle on the line
 	for _, vehicle_id in pairs(lineVehicles) do
 		local vehicleInfo = api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
 		if vehicleInfo.transportVehicleConfig.vehicles[1].purchaseTime < oldestVehiclePurchaseTime then
@@ -25,6 +24,17 @@ local function removeVehicle(line_id)
 			oldestVehicleId           = vehicle_id
 		end
 	end
+
+	return oldestVehicleId
+end
+
+---@param line_id number
+---removes oldest vehicle from said line
+local function removeVehicle(line_id)
+	local lineVehicles    = api.engine.system.transportVehicleSystem.getLineVehicles(line_id)
+
+	-- Find the oldest vehicle on the line
+	local oldestVehicleId = getOldestVehicle(lineVehicles)
 
 	-- Remove/sell the oldest vehicle (instantly sells)
 	api.cmd.sendCommand(api.cmd.make.sellVehicle(oldestVehicleId))
@@ -144,7 +154,12 @@ local function updateLines()
 			end
 		end
 	end
-	log.info("Total Lines: " .. lineCount .. " Total Vehicles: " .. totalVehicleCount)
+	local deb = ""
+	if (debugging) then
+		local ignored = #api.engine.system.lineSystem.getLines() - lineCount
+		deb           = " ignoring " .. ignored .. " lines"
+	end
+	log.info("Total Lines: " .. lineCount .. " Total Vehicles: " .. totalVehicleCount .. deb)
 end
 
 ---updates the trackers of when the next update gets unlocked
