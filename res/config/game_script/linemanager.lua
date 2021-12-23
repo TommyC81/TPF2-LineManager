@@ -156,13 +156,13 @@ local function updateLines()
 			-- If a line has sufficient samples, then check whether vehicles should be added/removed.
 			if sampledLineData[line_id].samples and sampledLineData[line_id].samples >= sample_size then
 				-- Check if a vehicle should be added to a Line.
-				if (sampledLineData[line_id].usage > 50 and sampledLineData[line_id].demand > sampledLineData[line_id].rate * 2) or (sampledLineData[line_id].usage > 80 and sampledLineData[line_id].demand > sampledLineData[line_id].rate * (sampledLineData[line_id].vehicles + 1) / sampledLineData[line_id].vehicles) then
+				if helper.moreVehicleConditions(sampledLineData, line_id) then
 					print(linePrint(line_id))
 					sampledLineData[line_id].samples = sample_restart
 					addVehicle(line_id)
 					totalVehicleCount = totalVehicleCount + 1
 					-- Check instead whether a vehicle should be removed from a Line.
-				elseif sampledLineData[line_id].vehicles > 1 and sampledLineData[line_id].usage < 70 and sampledLineData[line_id].demand < sampledLineData[line_id].rate * (sampledLineData[line_id].vehicles - 1) / sampledLineData[line_id].vehicles then
+				elseif helper.lessVehiclesConditions(sampledLineData, line_id) then
 					print(linePrint(line_id))
 					sampledLineData[line_id].samples = sample_restart
 					removeVehicle(line_id)

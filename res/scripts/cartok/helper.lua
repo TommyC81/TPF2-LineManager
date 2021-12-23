@@ -4,6 +4,57 @@
 
 local helper = {}
 
+---@param data userdata : the sampledLineData
+---@param id number : the internal line number
+---@return boolean : whether there shall be a new vehicle added or not
+function helper.moreVehicleConditions(data, id)
+	-- a bunch of factors
+	local usage    = data[id].usage
+	local demand   = data[id].demand
+	local rate     = data[id].rate
+	local vehicles = data[id].vehicles
+
+	-- an array with conditions that warrant more vehicles
+	local rules    = {
+		usage > 50 and demand > rate * 2,
+		usage > 80 and demand > rate * (vehicles + 1) / vehicles
+	}
+
+	-- figuring out whether at least one condition is fulfilled
+	local res      = false
+	for i = 0, #rules do
+		if rules[i] then
+			res = true
+		end
+	end
+	return res
+end
+
+---@param data userdata : the sampledLineData variable
+---@param id number : the internal line number
+---@return boolean : whether the line warrants less vehicles
+function helper.lessVehiclesConditions(data, id)
+	-- a bunch of factors
+	local usage    = data[id].usage
+	local demand   = data[id].demand
+	local rate     = data[id].rate
+	local vehicles = data[id].vehicles
+
+	-- an array with conditions that warrant less vehicles
+	local rules    = {
+		vehicles > 1 and usage < 70 and demand < rate * (vehicles - 1) / vehicles
+	}
+
+	-- figuring out whether at least one condition is fulfilled
+	local res      = false
+	for i = 0, #rules do
+		if rules[i] then
+			res = true
+		end
+	end
+	return res
+end
+
 ---@param data userdata
 ---@param id number
 ---@return string
@@ -16,8 +67,6 @@ function helper.lineDump(data, id)
 	use       = use .. "Rate: " .. data[id].rate
 	return use
 end
-
-
 
 ---@param line_id number | string
 ---@return number : lineRate
