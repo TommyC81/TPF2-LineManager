@@ -1,5 +1,7 @@
 ---@author CARTOK wrote the bulk of the code while
 ---@author RusteyBucket rearranged it to lbe more readable and added some minor debugging improvements
+---@author CARTOK wrote the bulk of the code while
+---@author RusteyBucket rearranged it to lbe more readable and added some minor debugging improvements
 local log = require 'cartok/logging'
 local helper = require 'cartok/helper'
 
