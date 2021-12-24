@@ -171,11 +171,14 @@ local function updateLines()
 			end
 		end
 	end
+
+	-- little extra info when debugging
 	local deb = ""
 	if (debugging) then
 		local ignored = #api.engine.system.lineSystem.getLines() - lineCount
 		deb           = " ignoring " .. ignored .. " lines"
 	end
+
 	log.info("Total Lines: " .. lineCount .. " Total Vehicles: " .. totalVehicleCount .. deb)
 end
 

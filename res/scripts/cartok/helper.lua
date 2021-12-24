@@ -55,6 +55,34 @@ function helper.lessVehiclesConditions(data, id)
 	return res
 end
 
+---@param id number : general line info
+---@return boolean : or error, thus unsafe
+function helper.supportedRoute(id)
+	local line = api.engine.getComponent(id, api.type.ComponentType.LINE)
+	local info = line.vehicleInfo.transportModes
+
+	-- check whether the parameters actually work
+	if not line and line.vehicleInfo and line.vehicleInfo.transportModes then
+		return false
+	end
+	-- 4 = ROAD, 6 = TRAM, 7 = ELECTRIC_TRAM, 10 = AIR, 13 = WATER
+	local modes = {
+		info[4],
+		info[6],
+		info[7],
+		info[10],
+		info[13]
+	}
+
+	local res   = false
+	for i = 0, #modes do
+		if modes[i] == 1 then
+			res = true
+		end
+	end
+	return res
+end
+
 ---@param data userdata
 ---@param id number
 ---@return string
@@ -175,13 +203,7 @@ function helper.getLineData()
 
 	for _, line_id in pairs(lines) do
 		-- Check type of line first
-		local line = api.engine.getComponent(line_id, api.type.ComponentType.LINE)
-		-- transportModes[4] = ROAD, transportModes[7] = TRAM, transportModes[10] = AIR, transportModes[13] = WATER
-		if line and line.vehicleInfo and line.vehicleInfo.transportModes
-				and (line.vehicleInfo.transportModes[4] == 1 or
-				line.vehicleInfo.transportModes[7] == 1 or
-				line.vehicleInfo.transportModes[10] == 1 or
-				line.vehicleInfo.transportModes[13] == 1) then
+		if helper.supportedRoute(line_id) then
 			local lineVehicleCount   = 0
 			local lineCapacity       = 0
 			local lineOccupancy      = 0
