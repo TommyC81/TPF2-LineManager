@@ -9,16 +9,16 @@ local helper = {}
 ---@return boolean : whether there shall be a new vehicle added or not
 function helper.moreVehicleConditions( data, id )
     -- a bunch of factors
-	local usage    = data[id].usage
-	local demand   = data[id].demand
-	local rate     = data[id].rate
+    local usage    = data[id].usage
+    local demand   = data[id].demand
+    local rate     = data[id].rate
     local vehicles = data[id].vehicles
 
     -- an array with conditions that warrant more vehicles
-	local rules    = {
-		usage > 50 and demand > rate * 2,
-		usage > 80 and demand > rate * (vehicles + 1) / vehicles
-	}
+    local rules    = {
+        usage > 50 and demand > rate * 2,
+        usage > 80 and demand > rate * (vehicles + 1) / vehicles
+    }
 
     -- figuring out whether at least one condition is fulfilled
     local res      = false
@@ -35,15 +35,15 @@ end
 ---@return boolean : whether the line warrants less vehicles
 function helper.lessVehiclesConditions( data, id )
     -- a bunch of factors
-	local usage    = data[id].usage
-	local demand   = data[id].demand
-	local rate     = data[id].rate
+    local usage    = data[id].usage
+    local demand   = data[id].demand
+    local rate     = data[id].rate
     local vehicles = data[id].vehicles
 
     -- an array with conditions that warrant less vehicles
-	local rules    = {
-		vehicles > 1 and usage < 70 and demand < rate * (vehicles - 1) / vehicles
-	}
+    local rules    = {
+        vehicles > 1 and usage < 70 and demand < rate * (vehicles - 1) / vehicles
+    }
 
     -- figuring out whether at least one condition is fulfilled
     local res      = false
@@ -66,13 +66,13 @@ function helper.supportedRoute( id )
         return false
     end
     -- 4 = ROAD, 6 = TRAM, 7 = ELECTRIC_TRAM, 10 = AIR, 13 = WATER
-	local modes = {
-		info[4],
-		info[6],
-		info[7],
-		info[10],
-		info[13]
-	}
+    local modes = {
+        info[4],
+        info[6],
+        info[7],
+        info[10],
+        info[13]
+    }
 
     local res = false
     for i = 0, #modes do
@@ -199,16 +199,16 @@ end
 
 ---@return table : containing line_id, vehicles, capacity, occupancy, usage, demand and rate
 function helper.getLineData()
-	local lines             = helper.getPlayerLines()
-	local lineData          = {}
+    local lines             = helper.getPlayerLines()
+    local lineData          = {}
     local totalVehicleCount = 0
 
     for _, line_id in pairs( lines ) do
         -- Check type of line first
-		if helper.supportedRoute(line_id) then
-			local lineVehicleCount   = 0
-			local lineCapacity       = 0
-			local lineOccupancy      = 0
+        if helper.supportedRoute(line_id) then
+            local lineVehicleCount   = 0
+            local lineCapacity       = 0
+            local lineOccupancy      = 0
             local lineTravellerCount = 0
 
             local lineTravellers     = api.engine.system.simPersonSystem.getSimPersonsForLine( line_id )
