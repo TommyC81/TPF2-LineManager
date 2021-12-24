@@ -38,6 +38,7 @@ vehicles on bus lines accordingly. Only live data is used.
       number is what as of yet, though we're on it).
 * The linemanager.lua file contains the execution functions that actually make things work, if you're determined, you
   can change stuff there.
+    * the variable debugging enables some extra console printouts like a list of the managed lines after each sampling.
 * Obviously cause the game to crash on loading or on reaching the clause that breaks the code.
 * Maybe even worse, who knows.
 
