@@ -7,11 +7,15 @@ local helper = require 'cartok/helper'
 local last_sampled_month = -1 -- Keeps track of what month number the last sample was taken.
 local sample_size = 6
 local sampledLineData = {}
+local sampledIgnoredLines = {}
 local update_interval = 2 -- For every x sampling, do a vehicle update (check if a vehicle should be added or removed)
 local sample_restart = 2 -- Following an update of a Line, the number of recorded samples will be reset to this value for the line to delay an update until sufficient data is available
 local samples_since_last_update = 0
 
 local debugging = true --Enables additional printouts in order to make debugging easier
+local debName = true --prints the name of the lines being managed
+local debNum = true --prints the EntityNumber of the lines being managed
+local getIgnored = true --also prints a list of ignored lines
 
 --- @param lineVehicles userdata
 --- @return number
@@ -102,8 +106,9 @@ end
 ---takes data samples of all applicable lines
 local function sampleLines()
     log.info("============ Sampling ============")
-    local lineData = helper.getLineData()
-    local sampled = "Sampled: "
+    local lineData
+    lineData, sampledIgnoredLines = helper.getLineData()
+    local sampled = {}
 
     for line_id, line_data in pairs(lineData) do
         if sampledLineData[line_id] then
@@ -117,7 +122,8 @@ local function sampleLines()
         else
             lineData[line_id].samples = 1
         end
-        sampled = sampled .. lineData[line_id].name .. ", "
+        local name = helper.identify(line_id, debNum, debName)
+        table.insert(sampled, name)
     end
 
     -- By initially just using the fresh lineData, no longer existing lines are removed. Does this cause increased memory/CPU usage?
@@ -125,7 +131,25 @@ local function sampleLines()
 
     -- printing the list of lines sampled for additional debug info
     if debugging then
-        log.info(sampled)
+
+        --sort sampled by letter
+        table.sort(sampled)
+
+        local res = helper.stringUp("Sampled: ", sampled, debName)
+
+        --also print the ignored ones if desired
+        if getIgnored then
+            local igno = {}
+            for i = 1, #sampledIgnoredLines do
+                local name = helper.identify(sampledIgnoredLines[i], debNum, debName)
+                table.insert(igno, name)
+            end
+            table.sort(igno)
+            res = res .. "\nIgnored:"
+            res = helper.stringUp(res, igno, debName)
+        end
+
+        print(res)
     end
 end
 
@@ -174,8 +198,8 @@ local function updateLines()
     -- little extra info when debugging
     local deb = ""
     if (debugging) then
-        local ignored = #api.engine.system.lineSystem.getLines() - lineCount
-        deb = " ignoring " .. ignored .. " lines"
+        local ignoredLines = #helper.getPlayerLines() - lineCount
+        deb = " ignoring " .. ignoredLines .. " lines"
     end
 
     log.info("Total Lines: " .. lineCount .. " Total Vehicles: " .. totalVehicleCount .. deb)
