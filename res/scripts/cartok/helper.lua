@@ -72,6 +72,7 @@ function helper.supportedRoute(id)
         info[6],
         info[7],
         info[10],
+        info[12],
         info[13]
     }
 
