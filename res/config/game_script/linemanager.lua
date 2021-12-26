@@ -103,7 +103,7 @@ end
 local function sampleLines()
     log.info("============ Sampling ============")
     local lineData = helper.getLineData()
-    local sampled = "Sampled: "
+    local sampled = {}
 
     for line_id, line_data in pairs(lineData) do
         if sampledLineData[line_id] then
@@ -117,7 +117,7 @@ local function sampleLines()
         else
             lineData[line_id].samples = 1
         end
-        sampled = sampled .. lineData[line_id].name .. ", "
+        table.insert(sampled, lineData[line_id].name)
     end
 
     -- By initially just using the fresh lineData, no longer existing lines are removed. Does this cause increased memory/CPU usage?
@@ -125,7 +125,27 @@ local function sampleLines()
 
     -- printing the list of lines sampled for additional debug info
     if debugging then
-        log.info(sampled)
+
+        --sort sampled by letter
+        table.sort(sampled)
+
+        local res = "Sampled: "
+        local first = ""
+
+        --space the lines by prefix
+        for i = 1, #sampled do
+            local start = tostring(sampled[i])
+            local prefEnd = string.find(start, " ")
+            local pref = string.sub(start, 1, prefEnd)
+            if first == pref then
+                res = res .. start .. ", "
+            else
+                first = pref
+                res = res .. "\n" .. start .. ", "
+            end
+        end
+
+        print(res)
     end
 end
 
