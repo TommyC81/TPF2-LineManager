@@ -66,12 +66,13 @@ function helper.supportedRoute(id)
     if not line and line.vehicleInfo and line.vehicleInfo.transportModes then
         return false
     end
-    -- 4 = ROAD, 6 = TRAM, 7 = ELECTRIC_TRAM, 10 = AIR, 13 = WATER
+    -- 4 = ROAD, 6 = TRAM, 7 = ELECTRIC_TRAM, 10 = AIR, 11 = WATER_LARGE, 13 = WATER_SMALL
     local modes = {
         info[4],
         info[6],
         info[7],
         info[10],
+        info[11],
         info[12],
         info[13]
     }
@@ -262,14 +263,14 @@ return helper
 --      [3] = 0,
 --      [4] = 0, ROAD
 --      [5] = 0,
---      [6] = 0,
---      [7] = 0, TRAM
---      [8] = 0,
+--      [6] = 0, TRAM
+--      [7] = 0, ELECTRIC_TRAM
+--      [8] = 0, RAIL STEAM
 --      [9] = 0, RAIL
 --      [10] = 0, AIR
---      [11] = 0,
+--      [11] = 0, WATER LARGE
 --      [12] = 0,
---      [13] = 0, WATER
+--      [13] = 0, WATER SMALL
 --      [14] = 0,
 --      [15] = 0,
 --      [16] = 0,
@@ -282,16 +283,16 @@ return helper
 --      [2] = 0,
 --      [3] = 0,
 --      [4] = 0,
---      [5] = 0,
+--      [5] = 0, STONE
 --      [6] = 0,
---      [7] = 0,
+--      [7] = 0, CRUDE OIL
 --      [8] = 0,
 --      [9] = 0,
 --      [10] = 0,
---      [11] = 0,
+--      [11] = 0, OIL
 --      [12] = 0,
 --      [13] = 0,
---      [14] = 0,
+--      [14] = 0, FUEL
 --      [15] = 0,
 --      [16] = 0,
 --      [17] = 0,

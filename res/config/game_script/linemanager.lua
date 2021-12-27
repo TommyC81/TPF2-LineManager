@@ -12,6 +12,9 @@ local sample_restart = 2 -- Following an update of a Line, the number of recorde
 local samples_since_last_update = 0
 
 local debugging = true --Enables additional printouts in order to make debugging easier
+local sortBy = " " --End of the prefix symbol between "", leave false to disable
+local debName = true --prints the name of the lines being managed
+local debNum = true --prints the EntityNumber of the lines being managed
 
 --- @param lineVehicles userdata
 --- @return number
@@ -117,7 +120,15 @@ local function sampleLines()
         else
             lineData[line_id].samples = 1
         end
-        table.insert(sampled, lineData[line_id].name)
+        local deb = nil
+        if (debName and debNum) then
+            deb = lineData[line_id].name .. "(" .. line_id .. ")"
+        elseif (debName) then
+            deb = lineData[line_id].name
+        elseif (debNum) then
+            deb = line_id
+        end
+        table.insert(sampled, deb)
     end
 
     -- By initially just using the fresh lineData, no longer existing lines are removed. Does this cause increased memory/CPU usage?
@@ -135,13 +146,17 @@ local function sampleLines()
         --space the lines by prefix
         for i = 1, #sampled do
             local start = tostring(sampled[i])
-            local prefEnd = string.find(start, " ")
-            local pref = string.sub(start, 1, prefEnd)
-            if first == pref then
-                res = res .. start .. ", "
+            if (sortBy and debName) then
+                local prefEnd = string.find(start, sortBy)
+                local pref = string.sub(start, 1, prefEnd)
+                if first == pref then
+                    res = res .. start .. ", "
+                else
+                    first = pref
+                    res = res .. "\n" .. start .. ", "
+                end
             else
-                first = pref
-                res = res .. "\n" .. start .. ", "
+                res = res .. start .. ", "
             end
         end
 
