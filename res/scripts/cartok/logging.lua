@@ -30,11 +30,11 @@ logging.levels = {
 local currentLogLevel = INFO
 local verboseDebugging = true
 
-function logging.setLevel( level )
+function logging.setLevel(level)
     currentLogLevel = level or DEFAULT
 end
 
-function setVerboseDebugging( verbose )
+function setVerboseDebugging(verbose)
     verboseDebugging = verbose
 end
 
@@ -46,30 +46,30 @@ function logging.isVerboseDebugging()
     return currentLogLevel >= DEBUG and verboseDebugging
 end
 
-function logging.log( level, message )
+function logging.log(level, message)
     if level >= currentLogLevel then
-        print( '[LineManager][' .. os.date( '%H:%M:%S' ) .. '][' .. levelNames[level] .. '] ' .. message ) -- Date/time output shortened from %Y-%m-%d %H:%M:%S
+        print('[LineManager][' .. os.date('%H:%M:%S') .. '][' .. levelNames[level] .. '] ' .. message) -- Date/time output shortened from %Y-%m-%d %H:%M:%S
     end
 end
 
-function logging.trace( message )
-    logging.log( TRACE, message )
+function logging.trace(message)
+    logging.log(TRACE, message)
 end
 
-function logging.debug( message )
-    logging.log( DEBUG, message )
+function logging.debug(message)
+    logging.log(DEBUG, message)
 end
 
-function logging.info( message )
-    logging.log( INFO, message )
+function logging.info(message)
+    logging.log(INFO, message)
 end
 
-function logging.warn( message )
-    logging.log( WARN, message )
+function logging.warn(message)
+    logging.log(WARN, message)
 end
 
-function logging.error( message )
-    logging.log( ERROR, message )
+function logging.error(message)
+    logging.log(ERROR, message)
 end
 
 return logging
