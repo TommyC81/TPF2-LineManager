@@ -1,4 +1,5 @@
--- From https://github.com/IncredibleHannes/TPF2-Timetables
+-- Contains code from https://github.com/IncredibleHannes/TPF2-Timetables
+---@author CARTOK expanded with some additional functions and tweaks
 
 local logging = {}
 
@@ -11,51 +12,64 @@ local ERROR = 5
 local DEFAULT = INFO
 
 local levelNames = {
-  [TRACE] = 'TRACE',
-  [DEBUG] = 'DEBUG',
-  [INFO] = 'INFO',
-  [WARN] = 'WARN',
-  [ERROR] = 'ERROR',
+    [TRACE] = 'TRACE',
+    [DEBUG] = 'DEBUG',
+    [INFO] = 'INFO',
+    [WARN] = 'WARN',
+    [ERROR] = 'ERROR',
 }
 
 logging.levels = {
-  TRACE = TRACE,
-  DEBUG = DEBUG,
-  INFO = INFO,
-  WARN = WARN,
-  ERROR = ERROR,
+    TRACE = TRACE,
+    DEBUG = DEBUG,
+    INFO = INFO,
+    WARN = WARN,
+    ERROR = ERROR,
 }
 
 local currentLogLevel = INFO
+local verboseDebugging = true
 
-function logging.setLevel(level)
-  currentLogLevel = level
+function logging.setLevel( level )
+    currentLogLevel = level or DEFAULT
 end
 
-function logging.log(level, message)
-  if level >= currentLogLevel then
-    print('[LineManager][' .. os.date('%Y-%m-%d %H:%M:%S') .. '][' .. levelNames[level] .. '] ' .. message)
-  end
+function setVerboseDebugging( verbose )
+    verboseDebugging = verbose
 end
 
-function logging.trace(message)
-  logging.log(TRACE, message)
+function logging.isDebugging()
+    return currentLogLevel >= DEBUG
 end
 
-function logging.debug(message)
-  logging.log(DEBUG, message)
+function logging.isVerboseDebugging()
+    return currentLogLevel >= DEBUG and verboseDebugging
 end
 
-function logging.info(message)
-  logging.log(INFO, message)
+function logging.log( level, message )
+    if level >= currentLogLevel then
+        print( '[LineManager][' .. os.date( '%H:%M:%S' ) .. '][' .. levelNames[level] .. '] ' .. message ) -- Date/time output shortened from %Y-%m-%d %H:%M:%S
+    end
 end
 
-function logging.warn(message)
-  logging.log(WARN, message)
+function logging.trace( message )
+    logging.log( TRACE, message )
 end
 
-function logging.error(message)
-  logging.log(ERROR, message)
+function logging.debug( message )
+    logging.log( DEBUG, message )
+end
+
+function logging.info( message )
+    logging.log( INFO, message )
+end
+
+function logging.warn( message )
+    logging.log( WARN, message )
+end
+
+function logging.error( message )
+    logging.log( ERROR, message )
 end
 
 return logging
