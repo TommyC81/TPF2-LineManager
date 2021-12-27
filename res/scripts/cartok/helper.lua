@@ -4,6 +4,8 @@
 
 local helper = {}
 
+local sortBy = " " --End of the prefix symbol between "", leave false to disable
+
 ---@param data userdata : the sampledLineData
 ---@param id number : the internal line number
 ---@return boolean : whether there shall be a new vehicle added or not
@@ -204,6 +206,7 @@ end
 function helper.getLineData()
     local lines = helper.getPlayerLines()
     local lineData = {}
+    local ignored = {}
     local totalVehicleCount = 0
 
     for _, line_id in pairs(lines) do
@@ -246,11 +249,59 @@ function helper.getLineData()
                     rate = helper.getLineRate(line_id),
                     name = helper.getEntityName(line_id),
                 }
+            else
+                table.insert(ignored, line_id)
             end
+        else
+            table.insert(ignored, line_id)
         end
     end
 
-    return lineData
+    return lineData, ignored
+end
+
+---strings together line name and line id depending on what is chosen in linemanager.lua
+---@param id number : line ID
+---@param num boolean : whether to print numbers
+---@param nam boolean : whether to print names
+---@return string : the line name in desired form
+function helper.identify(id, num, nam)
+    local name = helper.getEntityName(id)
+    local res
+    if (num and nam) then
+        res = name .. "(" .. id .. ")"
+    elseif (nam) then
+        res = name
+    elseif (num) then
+        res = id
+    end
+    return res
+end
+
+---slightly specialized array to string that inserts a linebreak whenever the first word in the array changes
+---@param introduction string : the leading sentence of the data
+---@param array table : the array to be strung up
+---@return string : introduction + array + some line breaks if applicable
+function helper.stringUp(introduction, array, nam)
+    local first = ""
+
+    --space the lines by prefix
+    for i = 1, #array do
+        local start = tostring(array[i])
+        if (sortBy and nam) then
+            local prefEnd = string.find(start, sortBy)
+            local pref = string.sub(start, 1, prefEnd)
+            if first == pref then
+                introduction = introduction .. start .. ", "
+            else
+                first = pref
+                introduction = introduction .. "\n" .. start .. ", "
+            end
+        else
+            introduction = introduction .. start .. ", "
+        end
+    end
+    return introduction
 end
 
 return helper

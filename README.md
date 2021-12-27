@@ -36,15 +36,17 @@ vehicles on bus lines accordingly. Only live data is used.
     * helper.lessVehiclesConditions() contains the rules that determine if there are too many vehicles on a line.
     * helper.supportedRoute() contains the categories of vehicles supported by this mod (We're snot entirely sure what
       number is what as of yet, though we're on it).
-* The linemanager.lua file contains the execution functions that actually make things work, if you're determined, you
-  can change stuff there.
-    * The variable debugging enables some extra console printouts like a list of the managed lines after each sampling.
     * The variable sortTo contains a string that denotes the end of the prefix in order to put each prefix on a separate
       line for easier checking whether the lines are being managed. Per default that's set to a space. Replacing the
       quote with a nil should disable this feature.
+
+* The linemanager.lua file contains the execution functions that actually make things work, if you're determined, you
+  can change stuff there.
+    * The variable debugging enables some extra console printouts like a list of the managed lines after each sampling.
     * The variables debName and debNum control whether the debugging mode includes a list containing the line name (User
       set name) or the entity number (internal name) of the lines being managed (both true is also possible and the
       default), replace the true with false if that information is not desirable.
+    * the variable getIgnored enables you to get a list of the not managed lines in addition to the managed ones.
 * Obviously cause the game to crash on loading or on reaching the clause that breaks the code.
 * Maybe even worse, who knows.
 

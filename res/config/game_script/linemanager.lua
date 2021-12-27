@@ -7,14 +7,15 @@ local helper = require 'cartok/helper'
 local last_sampled_month = -1 -- Keeps track of what month number the last sample was taken.
 local sample_size = 6
 local sampledLineData = {}
+local sampledIgnoredLines = {}
 local update_interval = 2 -- For every x sampling, do a vehicle update (check if a vehicle should be added or removed)
 local sample_restart = 2 -- Following an update of a Line, the number of recorded samples will be reset to this value for the line to delay an update until sufficient data is available
 local samples_since_last_update = 0
 
 local debugging = true --Enables additional printouts in order to make debugging easier
-local sortBy = " " --End of the prefix symbol between "", leave false to disable
 local debName = true --prints the name of the lines being managed
 local debNum = true --prints the EntityNumber of the lines being managed
+local getIgnored = true --also prints a list of ignored lines
 
 --- @param lineVehicles userdata
 --- @return number
@@ -105,7 +106,8 @@ end
 ---takes data samples of all applicable lines
 local function sampleLines()
     log.info("============ Sampling ============")
-    local lineData = helper.getLineData()
+    local lineData
+    lineData, sampledIgnoredLines = helper.getLineData()
     local sampled = {}
 
     for line_id, line_data in pairs(lineData) do
@@ -120,15 +122,8 @@ local function sampleLines()
         else
             lineData[line_id].samples = 1
         end
-        local deb = nil
-        if (debName and debNum) then
-            deb = lineData[line_id].name .. "(" .. line_id .. ")"
-        elseif (debName) then
-            deb = lineData[line_id].name
-        elseif (debNum) then
-            deb = line_id
-        end
-        table.insert(sampled, deb)
+        local name = helper.identify(line_id, debNum, debName)
+        table.insert(sampled, name)
     end
 
     -- By initially just using the fresh lineData, no longer existing lines are removed. Does this cause increased memory/CPU usage?
@@ -140,24 +135,18 @@ local function sampleLines()
         --sort sampled by letter
         table.sort(sampled)
 
-        local res = "Sampled: "
-        local first = ""
+        local res = helper.stringUp("Sampled: ", sampled, debName)
 
-        --space the lines by prefix
-        for i = 1, #sampled do
-            local start = tostring(sampled[i])
-            if (sortBy and debName) then
-                local prefEnd = string.find(start, sortBy)
-                local pref = string.sub(start, 1, prefEnd)
-                if first == pref then
-                    res = res .. start .. ", "
-                else
-                    first = pref
-                    res = res .. "\n" .. start .. ", "
-                end
-            else
-                res = res .. start .. ", "
+        --also print the ignored ones if desired
+        if getIgnored then
+            local igno = {}
+            for i = 1, #sampledIgnoredLines do
+                local name = helper.identify(sampledIgnoredLines[i], debNum, debName)
+                table.insert(igno, name)
             end
+            table.sort(igno)
+            res = res .. "\nIgnored:"
+            res = helper.stringUp(res, igno, debName)
         end
 
         print(res)
@@ -209,8 +198,8 @@ local function updateLines()
     -- little extra info when debugging
     local deb = ""
     if (debugging) then
-        local ignored = #api.engine.system.lineSystem.getLines() - lineCount
-        deb = " ignoring " .. ignored .. " lines"
+        local ignoredLines = #helper.getPlayerLines() - lineCount
+        deb = " ignoring " .. ignoredLines .. " lines"
     end
 
     log.info("Total Lines: " .. lineCount .. " Total Vehicles: " .. totalVehicleCount .. deb)
