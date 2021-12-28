@@ -34,7 +34,7 @@ function logging.setLevel( level )
 	currentLogLevel = level or DEFAULT
 end
 
-function setVerboseDebugging( verbose )
+function logging.setVerboseDebugging( verbose )
 	verboseDebugging = verbose
 end
 
