@@ -56,7 +56,7 @@ Inspired by and uses some functionality from https://github.com/IncredibleHannes
 
 ## What you can do by mucking around in the mod file
 
-* The helper.lua file contains much of the identification logic such as:
+* The `helper.lua` file contains much of the identification logic such as:
     * `helper.moreVehiclesConditions()` contains the rules that determine if there should be another vehicle added to a
       line.
     * `helper.lessVehiclesConditions()` contains the rules that determine if there are too many vehicles on a line.
