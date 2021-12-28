@@ -1,8 +1,8 @@
 function data()
 	return {
 		info = {
-			name = _("Name"),
-			description = _("Description"),
+			name = _( "Name" ),
+			description = _( "Description" ),
 			minorVersion = 6,
 			severityAdd = "NONE",
 			severityRemove = "NONE",
@@ -16,7 +16,11 @@ function data()
 					name = "Celmi", -- author name
 					role = "OTHER", -- OPTIONAL "CREATOR", "CO_CREATOR", "TESTER" or "BASED_ON" or "OTHER"
 				},
+				{
+					name = "RusteyBucket", -- other author, kinda									
+					role = "OTHER", -- OPTIONAL "CREATOR", "CO_CREATOR", "TESTER" or "BASED_ON" or "OTHER"
+				},
 			},
-		}
+		},
 	}
 end

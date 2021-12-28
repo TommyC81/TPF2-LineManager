@@ -12,64 +12,64 @@ local ERROR = 5
 local DEFAULT = INFO
 
 local levelNames = {
-    [TRACE] = 'TRACE',
-    [DEBUG] = 'DEBUG',
-    [INFO] = 'INFO',
-    [WARN] = 'WARN',
-    [ERROR] = 'ERROR',
+	[TRACE] = 'TRACE',
+	[DEBUG] = 'DEBUG',
+	[INFO] = 'INFO',
+	[WARN] = 'WARN',
+	[ERROR] = 'ERROR',
 }
 
 logging.levels = {
-    TRACE = TRACE,
-    DEBUG = DEBUG,
-    INFO = INFO,
-    WARN = WARN,
-    ERROR = ERROR,
+	TRACE = TRACE,
+	DEBUG = DEBUG,
+	INFO = INFO,
+	WARN = WARN,
+	ERROR = ERROR,
 }
 
 local currentLogLevel = INFO
 local verboseDebugging = true
 
 function logging.setLevel( level )
-    currentLogLevel = level or DEFAULT
+	currentLogLevel = level or DEFAULT
 end
 
 function setVerboseDebugging( verbose )
-    verboseDebugging = verbose
+	verboseDebugging = verbose
 end
 
 function logging.isDebugging()
-    return currentLogLevel >= DEBUG
+	return currentLogLevel >= DEBUG
 end
 
 function logging.isVerboseDebugging()
-    return currentLogLevel >= DEBUG and verboseDebugging
+	return currentLogLevel >= DEBUG and verboseDebugging
 end
 
 function logging.log( level, message )
-    if level >= currentLogLevel then
-        print( '[LineManager][' .. os.date( '%H:%M:%S' ) .. '][' .. levelNames[level] .. '] ' .. message ) -- Date/time output shortened from %Y-%m-%d %H:%M:%S
-    end
+	if level >= currentLogLevel then
+		print( '[LineManager][' .. os.date( '%H:%M:%S' ) .. '][' .. levelNames[level] .. '] ' .. message ) -- Date/time output shortened from %Y-%m-%d %H:%M:%S
+	end
 end
 
 function logging.trace( message )
-    logging.log( TRACE, message )
+	logging.log( TRACE, message )
 end
 
 function logging.debug( message )
-    logging.log( DEBUG, message )
+	logging.log( DEBUG, message )
 end
 
 function logging.info( message )
-    logging.log( INFO, message )
+	logging.log( INFO, message )
 end
 
 function logging.warn( message )
-    logging.log( WARN, message )
+	logging.log( WARN, message )
 end
 
 function logging.error( message )
-    logging.log( ERROR, message )
+	logging.log( ERROR, message )
 end
 
 return logging
