@@ -43,8 +43,8 @@ Inspired by and uses some functionality from https://github.com/IncredibleHannes
 
 * The mod takes one usage, rate and demand sample per line per in-game month.
 * Every second in-game month, lines are updated to add/remove vehicles as appropriate.
-* Thus, performance impact should be negligible. This has not been studied in-depth, but no effect of the sampling/updates
-  has been observed in games with hundreds of lines/buses/trams/aircraft/ships.
+* Thus, performance impact should be negligible. This has not been studied in-depth, but no effect of the
+  sampling/updates has been observed in games with hundreds of lines/buses/trams/aircraft/ships.
 
 ## Untested
 
@@ -67,3 +67,12 @@ Inspired by and uses some functionality from https://github.com/IncredibleHannes
     * Uncomment the line `log.setLevel(log.levels.DEBUG)` to avail additional in-game console debugging output.
 * Any changes made to the code could obviously cause the game to crash on loading or on reaching the clause that breaks
   the code. Maybe even worse, who knows.
+
+## How to Contribute
+
+If you want to contribute to this project, open an issue on GitHub, or create a fork/branch of the project, and work on
+your fork/branch. When you are done and want to integrate it, open a Pull Request (PR) aimed at the main branch.
+You can of course open a PR early to get feedback if you like. After review and required adjustments, the pull request
+can be merged into the main project. Make sure you (re)base your fork/branch on the latest version to ensure your
+fork/branch is up-to-date and can be merged without conflicts. Squash your commits as required to maintain a clean
+commit history.
