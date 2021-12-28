@@ -24,7 +24,7 @@ function helper.moreVehicleConditions( data, id )
 
 	-- figuring out whether at least one condition is fulfilled
 	local res = false
-	for i = 0, #rules do
+	for i = 1, #rules do
 		if rules[i] then
 			res = true
 		end
@@ -49,7 +49,7 @@ function helper.lessVehiclesConditions( data, id )
 
 	-- figuring out whether at least one condition is fulfilled
 	local res = false
-	for i = 0, #rules do
+	for i = 1, #rules do
 		if rules[i] then
 			res = true
 		end
@@ -80,7 +80,7 @@ function helper.supportedLine( line_id )
 	}
 
 	local res = false
-	for i = 0, #transportModes do
+	for i = 1, #transportModes do
 		if transportModes[i] == 1 then
 			res = true
 		end
