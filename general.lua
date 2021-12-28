@@ -1,0 +1,58 @@
+-- GENERAL USEFUL COMMANDS
+--
+-- Get all player lines
+--   api.engine.system.lineSystem.getLinesForPlayer( api.engine.util.getPlayer() )
+--
+-- Get vehicles of a specific line (make sure to replace "line_id")
+--   api.engine.system.transportVehicleSystem.getLineVehicles( line_id )
+--
+-- Get transport vehicle info (make sure to replace "vehicle_id")
+--   api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
+--
+-- Or combine into one call (make sure to replace "line_id")
+--   api.engine.getComponent( api.engine.system.transportVehicleSystem.getLineVehicles( line_id )[1], api.type.ComponentType.TRANSPORT_VEHICLE )
+--
+-- api.engine.getComponent(line_id, api.type.ComponentType.LINE)
+-- vehicleInfo = {
+--    transportModes = {
+--      [1]  = 0, (PERSON)
+--      [2]  = 0, (CARGO)
+--      [3]  = 0, (CAR)
+--      [4]  = 0, BUS
+--      [5]  = 0, TRUCK
+--      [6]  = 0, TRAM
+--      [7]  = 0, ELECTRIC_TRAM
+--      [8]  = 0, TRAIN
+--      [9]  = 0, ELECTRIC_TRAIN
+--      [10] = 0, AIRCRAFT
+--      [11] = 0, SHIP
+--      [12] = 0, SMALL_AIRCRAFT
+--      [13] = 0, SMALL_SHIP
+--      [14] = 0,
+--      [15] = 0,
+--      [16] = 0,
+--    },
+-- Note: The above seems to correspond to the list here (+1 to account for LUA starting arrays at 1): https://transportfever2.com/wiki/api/modules/api.type.html#enum.TransportMode
+--
+--
+-- api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
+-- config = {
+--    capacities = {
+--      [1]  = 0, PASSENGERS
+--      [2]  = 0,
+--      [3]  = 0,
+--      [4]  = 0,
+--      [5]  = 0, STONE
+--      [6]  = 0,
+--      [7]  = 0, CRUDE_OIL
+--      [8]  = 0,
+--      [9]  = 0,
+--      [10] = 0,
+--      [11] = 0, OIL
+--      [12] = 0,
+--      [13] = 0,
+--      [14] = 0, FUEL
+--      [15] = 0,
+--      [16] = 0,
+--      [17] = 0,
+--    },

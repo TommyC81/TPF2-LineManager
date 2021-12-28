@@ -3,6 +3,7 @@
 
 local log = require 'cartok/logging'
 local helper = require 'cartok/helper'
+local enums = require 'cartok/enums'
 
 local last_sampled_month = -1 -- Keeps track of what month number the last sample was taken.
 local sample_size = 6
