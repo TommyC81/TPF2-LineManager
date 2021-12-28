@@ -119,9 +119,10 @@ local function sampleLines()
 	for line_id, line_data in pairs( sampledLineData ) do
 		if currentLineData[line_id] then
 			sampledLineData[line_id].samples = currentLineData[line_id].samples + 1
-			-- sampledLineData[line_id].vehicles = line_data.vehicles
-			-- sampledLineData[line_id].capacity = line_data.capacity
-			-- sampledLineData[line_id].occupancy = line_data.occupancy
+			-- The below ones are already captured in the fresh sample taken, no need to overwrite those values.
+			-- sampledLineData[line_id].vehicles = currentLineData[line_id].vehicles
+			-- sampledLineData[line_id].capacity = currentLineData[line_id].capacity
+			-- sampledLineData[line_id].occupancy = currentLineData[line_id].occupancy
 			sampledLineData[line_id].demand = math.round( ((currentLineData[line_id].demand * (sample_size - 1)) + line_data.demand) / sample_size )
 			sampledLineData[line_id].usage = math.round( ((currentLineData[line_id].usage * (sample_size - 1)) + line_data.usage) / sample_size )
 			sampledLineData[line_id].rate = line_data.rate
@@ -165,14 +166,6 @@ local function sampleLines()
 			log.debug( debugOutput )
 		end
 	end
-end
-
----@param line_id number
----@return string
----returns the output string of a successful line adjustment
-local function linePrint( line_id )
-	local res = helper.printLine( line_id ) .. " - " .. helper.printLineData( currentLineData, line_id )
-	return res
 end
 
 --- updates vehicle amount if applicable and line list in general
