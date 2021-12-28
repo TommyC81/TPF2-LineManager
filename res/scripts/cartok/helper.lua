@@ -4,6 +4,9 @@
 
 local helper = {}
 
+--change the vehicle conditions to a preset favored by one of the authors
+local conditionpreset = "CARTOK"
+
 ---@param data userdata : the LineData (from helper.getLineData)
 ---@param id number : the id of the line
 ---@return boolean : whether a vehicle should be added to the line
@@ -15,10 +18,22 @@ function helper.moreVehicleConditions(data, id)
     local vehicles = data[id].vehicles
 
     -- an array with conditions that warrant more vehicles
-    local rules = {
-        usage > 50 and demand > rate * 2,
-        usage > 80 and demand > rate * (vehicles + 1) / vehicles
-    }
+    local rules
+
+    -- change the rules to the ones figured out by CARTOK
+    if conditionpreset == "CARTOK" then
+        rules = {
+            usage > 50 and demand > rate * 2,
+            usage > 80 and demand > rate * (vehicles + 1) / vehicles
+        }
+
+        -- change the array to the ones favored by RusteyBucket
+    elseif conditionpreset == "RUSTEY" then
+        rules = {
+            demand > rate,
+            usage > 90
+        }
+    end
 
     -- figuring out whether at least one condition is fulfilled
     local res = false
@@ -41,9 +56,17 @@ function helper.lessVehiclesConditions(data, id)
     local vehicles = data[id].vehicles
 
     -- an array with conditions that warrant less vehicles
-    local rules = {
-        vehicles > 1 and usage < 70 and demand < rate * (vehicles - 1) / vehicles
-    }
+    local rules
+
+    if conditionpreset == "CARTOK" then
+        rules = {
+            vehicles > 1 and usage < 70 and demand < rate * (vehicles - 1) / vehicles
+        }
+    elseif conditionpreset == "RUSTEY" then
+        rules = {
+            vehicles > 1 and usage < 40 and demand < rate / 2
+        }
+    end
 
     -- figuring out whether at least one condition is fulfilled
     local res = false
@@ -335,16 +358,16 @@ return helper
 --      [1]  = 0,
 --      [2]  = 0,
 --      [3]  = 0,
---      [4]  = 0, ROAD
---      [5]  = 0,
---      [6]  = 0,
---      [7]  = 0, TRAM
---      [8]  = 0, ELECTRIC_TRAM
---      [9]  = 0, RAIL
+--      [4]  = 0, ROAD (BUS)
+--      [5]  = 0,  (TRUCK)
+--      [6]  = 0,  (STEAM_TRAM/HORSE_TRAM PAX and CARGO)
+--      [7]  = 0, TRAM (ELECTRIC_TRAM PAX and CARGO)
+--      [8]  = 0, ELECTRIC_TRAM (STEAM_TRAIN)
+--      [9]  = 0, RAIL (ELECTRIC_TRAIN)
 --      [10] = 0, AIR?
---      [11] = 0, WATER_LARGE
---      [12] = 0, AIR
---      [13] = 0, WATER_SMALL
+--      [11] = 0, WATER_LARGE (WATER_LARGE)
+--      [12] = 0, AIR (PLANE_SMALL_PAX)
+--      [13] = 0, WATER_SMALL (WATER_SMALL)
 --      [14] = 0,
 --      [15] = 0,
 --      [16] = 0,
@@ -354,17 +377,17 @@ return helper
 -- config = {
 --    capacities = {
 --      [1]  = 0, PASSENGERS
---      [2]  = 0,
+--      [2]  = 0, LOGS
 --      [3]  = 0,
 --      [4]  = 0,
 --      [5]  = 0, STONE
 --      [6]  = 0,
 --      [7]  = 0, CRUDE_OIL
---      [8]  = 0,
---      [9]  = 0,
+--      [8]  = 0, STEEL/BRICKS
+--      [9]  = 0, PLANKS
 --      [10] = 0,
 --      [11] = 0, OIL
---      [12] = 0,
+--      [12] = 0, STEEL/BRICKS
 --      [13] = 0,
 --      [14] = 0, FUEL
 --      [15] = 0,
