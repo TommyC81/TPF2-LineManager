@@ -23,6 +23,10 @@ from https://github.com/IncredibleHannes/TPF2-Timetables.
 3. Make sure a depot is accessible for the bus on the bus line.
 4. Make sure you have cash available for buying additional buses (when the mod determines it required).
 
+## Quick tips for best results
+* Only use one type of vehicle per line (this makes addition of new vehicles more predictable).
+* Using smaller vehicles sizes (less capacity per vehicle) allows better fine-tuning of line capacity in accordance with demand.
+
 ## What the mod does
 
 * The mod will add/remove i.e. buy/sell buses (of the same type as already utilized on the line) according to line

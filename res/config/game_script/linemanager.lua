@@ -17,8 +17,8 @@ local samples_since_last_update = 0
 -- Uncomment the line below to reduce debugging verbosity
 -- log.setVerboseDebugging(false)
 
---- @param lineVehicles userdata
---- @return number id of the oldest vehicle
+--- @param lineVehicles userdata array of LINE objects
+--- @return number id of the oldest vehicle on the line
 --- finds the oldest vehicle on a line
 local function getOldestVehicle( lineVehicles )
 	local oldestVehicleId = 0
@@ -36,8 +36,9 @@ local function getOldestVehicle( lineVehicles )
 end
 
 ---@param line_id number
----removes oldest vehicle from the specified line
-local function removeVehicle( line_id )
+---@return boolean success whether a vehicle was removed
+---removes the oldest vehicle from the specified line
+local function removeVehicleFromLine( line_id )
 	local lineVehicles = api.engine.system.transportVehicleSystem.getLineVehicles( line_id )
 
 	-- Find the oldest vehicle on the line
@@ -47,16 +48,19 @@ local function removeVehicle( line_id )
 	api.cmd.sendCommand( api.cmd.make.sellVehicle( oldestVehicleId ) )
 	log.info( " -1 vehicle: " .. helper.getEntityName( line_id ) .. " (" .. helper.printLineData( currentLineData, line_id ) .. ")" )
 	log.debug( "vehicle_id: " .. oldestVehicleId .. " line_id: " .. line_id )
+
+	return true
 end
 
 ---@param line_id number
----clones a vehicle on line
-local function addVehicle( line_id )
+---@return boolean success whether a vehicle was added
+---adds a vehicle to the specified line_id by cloning an existing vehicle
+local function addVehicleToLine( line_id )
+	local success = false
 	local lineVehicles = api.engine.system.transportVehicleSystem.getLineVehicles( line_id )
 	local depot_id
 	local stop_id
 	local vehicleToDuplicate
-	local purchaseTime = helper.getGameTime()
 
 	-- TODO: Figure out a better way to find the closest depot (or one at all).
 	-- This merely tries to send an existing vehicle on the line to the depot, checks if succeeds then cancel the depot call but uses the depot data.
@@ -71,7 +75,9 @@ local function addVehicle( line_id )
 			if vehicleToDuplicate.state == api.type.enum.TransportVehicleState.GOING_TO_DEPOT then
 				depot_id = vehicleToDuplicate.depot
 				stop_id = vehicleToDuplicate.stopIndex
-				api.cmd.sendCommand( api.cmd.make.setLine( vehicle_id, line_id, stop_id ) )
+
+				local lineCommand = api.cmd.make.setLine( vehicle_id, line_id, stop_id )
+				api.cmd.sendCommand( lineCommand )
 				break
 			end
 		end
@@ -79,6 +85,7 @@ local function addVehicle( line_id )
 
 	if depot_id then
 		local transportVehicleConfig = vehicleToDuplicate.transportVehicleConfig
+		local purchaseTime = helper.getGameTime()
 
 		-- Reset applicable parts of the transportVehicleConfig
 		for _, vehicle in pairs( transportVehicleConfig.vehicles ) do
@@ -87,12 +94,12 @@ local function addVehicle( line_id )
 		end
 
 		local buyCommand = api.cmd.make.buyVehicle( api.engine.util.getPlayer(), depot_id, transportVehicleConfig )
-
 		api.cmd.sendCommand( buyCommand,
-			function( cmd, success)
-				if (success and cmd.resultVehicleEntity) then
-					local lineCommand = api.cmd.make.setLine( cmd.resultVehicleEntity, line_id, stop_id )
+			function( cmd, res )
+				if (res and cmd.resultVehicleEntity) then
+					success = true
 
+					local lineCommand = api.cmd.make.setLine( cmd.resultVehicleEntity, line_id, stop_id )
 					api.cmd.sendCommand( lineCommand )
 
 					log.info( " +1 vehicle: " .. helper.getEntityName( line_id ) .. " (" .. helper.printLineData( currentLineData, line_id ) .. ")" )
@@ -103,15 +110,17 @@ local function addVehicle( line_id )
 			end
 		)
 	else
-		-- TODO: If this fails, it's not really reported back to the summary in the update function.
 		log.warn( "Unable to add vehicle to line: " .. helper.getEntityName( line_id ) .. " - No available depot." )
 		log.debug( "line_id: " .. line_id )
 	end
+
+	return success
 end
 
 ---takes data samples of all applicable lines
 local function sampleLines()
 	log.info( "============ Sampling ============" )
+
 	local sampledLineData = {}
 	local ignoredLines = {}
 	sampledLineData, ignoredLines = helper.getLineData()
@@ -140,7 +149,7 @@ local function sampleLines()
 	currentLineData = sampledLineData
 
 	-- print general summary for debugging purposes
-	log.debug( 'Sampled ' .. #sampledLines .. ' lines. Ignored ' .. #ignoredLines .. ' lines.' )
+	log.debug( 'Sampled Lines: ' .. #sampledLines .. ' (Ignored Lines: ' .. #ignoredLines .. ")" )
 
 	-- printing the list of lines sampled for additional debug info
 	if (log.isVerboseDebugging()) then
@@ -173,6 +182,7 @@ end
 --- updates vehicle amount if applicable and line list in general
 local function updateLines()
 	log.info( "============ Updating ============" )
+
 	local lines = helper.getPlayerLines()
 	local lineCount = 0
 	local totalVehicleCount = 0
@@ -187,22 +197,23 @@ local function updateLines()
 			if currentLineData[line_id].samples and currentLineData[line_id].samples >= sample_size then
 				-- Check if a vehicle should be added to a Line.
 				if helper.moreVehicleConditions( currentLineData, line_id ) then
-					addVehicle( line_id )
-					currentLineData[line_id].samples = sample_restart
-					totalVehicleCount = totalVehicleCount + 1
+					if addVehicleToLine( line_id ) then
+						currentLineData[line_id].samples = sample_restart
+						totalVehicleCount = totalVehicleCount + 1
+					end
 					-- Check instead whether a vehicle should be removed from a Line.
 				elseif helper.lessVehiclesConditions( currentLineData, line_id ) then
-					removeVehicle( line_id )
-					currentLineData[line_id].samples = sample_restart
-					totalVehicleCount = totalVehicleCount - 1
+					if removeVehicleFromLine( line_id ) then
+						currentLineData[line_id].samples = sample_restart
+						totalVehicleCount = totalVehicleCount - 1
+					end
 				end
 			end
 		end
 	end
 
 	local ignored = #api.engine.system.lineSystem.getLines() - lineCount
-
-	log.info( "Total Lines: " .. lineCount .. " Total Vehicles: " .. totalVehicleCount .. " (Ignored lines: " .. ignored .. ")" )
+	log.info( "Total Lines: " .. lineCount .. " Total Vehicles: " .. totalVehicleCount .. " (Ignored Lines: " .. ignored .. ")" )
 end
 
 ---updates the trackers of when the next update gets unlocked
