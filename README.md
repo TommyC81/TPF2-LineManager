@@ -2,19 +2,19 @@
 
 A mod for Transport Fever 2 to automatically manage the number of buses/trams/aircraft/ships on passenger lines.
 
-Taking into account the load-factor over time, and demand on the line, this mod will buy/sell
-buses/trams/aircraft/ships accordingly, effectively increasing/decreasing capacity on a line as per the actual
-demand. This mod will greatly assist in addressing the tedious micro-management of bus/tram/aircraft/ship lines
-when updating road/tram infrastructure, adding more destinations, and in general updating the overall passenger
-transport network. The mod in fact completely eliminates the bus/tram/aircraft/ship passenger line
-micro-management and will let you focus on the more fun overall design of the transport network.
+Taking into account the load-factor over time, and demand on the line, this mod will buy/sell buses/trams/aircraft/ships
+accordingly, effectively increasing/decreasing capacity on a line as per the actual demand. This mod will greatly assist
+in addressing the tedious micro-management of bus/tram/aircraft/ship lines when updating road/tram infrastructure,
+adding more destinations, and in general updating the overall passenger transport network. The mod in fact completely
+eliminates the bus/tram/aircraft/ship passenger line micro-management and will let you focus on the more fun overall
+design of the transport network.
 
-This mod can be added/removed to existing games as desired - it only measures load factor and demand and
-adds/removes vehicles on applicable lines accordingly. Only live data is used.
+This mod can be added/removed to existing games as desired - it only measures load factor and demand and adds/removes
+vehicles on applicable lines accordingly. Only live data is used.
 
-Source code is located here: https://github.com/TommyC81/TPF2-LineManager.
-Created by https://github.com/TommyC81 with contribution from https://github.com/RusteyBucket.
-Inspired by and uses some functionality from https://github.com/IncredibleHannes/TPF2-Timetables.
+Source code is located here: https://github.com/TommyC81/TPF2-LineManager. Created by https://github.com/TommyC81 with
+contribution from https://github.com/RusteyBucket. Inspired by and uses some functionality
+from https://github.com/IncredibleHannes/TPF2-Timetables.
 
 ## Quick start
 
@@ -38,10 +38,10 @@ Inspired by and uses some functionality from https://github.com/IncredibleHannes
 
 ## What the mod does NOT do
 
-* This mod will not fix poorly designed transports networks. If you have a bus line that has highly uneven demand
-  along the route, you will have to fix that yourself - there is no software that can fix this for you. If no vehicles
-  are added despite a single station being overloaded along the route - it is probably a sign of poor route design,
-  split the route up into evenly balanced (demand) sections.
+* This mod will not fix poorly designed transports networks. If you have a bus line that has highly uneven demand along
+  the route, you will have to fix that yourself - there is no software that can fix this for you. If no vehicles are
+  added despite a single station being overloaded along the route - it is probably a sign of poor route design, split
+  the route up into evenly balanced (demand) sections.
 
 ## Performance
 

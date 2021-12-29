@@ -29,19 +29,19 @@ local enums = {}
 --
 -- TODO: For some reason I'm unable to use the api.type.enum value directly, and must thus use hardcoded values. Why?
 enums.TransportModes = {
-	PERSON = 1,          -- api.type.enum.TransportMode.PERSON + 1
-    CARGO = 2,           -- api.type.enum.TransportMode.CARGO + 1
-	CAR = 3,             -- api.type.enum.TransportMode.CAR + 1
-	BUS = 4,             -- api.type.enum.TransportMode.BUS + 1
-    TRUCK = 5,           -- api.type.enum.TransportMode.TRUCK + 1
-    TRAM = 6,            -- api.type.enum.TransportMode.TRAM + 1
-    ELECTRIC_TRAM = 7,   -- api.type.enum.TransportMode.ELECTRIC_TRAM + 1
-    TRAIN = 8,           -- api.type.enum.TransportMode.TRAIN + 1
-    ELECTRIC_TRAIN = 9,  -- api.type.enum.TransportMode.ELECTRIC_TRAIN + 1
-    AIRCRAFT = 10,       -- api.type.enum.TransportMode.AIRCRAFT + 1
-    SHIP = 11,           -- api.type.enum.TransportMode.SHIP + 1
+    PERSON = 1, -- api.type.enum.TransportMode.PERSON + 1
+    CARGO = 2, -- api.type.enum.TransportMode.CARGO + 1
+    CAR = 3, -- api.type.enum.TransportMode.CAR + 1
+    BUS = 4, -- api.type.enum.TransportMode.BUS + 1
+    TRUCK = 5, -- api.type.enum.TransportMode.TRUCK + 1
+    TRAM = 6, -- api.type.enum.TransportMode.TRAM + 1
+    ELECTRIC_TRAM = 7, -- api.type.enum.TransportMode.ELECTRIC_TRAM + 1
+    TRAIN = 8, -- api.type.enum.TransportMode.TRAIN + 1
+    ELECTRIC_TRAIN = 9, -- api.type.enum.TransportMode.ELECTRIC_TRAIN + 1
+    AIRCRAFT = 10, -- api.type.enum.TransportMode.AIRCRAFT + 1
+    SHIP = 11, -- api.type.enum.TransportMode.SHIP + 1
     SMALL_AIRCRAFT = 12, -- api.type.enum.TransportMode.SMALL_AIRCRAFT + 1
-    SMALL_SHIP = 13,     -- api.type.enum.TransportMode.SMALL_SHIP + 1
+    SMALL_SHIP = 13, -- api.type.enum.TransportMode.SMALL_SHIP + 1
 }
 
 -- Enumerator for CargoTypes
@@ -50,42 +50,42 @@ enums.TransportModes = {
 -- config = {
 --    capacities = {
 --      [1]  = 0, PASSENGERS
---      [2]  = 0,
---      [3]  = 0,
---      [4]  = 0,
+--      [2]  = 0, LOGS
+--      [3]  = 0, COAL
+--      [4]  = 0, IRON_ORE
 --      [5]  = 0, STONE
---      [6]  = 0,
+--      [6]  = 0, GRAIN
 --      [7]  = 0, CRUDE_OIL
---      [8]  = 0,
---      [9]  = 0,
---      [10] = 0,
+--      [8]  = 0, STEEL
+--      [9]  = 0, PLANKS
+--      [10] = 0, PLASTIC
 --      [11] = 0, OIL
---      [12] = 0,
---      [13] = 0,
+--      [12] = 0, CONSTRUCTION_MATERIAL
+--      [13] = 0, MACHINES
 --      [14] = 0, FUEL
---      [15] = 0,
---      [16] = 0,
---      [17] = 0,
+--      [15] = 0, TOOLS
+--      [16] = 0, FOOD
+--      [17] = 0, GOODS
 --    },
 --
 enums.CargoTypes = {
     PASSENGERS = 1,
-    UNKNOWN2 = 2,
-    UNKNOWN3 = 3,
-    UNKNOWN4 = 4,
+    LOGS = 2,
+    COAL = 3,
+    IRON_ORE = 4,
     STONE = 5,
-    UNKNOWN6 = 6,
+    GRAIN = 6,
     CRUDE_OIL = 7,
-    UNKNOWN8 = 8,
-    UNKNOWN9 = 9,
-    UNKNOWN10 = 10,
+    STEEL = 8,
+    PLANKS = 9,
+    PLASTIC = 10,
     OIL = 11,
-    UNKNOWN12 = 12,
-    UNKNOWN13 = 13,
+    CONSTRUCTION_MATERIAL = 12,
+    MACHINES = 13,
     FUEL = 14,
-    UNKNOWN15 = 15,
-    UNKNOWN16 = 16,
-    UNKNOWN17 = 17,
+    TOOLS = 15,
+    FOOD = 16,
+    GOODS = 17,
 }
 
 return enums
