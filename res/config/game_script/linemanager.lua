@@ -3,6 +3,7 @@
 
 local log = require 'cartok/logging'
 local helper = require 'cartok/helper'
+local enums = require 'cartok/enums'
 
 local last_sampled_month = -1 -- Keeps track of what month number the last sample was taken.
 local sample_size = 6
@@ -44,7 +45,7 @@ local function removeVehicle( line_id )
 
 	-- Remove/sell the oldest vehicle (instantly sells)
 	api.cmd.sendCommand( api.cmd.make.sellVehicle( oldestVehicleId ) )
-	log.info( "-    Sold 1: " .. helper.getEntityName( line_id ) .. " (" .. helper.printLineData( currentLineData, line_id ) .. ")" )
+	log.info( " -1 vehicle: " .. helper.getEntityName( line_id ) .. " (" .. helper.printLineData( currentLineData, line_id ) .. ")" )
 	log.debug( "vehicle_id: " .. oldestVehicleId .. " line_id: " .. line_id )
 end
 
@@ -85,20 +86,22 @@ local function addVehicle( line_id )
 			vehicle.maintenanceState = 1
 		end
 
-		-- TODO: This doesn't return the id of the new vehicle, instead I check that the purchaseTime corresponds to the expected.
-		-- This is not perfect, but shouldn't be a big issue.
-		-- In the API documentation the below should return an id of the new vehicle, but can't figure out how to get that to work proper:
-		-- api.type.BuyVehicle(playerEntity, depotEntity, config) return resultVehicleEntity
-		api.cmd.sendCommand( api.cmd.make.buyVehicle( api.engine.util.getPlayer(), depot_id, transportVehicleConfig ) )
-		local depot_vehicles = api.engine.system.transportVehicleSystem.getDepotVehicles( depot_id )
-		for _, depot_vehicle_id in pairs( depot_vehicles ) do
-			local depot_vehicle = api.engine.getComponent( depot_vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE )
-			if depot_vehicle.transportVehicleConfig.vehicles[1].purchaseTime == purchaseTime then
-				api.cmd.sendCommand( api.cmd.make.setLine( depot_vehicle_id, line_id, stop_id ) )
-				log.info( "+  Bought 1: " .. helper.getEntityName( line_id ) .. " (" .. helper.printLineData( currentLineData, line_id ) .. ")" )
-				log.debug( "vehicle_id: " .. depot_vehicle_id .. " line_id: " .. line_id .. " depot_id: " .. depot_id )
+		local buyCommand = api.cmd.make.buyVehicle( api.engine.util.getPlayer(), depot_id, transportVehicleConfig )
+
+		api.cmd.sendCommand( buyCommand,
+			function( cmd, success)
+				if (success and cmd.resultVehicleEntity) then
+					local lineCommand = api.cmd.make.setLine( cmd.resultVehicleEntity, line_id, stop_id )
+
+					api.cmd.sendCommand( lineCommand )
+
+					log.info( " +1 vehicle: " .. helper.getEntityName( line_id ) .. " (" .. helper.printLineData( currentLineData, line_id ) .. ")" )
+					log.debug( "vehicle_id: " .. cmd.resultVehicleEntity .. " line_id: " .. line_id .. " depot_id: " .. depot_id )
+				else
+					log.warn( "Unable to add vehicle to line: " .. helper.getEntityName( line_id ) .. " - Insufficient cash?" )
+				end
 			end
-		end
+		)
 	else
 		-- TODO: If this fails, it's not really reported back to the summary in the update function.
 		log.warn( "Unable to add vehicle to line: " .. helper.getEntityName( line_id ) .. " - No available depot." )
@@ -118,9 +121,10 @@ local function sampleLines()
 	for line_id, line_data in pairs( sampledLineData ) do
 		if currentLineData[line_id] then
 			sampledLineData[line_id].samples = currentLineData[line_id].samples + 1
-			-- sampledLineData[line_id].vehicles = line_data.vehicles
-			-- sampledLineData[line_id].capacity = line_data.capacity
-			-- sampledLineData[line_id].occupancy = line_data.occupancy
+			-- The below ones are already captured in the fresh sample taken, no need to overwrite those values.
+			-- sampledLineData[line_id].vehicles = currentLineData[line_id].vehicles
+			-- sampledLineData[line_id].capacity = currentLineData[line_id].capacity
+			-- sampledLineData[line_id].occupancy = currentLineData[line_id].occupancy
 			sampledLineData[line_id].demand = math.round( ((currentLineData[line_id].demand * (sample_size - 1)) + line_data.demand) / sample_size )
 			sampledLineData[line_id].usage = math.round( ((currentLineData[line_id].usage * (sample_size - 1)) + line_data.usage) / sample_size )
 			sampledLineData[line_id].rate = line_data.rate
@@ -164,14 +168,6 @@ local function sampleLines()
 			log.debug( debugOutput )
 		end
 	end
-end
-
----@param line_id number
----@return string
----returns the output string of a successful line adjustment
-local function linePrint( line_id )
-	local res = helper.printLine( line_id ) .. " - " .. helper.printLineData( currentLineData, line_id )
-	return res
 end
 
 --- updates vehicle amount if applicable and line list in general
