@@ -6,7 +6,7 @@ function data()
 			              '\n' ..
 			              'Taking into account the load-factor over time, and demand on the line, this mod will buy/sell buses/trams/aircraft/ships accordingly, effectively increasing/decreasing capacity on a line as per the actual demand.\n' ..
 			              'This mod will greatly assist in addressing the tedious micro-management of bus/tram/aircraft/ship lines when updating road/tram infrastructure, adding more destinations, and in general updating the overall transport network. The mod in fact completely eliminates the bus/tram/aircraft/ship micro-management and will let you focus on the more fun overall design of the transport network.\n' ..
-			              'This mod can be added/removed to existing games as desired - it only measures load factor and demand and adds/removes vehicles on applicable lines accordingly. Only live data is used\n' ..
+			              'This mod can be added/removed to existing games as desired - it only measures load factor and demand and adds/removes vehicles on applicable lines accordingly. Only live data is used.\n' ..
 			              '\n' ..
 			              'Quick start:\n' ..
 			              '1. Create a bus line.\n' ..
@@ -33,7 +33,7 @@ function data()
 			              '\n' ..
 			              'Code:' ..
 			              'Source code is available here [url=https://github.com/TommyC81/TPF2-LineManager]here[/url].' ..
-			              'Mod created by [url=https://github.com/TommyC81]TommyC81[/url] with contribution from [url=https://github.com/RusteyBucket]RusteyBucket[/url]' ..
+			              'Mod created by [url=https://github.com/TommyC81]TommyC81[/url] with contribution from [url=https://github.com/RusteyBucket]RusteyBucket[/url].\n' ..
 			              'This mod is inspired by and uses some functionality from [url=https://github.com/IncredibleHannes/TPF2-Timetables]TPF2-Timetables[/url].',
 		},
 	}
