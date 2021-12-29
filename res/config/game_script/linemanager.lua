@@ -17,8 +17,8 @@ local samples_since_last_update = 0
 -- Uncomment the line below to reduce debugging verbosity
 -- log.setVerboseDebugging(false)
 
---- @param lineVehicles userdata
---- @return number id of the oldest vehicle
+--- @param lineVehicles userdata array of LINE objects
+--- @return number id of the oldest vehicle on the line
 --- finds the oldest vehicle on a line
 local function getOldestVehicle( lineVehicles )
 	local oldestVehicleId = 0
@@ -36,9 +36,9 @@ local function getOldestVehicle( lineVehicles )
 end
 
 ---@param line_id number
----@return boolean vehicle_removed whether a vehicle was removed
----removes oldest vehicle from the specified line
-local function removeVehicle( line_id )
+---@return boolean success whether a vehicle was removed
+---removes the oldest vehicle from the specified line
+local function removeVehicleFromLine( line_id )
 	local lineVehicles = api.engine.system.transportVehicleSystem.getLineVehicles( line_id )
 
 	-- Find the oldest vehicle on the line
@@ -53,10 +53,10 @@ local function removeVehicle( line_id )
 end
 
 ---@param line_id number
----@return boolean vehicle_added whether a vehicle was added
----clones a vehicle on line
-local function addVehicle( line_id )
-	local vehicle_added = false
+---@return boolean success whether a vehicle was added
+---adds a vehicle to the specified line_id by cloning an existing vehicle
+local function addVehicleToLine( line_id )
+	local success = false
 	local lineVehicles = api.engine.system.transportVehicleSystem.getLineVehicles( line_id )
 	local depot_id
 	local stop_id
@@ -95,9 +95,9 @@ local function addVehicle( line_id )
 
 		local buyCommand = api.cmd.make.buyVehicle( api.engine.util.getPlayer(), depot_id, transportVehicleConfig )
 		api.cmd.sendCommand( buyCommand,
-			function( cmd, success)
-				if (success and cmd.resultVehicleEntity) then
-					vehicle_added = true
+			function( cmd, res )
+				if (res and cmd.resultVehicleEntity) then
+					success = true
 
 					local lineCommand = api.cmd.make.setLine( cmd.resultVehicleEntity, line_id, stop_id )
 					api.cmd.sendCommand( lineCommand )
@@ -114,7 +114,7 @@ local function addVehicle( line_id )
 		log.debug( "line_id: " .. line_id )
 	end
 
-	return vehicle_added
+	return success
 end
 
 ---takes data samples of all applicable lines
@@ -197,13 +197,13 @@ local function updateLines()
 			if currentLineData[line_id].samples and currentLineData[line_id].samples >= sample_size then
 				-- Check if a vehicle should be added to a Line.
 				if helper.moreVehicleConditions( currentLineData, line_id ) then
-					if addVehicle( line_id ) then
+					if addVehicleToLine( line_id ) then
 						currentLineData[line_id].samples = sample_restart
 						totalVehicleCount = totalVehicleCount + 1
 					end
 					-- Check instead whether a vehicle should be removed from a Line.
 				elseif helper.lessVehiclesConditions( currentLineData, line_id ) then
-					if removeVehicle( line_id ) then
+					if removeVehicleFromLine( line_id ) then
 						currentLineData[line_id].samples = sample_restart
 						totalVehicleCount = totalVehicleCount - 1
 					end
@@ -213,7 +213,6 @@ local function updateLines()
 	end
 
 	local ignored = #api.engine.system.lineSystem.getLines() - lineCount
-
 	log.info( "Total Lines: " .. lineCount .. " Total Vehicles: " .. totalVehicleCount .. " (Ignored Lines: " .. ignored .. ")" )
 end
 

@@ -13,6 +13,10 @@ function data()
 			              '2. Add one bus to the bus line.\n' ..
 			              '3. Make sure a depot is accessible for the bus on the bus line.\n' ..
 			              '4. Make sure you have cash available for buying additional buses (when the mod determines it required).\n' ..
+						  '\n' ..
+			              'Quick tips for best results:\n' ..
+						  '* Only use one type of vehicle per line (this makes addition of new vehicles more predictable).\n' ..
+						  '* Using smaller vehicles sizes (less capacity per vehicle) allows better fine-tuning of line capacity in accordance with demand.\n' ..
 			              '\n' ..
 			              'What the mod does:\n' ..
 			              '* The mod will add/remove i.e. buy/sell buses (of the same type as already utilized on the line) according to line utilization and demand, as money permits.\n' ..
