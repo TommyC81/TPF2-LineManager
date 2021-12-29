@@ -24,8 +24,10 @@ from https://github.com/IncredibleHannes/TPF2-Timetables.
 4. Make sure you have cash available for buying additional buses (when the mod determines it required).
 
 ## Quick tips for best results
+
 * Only use one type of vehicle per line (this makes addition of new vehicles more predictable).
-* Using smaller vehicles sizes (less capacity per vehicle) allows better fine-tuning of line capacity in accordance with demand.
+* Using smaller vehicles sizes (less capacity per vehicle) allows better fine-tuning of line capacity in accordance with
+  demand.
 
 ## What the mod does
 
@@ -75,8 +77,7 @@ from https://github.com/IncredibleHannes/TPF2-Timetables.
 ## How to Contribute
 
 If you want to contribute to this project, open an issue on GitHub, or create a fork/branch of the project, and work on
-your fork/branch. When you are done and want to integrate it, open a Pull Request (PR) aimed at the main branch.
-You can of course open a PR early to get feedback if you like. After review and required adjustments, the pull request
-can be merged into the main project. Make sure you (re)base your fork/branch on the latest version to ensure your
-fork/branch is up-to-date and can be merged without conflicts. Squash your commits as required to maintain a clean
-commit history.
+your fork/branch. When you are done and want to integrate it, open a Pull Request (PR) aimed at the main branch. You can
+of course open a PR early to get feedback if you like. After review and required adjustments, the pull request can be
+merged into the main project. Make sure you (re)base your fork/branch on the latest version to ensure your fork/branch
+is up-to-date and can be merged without conflicts. Squash your commits as required to maintain a clean commit history.
