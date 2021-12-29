@@ -6,7 +6,7 @@ local enums = require 'cartok/enums'
 
 local helper = {}
 
---TODO Get more rule options to be switchable as presets
+--TODO: Get more rule options to be switchable as presets
 ---@param data userdata : the LineData (from helper.getLineData)
 ---@param id number : the id of the line
 ---@return boolean : whether a vehicle should be added to the line
