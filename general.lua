@@ -9,7 +9,7 @@
 -- Get transport vehicle info (make sure to replace "vehicle_id")
 --   api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
 --
--- Or combine into one call (make sure to replace "line_id")
+-- Or combine the above two commands into one call using the first line (make sure to replace "line_id")
 --   api.engine.getComponent( api.engine.system.transportVehicleSystem.getLineVehicles( line_id )[1], api.type.ComponentType.TRANSPORT_VEHICLE )
 --
 -- api.engine.getComponent(line_id, api.type.ComponentType.LINE)
