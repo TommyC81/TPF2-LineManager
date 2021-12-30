@@ -12,6 +12,8 @@ micro-management and will let you focus on the more fun overall design of the tr
 This mod can be added/removed to existing games as desired - it only measures load factor and demand and
 adds/removes vehicles on applicable lines accordingly. Only live data is used.
 
+To disable automatic vehicle management of a specific line, add "**(M)**" to the name of the line.
+
 Source code is located here: https://github.com/TommyC81/TPF2-LineManager.
 Created by https://github.com/TommyC81 with contribution from https://github.com/RusteyBucket.
 Inspired by and uses some functionality from https://github.com/IncredibleHannes/TPF2-Timetables.
