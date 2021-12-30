@@ -9,8 +9,8 @@ function data()
 						  '\n' ..
 						  'Information and options:\n' ..
 			              '* This mod can be added/removed to existing games as desired - it only measures load factor and demand and adds/removes vehicles on applicable lines accordingly. Only live data is used.\n' ..
-						  '* To disable automatic vehicle management of a specific line, add "(M)" to the name of the line (anywhere in the line name).' ..
-						  '* To use alternative rules for a line to scale the line rate strictly according to demand (this is more aggressive scaling, effectively ignoring load factor), add "(R)" to the name of the line (anywhere in the line name). Note that this is somewhat experimental and the rules may change, please provide feedback.' ..
+						  '* To disable automatic vehicle management of a specific line, add "(M)" to the name of the line (anywhere in the line name).\n' ..
+						  '* To use alternative rules for a line to scale the line rate strictly according to demand (this is more aggressive scaling, effectively ignoring load factor), add "(R)" to the name of the line (anywhere in the line name). Note that this is somewhat experimental and the rules may change, please provide feedback.\n' ..
 						  '\n' ..
 			              'Quick start:\n' ..
 			              '1. Create a bus line.\n' ..
