@@ -15,12 +15,21 @@ function helper.moreVehicleConditions(data, id)
     local demand = data[id].demand
     local rate = data[id].rate
     local vehicles = data[id].vehicles
+    local rules = {}
 
-    -- an array with conditions that warrant more vehicles
-    local rules = {
-        usage > 50 and demand > rate * 2,
-        usage > 80 and demand > rate * (vehicles + 1) / vehicles,
-    }
+    local lineName = helper.getEntityName(line_id)
+
+    -- if a line contains "(R)", as in "Rate", in its name, then the vehicle scaling rules will strictly target line rate to stay above demand
+    if (string.find(lineName, "(R)", 1, true) ~= nil) then
+        rules = {
+            demand > rate,
+        }
+    else -- make use of standard rules
+        rules = {
+            usage > 50 and demand > rate * 2,
+            usage > 80 and demand > rate * (vehicles + 1) / vehicles,
+        }
+    end
 
     -- figuring out whether at least one condition is fulfilled
     local res = false
@@ -41,11 +50,20 @@ function helper.lessVehiclesConditions(data, id)
     local demand = data[id].demand
     local rate = data[id].rate
     local vehicles = data[id].vehicles
+    local rules = {}
 
-    -- an array with conditions that warrant less vehicles
-    local rules = {
-        vehicles > 1 and usage < 70 and demand < rate * (vehicles - 1) / vehicles,
-    }
+    local lineName = helper.getEntityName(line_id)
+
+    -- if a line contains "(R)", as in "Rate", in its name, then the vehicle scaling rules will strictly target line rate to stay above demand
+    if (string.find(lineName, "(R)", 1, true) ~= nil) then
+        rules = {
+            vehicles > 1 and demand < rate * (vehicles - 1) / vehicles,
+        }
+    else -- make use of standard rules
+        rules = {
+            vehicles > 1 and usage < 70 and demand < rate * (vehicles - 1) / vehicles,
+        }
+    end
 
     -- figuring out whether at least one condition is fulfilled
     local res = false
