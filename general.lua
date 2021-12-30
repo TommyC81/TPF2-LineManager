@@ -1,6 +1,6 @@
 --[[
 
-GENERAL USEFUL COMMANDS
+** GENERAL USEFUL COMMANDS **
 
 Get all player lines
   api.engine.system.lineSystem.getLinesForPlayer( api.engine.util.getPlayer() )
@@ -17,7 +17,9 @@ Get transport vehicle info (make sure to replace "vehicle_id")
 Or combine the above two commands into one call using the first line (make sure to replace "line_id")
   api.engine.getComponent( api.engine.system.transportVehicleSystem.getLineVehicles( line_id )[1], api.type.ComponentType.TRANSPORT_VEHICLE )
 
-OUTPUT/STRUCTURE FROM VARIOUS COMMANDS (All of the below from an ELECTRIC_TRAM line with 1 vehicle on it)
+** OUTPUT/STRUCTURE FROM VARIOUS COMMANDS **
+
+(All of the below examples are from an ELECTRIC_TRAM line with 1 vehicle on it)
 
 >> api.engine.getComponent( 27606, api.type.ComponentType.LINE )
 {
