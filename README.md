@@ -79,5 +79,16 @@ Inspired by and uses some functionality from https://github.com/IncredibleHannes
 If you want to contribute to this project, open an issue on GitHub, or create a fork/branch of the project, and work on
 your fork/branch. When you are done and want to integrate it, open a Pull Request (PR) aimed at the main branch. You can
 of course open a PR early to get feedback if you like. After review and required adjustments, the pull request can be
-merged into the main project. Make sure you (re)base your fork/branch on the latest version to ensure your fork/branch
-is up-to-date and can be merged without conflicts. Squash your commits as required to maintain a clean commit history.
+merged into the main project. Make sure you continuously (re)base your fork/branch on the main branch/repository , or 
+merge in changes from the main branch/repository, to ensure your fork/branch is up-to-date and can be merged without 
+conflicts. Squash your commits as required to maintain a clean commit history.
+
+Recommended tools:
+
+* **GitHub account** (sign up for a free account here: https://github.com/)
+* **Github Desktop** (free, also requires a free GitHub account: https://desktop.github.com/)
+* **Visual Studio Code** (free, https://code.visualstudio.com/), with the following free extensions
+    * **Lua** (by sumneko, link: https://marketplace.visualstudio.com/items?itemName=sumneko.lua)
+    * **vscode-lua-format** (by Koihik, link: https://marketplace.visualstudio.com/items?itemName=Koihik.vscode-lua-format)
+    * **GitLens - Git supercharged** (by GitKraken, link: https://marketplace.visualstudio.com/items?itemName=eamodio.gitlens)
+    * **Code Spell Checker** (by Street Side Software, link: https://marketplace.visualstudio.com/items?itemName=streetsidesoftware.code-spell-checker)
