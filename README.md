@@ -9,14 +9,18 @@ when updating road/tram infrastructure, adding more destinations, and in general
 transport network. The mod in fact completely eliminates the bus/tram/aircraft/ship passenger line
 micro-management and will let you focus on the more fun overall design of the transport network.
 
-This mod can be added/removed to existing games as desired - it only measures load factor and demand and
-adds/removes vehicles on applicable lines accordingly. Only live data is used.
-
-To disable automatic vehicle management of a specific line, add "**(M)**" to the name of the line.
-
 Source code is located here: https://github.com/TommyC81/TPF2-LineManager.
 Created by https://github.com/TommyC81 with contribution from https://github.com/RusteyBucket.
 Inspired by and uses some functionality from https://github.com/IncredibleHannes/TPF2-Timetables.
+
+## Information and options
+
+This mod can be added/removed to existing games as desired - it only measures load factor and demand and
+adds/removes vehicles on applicable lines accordingly. Only live data is used.
+
+To disable automatic vehicle management of a specific line, add "**(M)**" to the name of the line (anywhere in the line name).
+
+To use alternative rules for a line to scale the line rate strictly according to demand (this is more aggressive scaling, effectively ignoring load factor), add "**(R)**" to the name of the line (anywhere in the line name). Note that this is somewhat experimental and the rules may change, please provide feedback.
 
 ## Quick start
 
