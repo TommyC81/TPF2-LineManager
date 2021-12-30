@@ -45,7 +45,7 @@ function helper.lessVehiclesConditions(data, id)
     -- an array with conditions that warrant less vehicles
     local rules = {
         vehicles > 1 and usage < 70 and demand < rate * (vehicles - 1) / vehicles,
-
+    }
 
     -- figuring out whether at least one condition is fulfilled
     local res = false
@@ -60,23 +60,31 @@ end
 ---@param line_id number : the id of the line
 ---@return boolean : whether the line type is supported by the mod
 function helper.supportedLine(line_id)
+    local lineName = helper.getEntityName(line_id)
+
+    -- if a line contains "(M)", as in "Manual", in its name, then ignore it
+    if (string.find(lineName, "(M)", 1, true) ~= nil) then
+        return false
+    end
+
     -- get the line info
     local line = api.engine.getComponent(line_id, api.type.ComponentType.LINE)
-    local info = line.vehicleInfo.transportModes
 
     -- check whether the required parameters exists
     if not line and line.vehicleInfo and line.vehicleInfo.transportModes then
         return false
     end
 
+    local lineTransportModes = line.vehicleInfo.transportModes
+
     local transportModes = {
-        info[enums.TransportModes.BUS],
-        info[enums.TransportModes.TRAM],
-        info[enums.TransportModes.ELECTRIC_TRAM],
-        info[enums.TransportModes.AIRCRAFT],
-        info[enums.TransportModes.SHIP],
-        info[enums.TransportModes.SMALL_AIRCRAFT],
-        info[enums.TransportModes.SMALL_SHIP],
+        lineTransportModes[enums.TransportModes.BUS],
+        lineTransportModes[enums.TransportModes.TRAM],
+        lineTransportModes[enums.TransportModes.ELECTRIC_TRAM],
+        lineTransportModes[enums.TransportModes.AIRCRAFT],
+        lineTransportModes[enums.TransportModes.SHIP],
+        lineTransportModes[enums.TransportModes.SMALL_AIRCRAFT],
+        lineTransportModes[enums.TransportModes.SMALL_SHIP],
     }
 
     local res = false
@@ -215,6 +223,11 @@ function helper.getLineData()
             local lineOccupancy = 0
             local lineTravellerCount = 0
 
+            -- This retrieves the total number of people that have a path that includes travel via this line.
+            -- It doesn't mean that the person is at a station of the line, or on a line vehicle.
+            -- This is used as "demand" and is useful for scaling up line rate (capacity) preemptively when
+            -- there is a surge in demand, or to (partially) negate poorly balanced lines with some line sections
+            -- overloaded and other sections empty - effectively leading to a lower average load on the line.
             local lineTravellers = api.engine.system.simPersonSystem.getSimPersonsForLine(line_id)
             for _, traveller_id in pairs(lineTravellers) do
                 lineTravellerCount = lineTravellerCount + 1
@@ -226,11 +239,12 @@ function helper.getLineData()
                 local lineVehicles = api.engine.system.transportVehicleSystem.getLineVehicles(line_id)
                 for _, vehicle_id in pairs(lineVehicles) do
                     local vehicle = api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
-                    if vehicle and vehicle.config and vehicle.config.capacities[1] and vehicle.config.capacities[1] > 0 then
+                    if vehicle and vehicle.config and vehicle.config.capacities[enums.CargoTypes.PASSENGERS] and vehicle.config.capacities[enums.CargoTypes.PASSENGERS] > 0 then
                         lineVehicleCount = lineVehicleCount + 1
-                        lineCapacity = lineCapacity + vehicle.config.capacities[1]
+                        lineCapacity = lineCapacity + vehicle.config.capacities[enums.CargoTypes.PASSENGERS]
                     end
-
+                    
+                    -- This gets the actual people on this line vehicle at this moment i.e. occupying a seat.
                     for _, traveller_id in pairs(lineTravellers) do
                         local traveller = api.engine.getComponent(traveller_id, api.type.ComponentType.SIM_PERSON_AT_VEHICLE)
                         if traveller and traveller.vehicle and traveller.vehicle == vehicle_id then
