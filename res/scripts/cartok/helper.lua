@@ -7,14 +7,14 @@ local helper = {}
 
 -- TODO: Get more rule options to be switchable as presets
 ---@param data userdata : the LineData (from helper.getLineData)
----@param id number : the id of the line
+---@param line_id number : the id of the line
 ---@return boolean : whether a vehicle should be added to the line
-function helper.moreVehicleConditions(data, id)
+function helper.moreVehicleConditions(data, line_id)
     -- a bunch of factors
-    local usage = data[id].usage
-    local demand = data[id].demand
-    local rate = data[id].rate
-    local vehicles = data[id].vehicles
+    local usage = data[line_id].usage
+    local demand = data[line_id].demand
+    local rate = data[line_id].rate
+    local vehicles = data[line_id].vehicles
     local rules = {}
 
     local lineName = helper.getEntityName(line_id)
@@ -42,14 +42,14 @@ function helper.moreVehicleConditions(data, id)
 end
 
 ---@param data userdata : the LineData (from helper.getLineData)
----@param id number : the id of the line
+---@param line_id number : the id of the line
 ---@return boolean : whether a vehicle should be removed from the line
-function helper.lessVehiclesConditions(data, id)
+function helper.lessVehiclesConditions(data, line_id)
     -- a bunch of factors
-    local usage = data[id].usage
-    local demand = data[id].demand
-    local rate = data[id].rate
-    local vehicles = data[id].vehicles
+    local usage = data[line_id].usage
+    local demand = data[line_id].demand
+    local rate = data[line_id].rate
+    local vehicles = data[line_id].vehicles
     local rules = {}
 
     local lineName = helper.getEntityName(line_id)
