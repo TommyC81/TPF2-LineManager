@@ -15,12 +15,25 @@ Inspired by and uses some functionality from https://github.com/IncredibleHannes
 
 ## Information and options
 
-This mod can be added/removed to existing games as desired - it only measures load factor and demand and
-adds/removes vehicles on applicable lines accordingly. Only live data is used.
+* This mod can be added/removed to existing games as desired - it only measures load factor and demand and
+  adds/removes vehicles on applicable lines accordingly. Only live data is used.
+* This mod will by default automatically manage the number of vehicles on all passenger lines utilizing
+  buses, trams, aircraft, or ships.
+* Tested and sensible default rules are used to determine the number of required vehicles on a line.
+  However, should this not work as desired, two options as per below are available to tweak the functionality:
+* **(M) - MANUAL**: To disable automatic vehicle management on a specific line, add "**(M)**" to the name of
+  the line (anywhere in the line name).
+* **(R) - RATE****: To use alternative line rate rules for a specific line, adjusting number of
+  vehicles strictly to ensure rate exceeds demand (this is more aggressive scaling, effectively ignoring
+  load factor), add "***(R)**" to the name of the line (anywhere in the line name). Note that this
+  is somewhat experimental and the rules may change, please provide feedback..
 
-To disable automatic vehicle management of a specific line, add "**(M)**" to the name of the line (anywhere in the line name).
-
-To use alternative rules for a line to scale the line rate strictly according to demand (this is more aggressive scaling, effectively ignoring load factor), add "**(R)**" to the name of the line (anywhere in the line name). Note that this is somewhat experimental and the rules may change, please provide feedback.
+Examples of line naming:
+* Line name "**BUS ABC-1**" - none of the specific syntax is used, this line will be automatically managed
+  according to default rules.
+* Line name "**BUS ABC-1 (M)**" - this line is **MANUALLY** managed (no automatic vehicle management).
+* Line name "**BUS ABC-1 (R)**" - this line is managed according to alternative, and more aggressive,
+  **(R) - RATE** line rules (disregarding load factor).
 
 ## Quick start
 
@@ -32,8 +45,10 @@ To use alternative rules for a line to scale the line rate strictly according to
 ## Quick tips for best results
 
 * Only use one type of vehicle per line (this makes addition of new vehicles more predictable).
-* Using smaller vehicles sizes (less capacity per vehicle) allows better fine-tuning of line capacity in accordance with
-  demand.
+* If you need to update/upgrade vehicle type on a line, replace all vehicles at the same time (see above
+  related item).
+* Where appropriate, using a smaller vehicle size (less capacity per vehicle) allows better automatic
+  fine-tuning of the line capacity.
 
 ## What the mod does
 
@@ -50,11 +65,13 @@ To use alternative rules for a line to scale the line rate strictly according to
   along the route, you will have to fix that yourself - there is no software that can fix this for you. If no vehicles
   are added despite a single station being overloaded along the route - it is probably a sign of poor route design,
   split the route up into evenly balanced (demand) sections.
+* As an alternative to improving the route network, you can try using the alternative **(R) - RATE** line rules
+  or **(M) - MANUAL** line management (see Information and and options above).
 
 ## Performance
 
-* The mod takes one usage, rate and demand sample per line per in-game month.
-* Every second in-game month, lines are updated to add/remove vehicles as appropriate.
+* Every in-game month, the mod takes one usage, rate and demand sample per applicable line.
+* Every second in-game month, the mod updates managed lines to add/remove vehicles as appropriate.
 * Thus, performance impact should be negligible. This has not been studied in-depth, but no effect of the
   sampling/updates has been observed in games with hundreds of lines/buses/trams/aircraft/ships.
 
@@ -64,7 +81,8 @@ To use alternative rules for a line to scale the line rate strictly according to
 
 ## Future plans
 
-* No specific plans, except making this stable and add some general coding improvements as time permits.
+* No specific plans, except making this stable and add coding improvements as time permits
+  (this is also dependent on contribution from users).
 
 ## What you can do by mucking around in the mod file
 
@@ -82,14 +100,18 @@ To use alternative rules for a line to scale the line rate strictly according to
 
 ## How to Contribute
 
-If you want to contribute to this project, open an issue on GitHub, or create a fork/branch of the project, and work on
-your fork/branch. When you are done and want to integrate it, open a Pull Request (PR) aimed at the main branch. You can
-of course open a PR early to get feedback if you like. After review and required adjustments, the pull request can be
-merged into the main project. Make sure you continuously (re)base your fork/branch on the main branch/repository , or 
-merge in changes from the main branch/repository, to ensure your fork/branch is up-to-date and can be merged without 
-conflicts. Squash your commits as required to maintain a clean commit history.
+### General
 
-Recommended tools:
+* If you want to contribute to this project, open an issue on GitHub, or create a fork/branch of the project, and work on
+  your fork/branch.
+* When you are done with your changes and want to integrate it, open a Pull Request (PR) aimed at the main branch. You can
+  of course open a PR early to get feedback if you like.
+* After review and any required adjustments, the pull request can be merged into the main project. Make sure you
+  continuously (re)base your fork/branch on the main branch/repository, or merge in changes from the main
+  branch/repository, to ensure your fork/branch is up-to-date and can be merged without conflicts.
+* Squash your commits as required to maintain a clean commit history.
+
+### Recommended tools:
 
 * **GitHub account** (sign up for a free account here: https://github.com/)
 * **Github Desktop** (free, also requires a free GitHub account: https://desktop.github.com/)
