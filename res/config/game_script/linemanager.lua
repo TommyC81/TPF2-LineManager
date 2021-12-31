@@ -11,7 +11,7 @@ local update_interval = 2 -- For every x sampling, do a vehicle update (check if
 local sample_restart = 2 -- Following an update of a Line, the number of recorded samples will be reset to this value for the line to delay an update until sufficient data is available
 local samples_since_last_update = 0
 
--- TODO: make these options load menu toggleable
+-- TODO: make these options load menu toggleable (And make that button actually work)
 -- Set the logging level, uncomment the line below to change logging from default 'INFO' to 'DEBUG'
 -- log.setLevel(log.levels.DEBUG)
 -- Uncomment the line below to reduce debugging verbosity

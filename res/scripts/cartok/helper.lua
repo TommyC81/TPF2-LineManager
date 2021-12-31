@@ -5,6 +5,8 @@ local enums = require 'cartok/enums'
 
 local helper = {}
 
+helper.ruleInvert=false
+
 -- TODO: Get more rule options to be switchable as presets
 ---@param data userdata : the LineData (from helper.getLineData)
 ---@param line_id number : the id of the line
@@ -24,7 +26,8 @@ function helper.moreVehicleConditions(data, line_id)
         rules = {
             demand > rate,
         }
-    else -- make use of standard rules
+    else
+        -- make use of standard rules
         rules = {
             usage > 50 and demand > rate * 2,
             usage > 80 and demand > rate * (vehicles + 1) / vehicles,
@@ -59,7 +62,8 @@ function helper.lessVehiclesConditions(data, line_id)
         rules = {
             vehicles > 1 and demand < rate * (vehicles - 1) / vehicles,
         }
-    else -- make use of standard rules
+    else
+        -- make use of standard rules
         rules = {
             vehicles > 1 and usage < 70 and demand < rate * (vehicles - 1) / vehicles,
         }
@@ -261,7 +265,7 @@ function helper.getLineData()
                         lineVehicleCount = lineVehicleCount + 1
                         lineCapacity = lineCapacity + vehicle.config.capacities[enums.CargoTypes.PASSENGERS]
                     end
-                    
+
                     -- This gets the actual people on this line vehicle at this moment i.e. occupying a seat.
                     for _, traveller_id in pairs(lineTravellers) do
                         local traveller = api.engine.getComponent(traveller_id, api.type.ComponentType.SIM_PERSON_AT_VEHICLE)
