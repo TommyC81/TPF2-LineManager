@@ -10,7 +10,7 @@ local supportedLineModes = {
     "(R)", --Rate focused line management
     --    "(P)"--peak demand must be met TODO: implement peak demand mode
 }
-local defaultLineMode = "(R)"
+local defaultLineMode = "(D)"
 
 ---@param lineName string : the name of the line for there is the line mode designator
 ---@return string : line mode designator string
