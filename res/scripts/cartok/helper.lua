@@ -4,8 +4,28 @@
 local enums = require 'cartok/enums'
 
 local helper = {}
+local supportedLineModes = {
+    "(M)", --Manual management
+    "(D)", --"Default" line management (CARTOK's original rules)
+    "(R)", --Rate focused line management
+    --    "(P)"--peak demand must be met TODO: implement peak demand mode
+}
+local defaultLineMode = "(R)"
 
-helper.ruleInvert=false
+---@param lineName string : the name of the line for there is the line mode designator
+---@return string : line mode designator string
+function helper.getLineMode(lineName)
+    local current = defaultLineMode
+    for i = 1, #supportedLineModes do
+        if (string.find(lineName, supportedLineModes[i], 1, true) ~= nil) then
+            current = supportedLineModes[i]
+        end
+    end
+    return current
+end
+
+--TODO: deprecated, redo this and the start menu buttons
+helper.ruleInvert = false
 
 -- TODO: Get more rule options to be switchable as presets
 ---@param data userdata : the LineData (from helper.getLineData)
@@ -17,16 +37,17 @@ function helper.moreVehicleConditions(data, line_id)
     local demand = data[line_id].demand
     local rate = data[line_id].rate
     local vehicles = data[line_id].vehicles
+    local mode = data[line_id].mode
     local rules = {}
 
     local lineName = helper.getEntityName(line_id)
 
     -- if a line contains "(R)", as in "Rate", in its name, then the vehicle scaling rules will strictly target line rate to stay above demand
-    if (string.find(lineName, "(R)", 1, true) ~= nil) then
+    if mode == "(R)" then
         rules = {
             demand > rate,
         }
-    else
+    elseif mode == "(D)" then
         -- make use of standard rules
         rules = {
             usage > 50 and demand > rate * 2,
@@ -53,16 +74,17 @@ function helper.lessVehiclesConditions(data, line_id)
     local demand = data[line_id].demand
     local rate = data[line_id].rate
     local vehicles = data[line_id].vehicles
+    local mode = data[line_id].mode
     local rules = {}
 
     local lineName = helper.getEntityName(line_id)
 
     -- if a line contains "(R)", as in "Rate", in its name, then the vehicle scaling rules will strictly target line rate to stay above demand
-    if (string.find(lineName, "(R)", 1, true) ~= nil) then
+    if mode == "(R)" then
         rules = {
             vehicles > 1 and demand < rate * (vehicles - 1) / vehicles,
         }
-    else
+    elseif mode == "(D)" then
         -- make use of standard rules
         rules = {
             vehicles > 1 and usage < 70 and demand < rate * (vehicles - 1) / vehicles,
@@ -85,7 +107,7 @@ function helper.supportedLine(line_id)
     local lineName = helper.getEntityName(line_id)
 
     -- if a line contains "(M)", as in "Manual", in its name, then ignore it
-    if (string.find(lineName, "(M)", 1, true) ~= nil) then
+    if (helper.getLineMode(lineName) == "(M)") then
         return false
     end
 
@@ -126,7 +148,8 @@ function helper.printLineData(data, line_id)
     local use = "Usage: " .. data[line_id].usage .. "% "
     use = use .. "Demand: " .. data[line_id].demand .. " "
     use = use .. "Rate: " .. data[line_id].rate .. " "
-    use = use .. "Vehicles: " .. data[line_id].vehicles
+    use = use .. "Vehicles: " .. data[line_id].vehicles .. " "
+    use = use .. "Mode: " .. data[line_id].mode
     return use
 end
 
@@ -275,6 +298,7 @@ function helper.getLineData()
                     end
                 end
 
+                local name = helper.getEntityName(line_id)
                 lineData[line_id] = {
                     vehicles = lineVehicleCount,
                     capacity = lineCapacity,
@@ -282,7 +306,8 @@ function helper.getLineData()
                     demand = lineTravellerCount,
                     usage = math.round(100 * lineOccupancy / lineCapacity),
                     rate = helper.getLineRate(line_id),
-                    name = helper.getEntityName(line_id),
+                    name = name,
+                    mode = helper.getLineMode(name),
                 }
             end
         end

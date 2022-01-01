@@ -53,7 +53,7 @@ function data()
                 },
                 {
                     name = "kryfield", -- Author of Departure Board mod. LineManager uses code and inspiration from this mod.
-					role = "OTHER",  -- OPTIONAL "CREATOR", "CO_CREATOR", "TESTER" or "BASED_ON" or "OTHER"
+                    role = "OTHER", -- OPTIONAL "CREATOR", "CO_CREATOR", "TESTER" or "BASED_ON" or "OTHER"
                 },
             },
         },
@@ -71,7 +71,7 @@ function data()
             ]]
             --Button two
             helper.ruleInvert = (params["RuleAggressive"] == 1)
-            log.setVerboseDebugging(params["RuleVerbose"]==1)
+            log.setVerboseDebugging(params["RuleVerbose"] == 1)
         end,
 
     }
