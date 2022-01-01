@@ -1,5 +1,5 @@
----@author CARTOK wrote the bulk of the code while
----@author RusteyBucket rearranged the code to improve readability and expandability
+---@author CARTOK
+---@author RusteyBucket
 local log = require 'cartok/logging'
 local helper = require 'cartok/helper'
 local enums = require 'cartok/enums'

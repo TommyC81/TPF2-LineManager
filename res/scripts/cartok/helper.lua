@@ -1,6 +1,6 @@
--- Contains code from https://github.com/IncredibleHannes/TPF2-Timetables
----@author CARTOK wrote the bulk of the code while
----@author RusteyBucket rearranged the code to improve readability and expandability
+---@author CARTOK
+---@author RusteyBucket
+-- Contains code from TPF2-Timetables, created by Celmi, available here: https://steamcommunity.com/workshop/filedetails/?id=2408373260 and source https://github.com/IncredibleHannes/TPF2-Timetables
 local enums = require 'cartok/enums'
 
 local helper = {}

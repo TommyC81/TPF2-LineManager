@@ -1,5 +1,5 @@
--- Contains code from https://github.com/IncredibleHannes/TPF2-Timetables
----@author CARTOK expanded with some additional functions and tweaks
+---@author CARTOK
+-- Contains code from TPF2-Timetables, created by Celmi, available here: https://steamcommunity.com/workshop/filedetails/?id=2408373260 and source https://github.com/IncredibleHannes/TPF2-Timetables
 local logging = {}
 
 local TRACE = 1

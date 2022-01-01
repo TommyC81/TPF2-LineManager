@@ -1,0 +1,21 @@
+
+-- This folder contains Line Data Files
+--   see docs/info  for more information
+
+-- Double hyphen means a comment until the end of line
+-- Each statement,  <line name> = <data>  must be on a single logical line, but a backslash
+--   character at the end of a line joins it to the next line.
+-- Keywords  TO  SHORT  VIA  FOR  OR  must be upper case
+-- A FOR clause shows destinations which are not stations in the game. It can include OR and VIA and is enclosed in round brackets.
+
+-- Here are examples:
+
+BPN_LIV =  Blackpool TO Liverpool VIA Preston VIA Wigan
+BPN_YRK =  Blackpool TO Leeds (FOR York) VIA Blackburn
+CAR_LDS =  Carlisle TO Leeds VIA Settle
+LAN_SPT =  Lancaster TO Stockport VIA Wigan VIA Mcr Picadilly
+SOP_SYB =  Southport TO Stalybridge VIA Bolton
+MAN_RDG =  Mcr Picadilly TO Stoke-on-Trent (FOR Reading VIA Birmingham\
+				OR Bournmouth VIA Birmingham VIA Reading OR Bristol VIA Birmingham\
+                OR Bournmouth VIA Birmingham VIA Reading OR Plymouth VIA Birmingham VIA Bristol)
+WCML = Crewe (FOR London Euston OR London Euston VIA Birmingham) TO Carlisle (FOR Glasgow OR Edinburgh)

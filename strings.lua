@@ -9,7 +9,7 @@ function data()
                     '[hr]\n' ..
                     '[h1]Information and options[/h1]\n' ..
                     '[list]\n' ..
-                    '[*]This mod can be added/removed to existing games as desired - it only measures load factor and demand and adds/removes vehicles on applicable lines accordingly. Only live data is used.\n' ..
+                    '[*]This mod can be added/removed to existing games as desired - it only measures load factor, rate, and demand, adding/removing vehicles on applicable lines accordingly. Only live data is used.\n' ..
                     '[*]This mod will by default automatically manage the number of vehicles on [u]all passenger lines utilizing buses, trams, aircraft, or ships[/u].\n' ..
                     '[*]Tested and sensible default rules are used to determine the number of required vehicles on a line. However, should this not work as desired, two options as per below are available to tweak the functionality:\n' ..
                     '[*][b](M) - MANUAL[/b]: To [u]disable automatic vehicle management[/u] on a specific line, add "[b](M)[/b]" to the name of the line (anywhere in the line name).\n' ..
@@ -37,6 +37,7 @@ function data()
                     '[*]Only use one type of vehicle per line (this makes addition of new vehicles more predictable).\n' ..
                     '[*]If you need to update/upgrade vehicle type on a line, replace all vehicles at the same time (see above related item).\n' ..
                     '[*]Where appropriate, using a smaller vehicle size (less capacity per vehicle) allows better automatic fine-tuning of the line capacity.\n' ..
+                    '[*]Having depots available close to automatically managed lines will speed up capacity increase when required.\n' ..
                     '[/list]\n' ..
                     '\n' ..
                     '[h1]What the mod does[/h1]\n' ..
@@ -72,7 +73,11 @@ function data()
                     '[h1]Code[/h1]' ..
                     'Source code and further information is available on the [url=https://github.com/TommyC81/TPF2-LineManager]GitHub repository[/url].\n' ..
                     'Mod created by [url=https://github.com/TommyC81]TommyC81[/url] with contribution from [url=https://github.com/RusteyBucket]RusteyBucket[/url].\n' ..
-                    'This mod is inspired by and uses some functionality from [url=https://github.com/IncredibleHannes/TPF2-Timetables]TPF2-Timetables[/url].',
+                    'This mod is inspired by and uses some functionality from:\n',
+                    '[list]\n' ..
+                    '[*][url=https://steamcommunity.com/workshop/filedetails/?id=2408373260]TPF2-Timetables (Steam Workshop)[/url] created by Celmi. Source code available on [url=https://github.com/IncredibleHannes/TPF2-Timetables]GitHub[/url].',
+                    '[*][url=https://steamcommunity.com/workshop/filedetails/?id=2692112427]Departure Board (Steam Workshop)[/url] created by kryfield.',
+                    '[/list]\n',
     },
   }
 end
