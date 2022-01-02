@@ -1,6 +1,7 @@
 ---@author CARTOK
 ---@author RusteyBucket
--- Contains code from TPF2-Timetables, created by Celmi, available here: https://steamcommunity.com/workshop/filedetails/?id=2408373260 and source https://github.com/IncredibleHannes/TPF2-Timetables
+-- Contains code and inspiration from 'TPF2-Timetables' created by Celmi, available here: https://steamcommunity.com/workshop/filedetails/?id=2408373260 and source https://github.com/IncredibleHannes/TPF2-Timetables
+-- General Transport Fever 2 API documentation can be found here: https://transportfever2.com/wiki/api/index.html
 local enums = require 'cartok/enums'
 
 local helper = {}
