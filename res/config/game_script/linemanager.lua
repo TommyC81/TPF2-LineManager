@@ -1,7 +1,11 @@
 ---@author CARTOK
 ---@author RusteyBucket
+-- General Transport Fever 2 API documentation can be found here: https://transportfever2.com/wiki/api/index.html
+
+-- Include all required helper functions and scripts to make this mod work
 local log = require 'cartok/logging'
 local helper = require 'cartok/helper'
+local gui_helper = require 'cartok/gui_helper'
 local enums = require 'cartok/enums'
 
 local last_sampled_month = -1 -- Keeps track of what month number the last sample was taken.
@@ -234,11 +238,13 @@ local function checkIfUpdateIsDue()
     end
 end
 
----updates the counters when the last line adjustment happened
-local function update()
-    checkIfUpdateIsDue()
-end
-
 function data()
-    return { update = update }
+    return {
+        update = function()
+            checkIfUpdateIsDue()
+        end,
+        guiInit = function()
+            gui_helper.initGui()
+        end,
+    }
 end

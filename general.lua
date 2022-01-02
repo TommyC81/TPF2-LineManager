@@ -1,5 +1,7 @@
 --[[
 
+General Transport Fever 2 API documentation can be found here: https://transportfever2.com/wiki/api/index.html
+
 ** GENERAL USEFUL COMMANDS **
 
 Get all player lines
@@ -205,3 +207,5 @@ Or combine the above two commands into one call using the first line (make sure 
   doorsTime = 128426800000,
   autoDeparture = true,
 }
+
+]]

@@ -1,13 +1,14 @@
 ---@author CARTOK
 ---@author RusteyBucket
--- Contains code from TPF2-Timetables, created by Celmi, available here: https://steamcommunity.com/workshop/filedetails/?id=2408373260 and source https://github.com/IncredibleHannes/TPF2-Timetables
+-- Contains code and inspiration from 'TPF2-Timetables' created by Celmi, available here: https://steamcommunity.com/workshop/filedetails/?id=2408373260 and source https://github.com/IncredibleHannes/TPF2-Timetables
+-- General Transport Fever 2 API documentation can be found here: https://transportfever2.com/wiki/api/index.html
 local enums = require 'cartok/enums'
 
 local helper = {}
 local supportedLineModes = {
-    "(M)", --Manual management
-    "(D)", --"Default" line management (CARTOK's original rules)
-    "(R)", --Rate focused line management
+    "(M)", -- Manual management
+    "(D)", -- "Default" line management (CARTOK's original rules)
+    "(R)", -- Rate focused line management
     --    "(P)"--peak demand must be met TODO: implement peak demand mode
 }
 local defaultLineMode = "(D)"
@@ -24,7 +25,7 @@ function helper.getLineMode(lineName)
     return current
 end
 
---TODO: deprecated, redo this and the start menu buttons
+-- TODO: deprecated, redo this and the start menu buttons
 helper.ruleInvert = false
 
 -- TODO: Get more rule options to be switchable as presets
