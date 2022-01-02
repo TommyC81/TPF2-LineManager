@@ -96,7 +96,9 @@ Examples of line naming:
       number is what as of yet, though we're on it).
 * The `linemanager.lua` file contains the execution functions that actually make things work. If you're determined, you
   can change stuff there.
-    * Uncomment the line `log.setLevel(log.levels.DEBUG)` to avail additional in-game console debugging output.
+    * Uncomment the line `log.setLevel(log.levels.DEBUG)` to avail additional in-game console debugging output by default.
+    * A simple in-game menu is available; in the bottom bar of the game gui, look for `[LM]`. In this menu you can
+      enable/disable *Debugging* and *Verbose Debugging* (additional information) as required.
 * Any changes made to the code could obviously cause the game to crash on loading or on reaching the clause that breaks
   the code. Maybe even worse, who knows.
 

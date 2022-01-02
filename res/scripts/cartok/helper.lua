@@ -6,9 +6,9 @@ local enums = require 'cartok/enums'
 
 local helper = {}
 local supportedLineModes = {
-    "(M)", --Manual management
-    "(D)", --"Default" line management (CARTOK's original rules)
-    "(R)", --Rate focused line management
+    "(M)", -- Manual management
+    "(D)", -- "Default" line management (CARTOK's original rules)
+    "(R)", -- Rate focused line management
     --    "(P)"--peak demand must be met TODO: implement peak demand mode
 }
 local defaultLineMode = "(D)"
@@ -25,7 +25,7 @@ function helper.getLineMode(lineName)
     return current
 end
 
---TODO: deprecated, redo this and the start menu buttons
+-- TODO: deprecated, redo this and the start menu buttons
 helper.ruleInvert = false
 
 -- TODO: Get more rule options to be switchable as presets

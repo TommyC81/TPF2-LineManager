@@ -27,38 +27,54 @@ logging.levels = {
     ERROR = ERROR,
 }
 
-local currentLogLevel = INFO
-local verboseDebugging = true
+logging.currentLogLevel = INFO
+logging.verboseDebugging = true
 
 ---@param level number (Optional) The logging level, refer to logging.levels for applicable levels, default is 'INFO' (3).
 ---Set the logging level to be used, this filters what messages are shown in the in-game console.
 function logging.setLevel(level)
-    currentLogLevel = level or DEFAULT
+    logging.currentLogLevel = level or DEFAULT
+    logging.info("Logging level set to " .. levelNames[logging.currentLogLevel] .. ".")
+end
+
+---@param debugging boolean (Optional) Toggles logging level between DEBUG (true) and INFO (false), default is DEBUG (true).
+---Set the logging level to be used, this filters what messages are shown in the in-game console.
+function logging.setDebugging(debugging)
+    if (debugging) then
+        logging.setLevel(logging.levels.DEBUG)
+    else
+        logging.setLevel(logging.levels.INFO)
+    end
 end
 
 ---@param verbose boolean (Optional) Whether verbose debug messages should be used, default is true.
 ---Set whether verbose debugging messages should be used.
 function logging.setVerboseDebugging(verbose)
-    verboseDebugging = verbose or true
+    if (verbose ~= nil ) then
+        logging.verboseDebugging = verbose
+    else
+        logging.verboseDebugging = true
+    end
+    logging.info("VerboseDebugging set to " .. tostring(logging.verboseDebugging) .. ".")
 end
 
 ---@return boolean isDebugging Whether current logging level is 'DEBUG' or greater.
 ---Used to check if logging level is debugging or greater. Useful for determining if extended debug messages should be prepared for displaying in the in-game console.
 function logging.isDebugging()
-    return currentLogLevel >= DEBUG
+    return logging.currentLogLevel >= DEBUG
 end
 
 ---@return boolean isVerboseDebugging Whether current logging level is 'DEBUG' or greater.
 ---Used to check if logging level is debugging or greater and verbose debugging messages should be used. Useful for determining if extended debug messages should be prepared for displaying in the in-game console.
 function logging.isVerboseDebugging()
-    return currentLogLevel >= DEBUG and verboseDebugging
+    return logging.currentLogLevel >= DEBUG and logging.verboseDebugging
 end
 
 ---@param level number message level
 ---@param message string the message
 ---Sends a message of the specified level to the in-game console. Refer to logging.levels for applicable levels.
 function logging.log(level, message)
-    if level >= currentLogLevel then
+    if level >= logging.currentLogLevel then
         print('[LineManager][' .. os.date('%H:%M:%S') .. '][' .. levelNames[level] .. '] ' .. message) -- Date/time output shortened from %Y-%m-%d %H:%M:%S
     end
 end

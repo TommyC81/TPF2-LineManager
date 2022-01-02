@@ -8,14 +8,13 @@ local helper = require 'cartok/helper'
 local gui_helper = require 'cartok/gui_helper'
 local enums = require 'cartok/enums'
 
-local last_sampled_month = -1 -- Keeps track of what month number the last sample was taken.
-local sample_size = 6
-local currentLineData = {}
+local currentLineData = {} -- An up-to-date list (since last sampling...) of the Player lines and associated data.
+local last_sampled_month = -1 -- Keeps track of what month number the last sample was taken, in order to re-trigger a new sampling when month changes.
+local sample_size = 6 -- Number of samples to average data out over.
 local update_interval = 2 -- For every x sampling, do a vehicle update (check if a vehicle should be added or removed)
-local sample_restart = 2 -- Following an update of a Line, the number of recorded samples will be reset to this value for the line to delay an update until sufficient data is available
-local samples_since_last_update = 0
+local sample_restart = 2 -- Following an update of a Line, the number of recorded samples will be reset to this value for the line to delay an update until sufficient data is available.
+local samples_since_last_update = 0 -- A counter to keep track of how many samples have been taken since last update, and then re-trigger an update when 'update_interval' is reached.
 
--- TODO: make these options load menu toggleable (And make that button actually work)
 -- Set the logging level, uncomment the line below to change logging from default 'INFO' to 'DEBUG'
 -- log.setLevel(log.levels.DEBUG)
 -- Uncomment the line below to reduce debugging verbosity
@@ -240,11 +239,24 @@ end
 
 function data()
     return {
+        handleEvent = function (filename, id, name, param)
+            if filename == "LineManager" and id == "settingsGui" then
+                if (name == "debuggingUpdate") then
+                    log.setDebugging(param)
+                elseif (name == "verboseDebuggingUpdate") then
+                    log.setVerboseDebugging(param)
+                end
+            end
+        end,
         update = function()
             checkIfUpdateIsDue()
         end,
         guiInit = function()
+            gui_helper.logging = log
             gui_helper.initGui()
         end,
+        -- TODO: Add something clever here eventually
+        --guiUpdate = function()
+        --end,
     }
 end

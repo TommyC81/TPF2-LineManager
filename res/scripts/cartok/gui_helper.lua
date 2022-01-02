@@ -7,29 +7,64 @@ local gui = require "gui"
 
 local gui_helper = {}
 
-gui_helper.settingsWindow = nil
+local settingsWindow = nil
+
+local debugging = false
+local verboseDebugging = true
 
 function gui_helper.initGui()
-    -- Create button
-    local buttonLabel = gui.textView_create("gameInfo.linemanager.label", "BUTTONLABEL")
+    -- Create LineManager button in the main GUI
+    local buttonLabel = gui.textView_create("gameInfo.linemanager.label", "[LM]")
     local button = gui.button_create("gameInfo.linemanager.button", buttonLabel)
-
+    button:onClick(gui_helper.buttonClick)
+    -- TODO: Should add a divider in the bar before this button. How?
     game.gui.boxLayout_addItem("gameInfo.layout", button.id)
 
-    -- Create settings window
-    -- TODO: This needs to be fleshed out with actual contents and callbacks etc.
-    local textView = api.gui.comp.TextView.new("")
-    gui_helper.settingsWindow = api.gui.comp.Window.new("TITLE", textView)
-    gui_helper.settingsWindow:setTitle("TITLE")
-    gui_helper.settingsWindow:addHideOnCloseHandler()
-    gui_helper.settingsWindow:setMovable(true)
-    gui_helper.settingsWindow:setPinButtonVisible(true)
-    gui_helper.settingsWindow:setResizable(false)
-    gui_helper.settingsWindow:setSize(api.gui.util.Size.new(450, 76)) -- 2 lines
-    gui_helper.settingsWindow:setPosition(0, 0)
-    gui_helper.settingsWindow:setPinned(true)
-    gui_helper.settingsWindow:setResizable(true)
-    gui_helper.settingsWindow:setVisible(false, false)
+    -- SETTINGS WINDOW
+    -- Create a BoxLayout for the options
+    local settingsBox = api.gui.layout.BoxLayout.new("VERTICAL")
+
+    -- Create the SETTINGS window
+    settingsWindow = api.gui.comp.Window.new("", settingsBox)
+    settingsWindow:setTitle("LineManager Settings")
+    settingsWindow:addHideOnCloseHandler()
+    settingsWindow:setMovable(true)
+    settingsWindow:setPinButtonVisible(true)
+    settingsWindow:setResizable(false)
+    settingsWindow:setSize(api.gui.util.Size.new(300, 200))
+    settingsWindow:setPosition(0, 0)
+    settingsWindow:setPinned(true)
+    settingsWindow:setVisible(false, false)
+
+    -- Add a header for the Debugging options
+    local header_Debugging = api.gui.comp.TextView.new("Debugging options")
+    settingsBox:addItem(header_Debugging)
+
+    -- Create a toggle for debugging mode and add it to the SettingsBox (BoxLayout)
+    local checkBox_debugging = api.gui.comp.CheckBox.new("Debugging")
+    checkBox_debugging:setSelected(debugging, false)
+    checkBox_debugging:onToggle(function(selected)
+        -- Send a script event to say that the debugging setting has been changed.
+        api.cmd.sendCommand(api.cmd.make.sendScriptEvent("LineManager", "settingsGui", "debuggingUpdate", selected))
+    end)
+    settingsBox:addItem(checkBox_debugging)
+
+    -- Create a toggle for verboseDebugging mode
+    local checkBox_verboseDebugging = api.gui.comp.CheckBox.new("Verbose Debugging")
+    checkBox_verboseDebugging:setSelected(verboseDebugging, false)
+    checkBox_verboseDebugging:onToggle(function(selected)
+        -- Send a script event to say that the verboseDebugging setting has been changed.
+        api.cmd.sendCommand(api.cmd.make.sendScriptEvent("LineManager", "settingsGui", "verboseDebuggingUpdate", selected))
+    end)
+    settingsBox:addItem(checkBox_verboseDebugging)
+end
+
+function gui_helper.buttonClick()
+    if not settingsWindow:isVisible() then
+        settingsWindow:setVisible(true, false)
+    else
+        settingsWindow:setVisible(false, false)
+    end
 end
 
 return gui_helper
