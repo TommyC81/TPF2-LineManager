@@ -252,7 +252,6 @@ function data()
             checkIfUpdateIsDue()
         end,
         guiInit = function()
-            gui_helper.logging = log
             gui_helper.initGui()
         end,
         -- TODO: Add something clever here eventually
