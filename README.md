@@ -11,7 +11,9 @@ micro-management and will let you focus on the more fun overall design of the tr
 
 Source code is located here: https://github.com/TommyC81/TPF2-LineManager.
 Created by https://github.com/TommyC81 with contribution from https://github.com/RusteyBucket.
-Inspired by and uses some functionality from https://github.com/IncredibleHannes/TPF2-Timetables.
+This mod is inspired by and uses some functionality from:
+* TPF2-Timetables, created by Celmi, available here: https://steamcommunity.com/workshop/filedetails/?id=2408373260 and source https://github.com/IncredibleHannes/TPF2-Timetables
+* Departure Board, created by kryfield, available here: https://steamcommunity.com/workshop/filedetails/?id=2692112427
 
 ## Information and options
 
@@ -94,7 +96,9 @@ Examples of line naming:
       number is what as of yet, though we're on it).
 * The `linemanager.lua` file contains the execution functions that actually make things work. If you're determined, you
   can change stuff there.
-    * Uncomment the line `log.setLevel(log.levels.DEBUG)` to avail additional in-game console debugging output.
+    * Uncomment the line `log.setLevel(log.levels.DEBUG)` to avail additional in-game console debugging output by default.
+    * A simple in-game menu is available; in the bottom bar of the game gui, look for `[LM]`. In this menu you can
+      enable/disable *Debugging* and *Verbose Debugging* (additional information) as required.
 * Any changes made to the code could obviously cause the game to crash on loading or on reaching the clause that breaks
   the code. Maybe even worse, who knows.
 

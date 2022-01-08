@@ -1,4 +1,5 @@
 ---@author CARTOK
+-- General Transport Fever 2 API documentation can be found here: https://transportfever2.com/wiki/api/index.html
 local enums = {}
 
 --- Enumerators for TransportModes
@@ -27,7 +28,7 @@ local enums = {}
 --      [16] = 0, (UNKNOWN16)
 --    },
 --
--- TODO: For some reason I'm unable to use the api.type.enum value directly, and must thus use hardcoded values. Why?
+-- TODO: For some reason I'm unable to use the api.type.enum value directly, and must thus use hardcoded values. Why? In-game console works as expected.
 enums.TransportModes = {
     PERSON = 1, -- api.type.enum.TransportMode.PERSON + 1
     CARGO = 2, -- api.type.enum.TransportMode.CARGO + 1
