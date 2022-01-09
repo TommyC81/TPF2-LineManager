@@ -13,14 +13,18 @@ function data()
                     '[*]This mod will by default automatically manage the number of vehicles on [u]all passenger lines utilizing buses, trams, aircraft, or ships[/u].\n' ..
                     '[*]Tested and sensible default rules are used to determine the number of required vehicles on a line. However, should this not work as desired, two options as per below are available to tweak the functionality:\n' ..
                     '[*][b](M) - MANUAL[/b]: To [u]disable automatic vehicle management[/u] on a specific line, add "[b](M)[/b]" to the name of the line (anywhere in the line name).\n' ..
-                    '[*][b](R) - RATE[/b]: To [u]use alternative line rate rules[/u] for a specific line, adjusting number of vehicles strictly to ensure rate exceeds demand (this is more aggressive scaling, effectively ignoring load factor), add "[b](R)[/b]" to the name of the line (anywhere in the line name). [i]Note that this is somewhat experimental and the rules may change, please provide feedback.[/i]\n' ..
+                    '[*][b](R) - RATE[/b]: To use [u]line rate rules[/u] for a specific line, adjusting number of vehicles strictly to ensure line rate exceeds demand (this is more aggressive scaling, effectively ignoring load factor), add "[b](R)[/b]" to the name of the line (anywhere in the line name). [i]Note that this is somewhat experimental and the rules may change, please provide feedback.[/i]\n' ..
+                    '[*][b](RC) - CONSERVATIVE RATE[/b]: To use [u]conservative line rate rules[/u] for a specific line, increasing number of vehicles to as close as possible match line rate to demand, whilst using default rules to reduce vehicles. [i]Note that this is somewhat experimental and the rules may change, please provide feedback.[/i]\n' ..
+                    '[*][b](T) - TEST[/b]: To use [u]test rate rules[/u] for a specific line, dynamically comparing usage vs rate/demand ratio to scale up/down the number of vehicles. [i]Note that this is somewhat experimental and the rules may change, please provide feedback.[/i]\n' ..
                     '[/list]\n' ..
                     '\n' ..
                     'Examples of line naming:\n' ..
                     '[list]\n' ..
                     '[*]Line name "[b]BUS ABC-1[/b]" - none of the specific syntax is used, this line will be automatically managed according to default rules.\n' ..
                     '[*]Line name "[b]BUS ABC-1 [u](M)[/u][/b]" - this line is [b]MANUALLY[/b] managed (no automatic vehicle management).\n' ..
-                    '[*]Line name "[b]BUS ABC-1 [u](R)[/u][/b]" - this line is managed according to alternative, and more aggressive, [b](R) - RATE[/b] line rules (disregarding load factor).\n' ..
+                    '[*]Line name "[b]BUS ABC-1 [u](R)[/u][/b]" - this line is managed according to [b](R) - RATE[/b] line rules.\n' ..
+                    '[*]Line name "[b]BUS ABC-1 [u](RC)[/u][/b]" - this line is managed according to [b](RC) - CONSERVATIVE RATE[/b] line rules.\n' ..
+                    '[*]Line name "[b]BUS ABC-1 [u](T)[/u][/b]" - this line is managed according to [b](T) - TEST[/b] line rules.\n' ..
                     '[/list]\n' ..
                     '\n' ..
                     '[hr]\n' ..
@@ -50,7 +54,7 @@ function data()
                     '[h1]What the mod does [u]NOT[/u] do[/h1]\n' ..
                     '[list]\n' ..
                     '[*]This mod will not fix poorly designed transports networks. If you have a bus line that has highly uneven demand along the route, you will have to fix that yourself - there is no software that can fix this for you. If no vehicles are added despite a single station being overloaded along the route - it is probably a sign of poor route design, split the route up into evenly balanced (demand) sections.\n' ..
-                    '[*]As an alternative to improving the route network, you can try using the alternative [b](R) - RATE[/b] line rules or [b](M) - MANUAL[/b] line management (see Information and and options above).\n' ..
+                    '[*]As an alternative to improving the route network, you can try using the alternative [b](R) - RATE[/b] line rules, [b](RC) - CONSERVATIVE RATE[/b] line rules, [b](T) - TEST[/b] line rules, or [b](M) - MANUAL[/b] line management (see Information and and options above).\n' ..
                     '[/list]\n' ..
                     '\n' ..
                     '[h1]Performance[/h1]\n' ..

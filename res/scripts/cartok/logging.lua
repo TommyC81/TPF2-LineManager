@@ -11,7 +11,7 @@ local ERROR = 5
 
 local DEFAULT = INFO
 
-local levelNames = {
+logging.levelNames = {
     [TRACE] = 'TRACE',
     [DEBUG] = 'DEBUG',
     [INFO] = 'INFO',
@@ -34,7 +34,7 @@ logging.verboseDebugging = true
 ---Set the logging level to be used, this filters what messages are shown in the in-game console.
 function logging.setLevel(level)
     logging.currentLogLevel = level or DEFAULT
-    logging.info("Logging level set to " .. levelNames[logging.currentLogLevel] .. ".")
+    logging.info("Logging level set to " .. logging.levelNames[logging.currentLogLevel] .. ".")
 end
 
 ---@param debugging boolean (Optional) Toggles logging level between DEBUG (true) and INFO (false), default is DEBUG (true).
@@ -75,7 +75,7 @@ end
 ---Sends a message of the specified level to the in-game console. Refer to logging.levels for applicable levels.
 function logging.log(level, message)
     if level >= logging.currentLogLevel then
-        print('[LineManager][' .. os.date('%H:%M:%S') .. '][' .. levelNames[level] .. '] ' .. message) -- Date/time output shortened from %Y-%m-%d %H:%M:%S
+        print('[LineManager][' .. os.date('%H:%M:%S') .. '][' .. logging.levelNames[level] .. '] ' .. message) -- Date/time output shortened from %Y-%m-%d %H:%M:%S
     end
 end
 

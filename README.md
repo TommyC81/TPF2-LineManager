@@ -12,7 +12,8 @@ micro-management and will let you focus on the more fun overall design of the tr
 Source code is located here: https://github.com/TommyC81/TPF2-LineManager.
 Created by https://github.com/TommyC81 with contribution from https://github.com/RusteyBucket.
 This mod is inspired by and uses some functionality from:
-* TPF2-Timetables, created by Celmi, available here: https://steamcommunity.com/workshop/filedetails/?id=2408373260 and source https://github.com/IncredibleHannes/TPF2-Timetables
+* TPF2-Timetables, created by Celmi, available here: https://steamcommunity.com/workshop/filedetails/?id=2408373260
+  and source https://github.com/IncredibleHannes/TPF2-Timetables
 * Departure Board, created by kryfield, available here: https://steamcommunity.com/workshop/filedetails/?id=2692112427
 
 ## Information and options
@@ -28,14 +29,23 @@ This mod is inspired by and uses some functionality from:
 * **(R) - RATE****: To use alternative line rate rules for a specific line, adjusting number of
   vehicles strictly to ensure rate exceeds demand (this is more aggressive scaling, effectively ignoring
   load factor), add "***(R)**" to the name of the line (anywhere in the line name). Note that this
-  is somewhat experimental and the rules may change, please provide feedback..
+  is somewhat experimental and the rules may change, please provide feedback.
+* **(RC) - CONSERVATIVE RATE****: To use alternative line rate rules for a specific line, adjusting number of
+  vehicles increasing number of vehicles to as close as possible match line rate to demand, whilst using default
+  rules to reduce vehicles, add "***(RC)**" to the name of the line (anywhere in the line name). Note that this
+  is somewhat experimental and the rules may change, please provide feedback.
+* **(T) - TEST****: To use alternative line rate rules for a specific line, adjusting number of
+  vehicles dynamically comparing usage vs rate/demand ratio to scale up/down the number of vehicles,
+  add "***(T)**" to the name of the line (anywhere in the line name). Note that this
+  is somewhat experimental and the rules may change, please provide feedback.
 
 Examples of line naming:
 * Line name "**BUS ABC-1**" - none of the specific syntax is used, this line will be automatically managed
   according to default rules.
 * Line name "**BUS ABC-1 (M)**" - this line is **MANUALLY** managed (no automatic vehicle management).
-* Line name "**BUS ABC-1 (R)**" - this line is managed according to alternative, and more aggressive,
-  **(R) - RATE** line rules (disregarding load factor).
+* Line name "**BUS ABC-1 (R)**" - this line is managed according to **(R) - RATE** line rules.
+* Line name "**BUS ABC-1 (RC)**" - this line is managed according to **(RC) - CONSERVATIVE RATE** line rules.
+* Line name "**BUS ABC-1 (T)**" - this line is managed according to **(T) - TEST** line rules.
 
 ## Quick start
 

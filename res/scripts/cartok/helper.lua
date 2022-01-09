@@ -9,6 +9,8 @@ local supportedLineModes = {
     "(M)", -- Manual management
     "(D)", -- "Default" line management (CARTOK's original rules)
     "(R)", -- Rate focused line management
+    "(RC)", -- Conservative rate focused line management (rate is kept as close to demand as possible), reduction as per default rules
+    "(T)", -- Test, strict comparison between rate/demand ratio vs (adjusted) usage.
     --    "(P)"--peak demand must be met TODO: implement peak demand mode
 }
 local defaultLineMode = "(D)"
@@ -25,34 +27,42 @@ function helper.getLineMode(lineName)
     return current
 end
 
--- TODO: deprecated, redo this and the start menu buttons
-helper.ruleInvert = false
-
 -- TODO: Get more rule options to be switchable as presets
----@param data userdata : the LineData (from helper.getLineData)
+---@param line_data userdata : the LineData (from helper.getLineData)
 ---@param line_id number : the id of the line
 ---@return boolean : whether a vehicle should be added to the line
-function helper.moreVehicleConditions(data, line_id)
+function helper.moreVehicleConditions(line_data, line_id)
     -- a bunch of factors
-    local usage = data[line_id].usage
-    local demand = data[line_id].demand
-    local rate = data[line_id].rate
-    local vehicles = data[line_id].vehicles
-    local mode = data[line_id].mode
+    local usage = line_data[line_id].usage
+    local demand = line_data[line_id].demand
+    local rate = line_data[line_id].rate
+    local vehicles = line_data[line_id].vehicles
+    local mode = line_data[line_id].mode
     local rules = {}
 
-    local lineName = helper.getEntityName(line_id)
-
-    -- if a line contains "(R)", as in "Rate", in its name, then the vehicle scaling rules will strictly target line rate to stay above demand
-    if mode == "(R)" then
-        rules = {
-            demand > rate,
-        }
-    elseif mode == "(D)" then
+    if mode == "(D)" then
         -- make use of standard rules
         rules = {
             usage > 50 and demand > rate * 2,
             usage > 80 and demand > rate * (vehicles + 1) / vehicles,
+        }
+    elseif mode == "(R)" then
+        -- make use of strict rate rules
+        rules = {
+            demand > rate
+        }
+    elseif mode == "(RC)" then
+        -- make use of conservative rate rules
+        local adjustedRate = rate * (vehicles + 1) / vehicles
+
+        rules = {
+            demand > adjustedRate,
+            rate < demand and adjustedRate > demand and demand - rate > adjustedRate - demand,
+        }
+    elseif mode == "(T)" then
+        -- make use of test rules
+        rules = {
+            0.7 * usage > 100 * rate / demand
         }
     end
 
@@ -66,29 +76,32 @@ function helper.moreVehicleConditions(data, line_id)
     return res
 end
 
----@param data userdata : the LineData (from helper.getLineData)
+---@param line_data userdata : the LineData (from helper.getLineData)
 ---@param line_id number : the id of the line
 ---@return boolean : whether a vehicle should be removed from the line
-function helper.lessVehiclesConditions(data, line_id)
+function helper.lessVehiclesConditions(line_data, line_id)
     -- a bunch of factors
-    local usage = data[line_id].usage
-    local demand = data[line_id].demand
-    local rate = data[line_id].rate
-    local vehicles = data[line_id].vehicles
-    local mode = data[line_id].mode
+    local usage = line_data[line_id].usage
+    local demand = line_data[line_id].demand
+    local rate = line_data[line_id].rate
+    local vehicles = line_data[line_id].vehicles
+    local mode = line_data[line_id].mode
     local rules = {}
 
-    local lineName = helper.getEntityName(line_id)
-
-    -- if a line contains "(R)", as in "Rate", in its name, then the vehicle scaling rules will strictly target line rate to stay above demand
-    if mode == "(R)" then
-        rules = {
-            vehicles > 1 and demand < rate * (vehicles - 1) / vehicles,
-        }
-    elseif mode == "(D)" then
+    if mode == "(D)" or mode == "(RC)" then
         -- make use of standard rules
         rules = {
-            vehicles > 1 and usage < 70 and demand < rate * (vehicles - 1) / vehicles,
+            vehicles > 1 and usage < 70 and demand < rate * (vehicles - 1) / vehicles and usage * vehicles / (vehicles - 1) < 100,
+        }
+    elseif mode == "(R)" then
+        -- make use of strict rate rules
+        rules = {
+            vehicles > 1 and demand < rate * (vehicles - 1) / vehicles
+        }
+    elseif mode == "(T)" then
+        -- make use of test rules
+        rules = {
+            vehicles > 1 and 1.3 * usage < 100 * rate / demand
         }
     end
 
@@ -141,16 +154,16 @@ function helper.supportedLine(line_id)
     return res
 end
 
----@param data userdata : the LineData (from helper.getLineData)
+---@param line_data userdata : the LineData (from helper.getLineData)
 ---@param line_id number : the id of the line
 ---@return string
 ---returns usage data string
-function helper.printLineData(data, line_id)
-    local use = "Usage: " .. data[line_id].usage .. "% "
-    use = use .. "Demand: " .. data[line_id].demand .. " "
-    use = use .. "Rate: " .. data[line_id].rate .. " "
-    use = use .. "Vehicles: " .. data[line_id].vehicles .. " "
-    use = use .. "Mode: " .. data[line_id].mode
+function helper.printLineData(line_data, line_id)
+    local use = "Usage: " .. line_data[line_id].usage .. "% "
+    use = use .. "Demand: " .. line_data[line_id].demand .. " "
+    use = use .. "Rate: " .. line_data[line_id].rate .. " "
+    use = use .. "Vehicles: " .. line_data[line_id].vehicles .. " "
+    use = use .. "Mode: " .. line_data[line_id].mode
     return use
 end
 
@@ -225,10 +238,29 @@ function helper.getGameTime()
     end
 end
 
+
+--- @param vehicle_id_table table array of VEHICLE ids
+--- @return number id of the oldest vehicle on the line
+--- finds the oldest vehicle on a line
+function helper.getOldestVehicleId(vehicle_id_table)
+    local oldestVehicleId = 0
+    local oldestVehiclePurchaseTime = 999999999999
+
+    for _, vehicle_id in pairs(vehicle_id_table) do
+        local vehicleInfo = api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
+        if vehicleInfo.transportVehicleConfig.vehicles[1].purchaseTime < oldestVehiclePurchaseTime then
+            oldestVehiclePurchaseTime = vehicleInfo.transportVehicleConfig.vehicles[1].purchaseTime
+            oldestVehicleId = vehicle_id
+        end
+    end
+
+    return oldestVehicleId
+end
+
 ---@param line_id  number | string : the id of the line
----@param lineType string : eg "RAIL", "ROAD", "TRAM", "WATER", "AIR"
----@return boolean : whether the line of the provided lineType
-function helper.lineHasType(line_id, lineType)
+---@param line_type string : eg "RAIL", "ROAD", "TRAM", "WATER", "AIR"
+---@return boolean : whether the line is of the provided lineType
+function helper.lineHasType(line_id, line_type)
     if type(line_id) == "string" then
         line_id = tonumber(line_id)
     end
@@ -241,7 +273,7 @@ function helper.lineHasType(line_id, lineType)
     if vehicles and vehicles[1] then
         local component = api.engine.getComponent(vehicles[1], api.type.ComponentType.TRANSPORT_VEHICLE)
         if component and component.carrier then
-            return component.carrier == api.type.enum.Carrier[lineType]
+            return component.carrier == api.type.enum.Carrier[line_type]
         end
     end
     return false
