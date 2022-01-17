@@ -297,14 +297,6 @@ local function gui_init()
         api.cmd.sendCommand(api.cmd.make.sendScriptEvent("LineManager", "settingsGui", "forceSample", true))
     end)
     settingsBox:addItem(forceSampleButton)
-
-    -- Add a force update button
-    local forceUpdateButton = api.gui.comp.Button.new(api.gui.comp.TextView.new("Force Update"), true)
-    forceUpdateButton:onClick(function()
-        -- Send a script event to say that a forced sample has been requested.
-        api.cmd.sendCommand(api.cmd.make.sendScriptEvent("LineManager", "settingsGui", "forceUpdate", true))
-    end)
-    settingsBox:addItem(forceUpdateButton)
 end
 
 -------------------------------------------------------------
@@ -323,10 +315,7 @@ function data()
                     log.setVerboseDebugging(param)
                 elseif (name == "forceSample") then
                     log.info("** Force Sample ** ")
-                    sampleLines()
-                elseif (name == "forceUpdate") then
-                    log.info("** Force Update **")
-                    updateLines()
+                    state.last_sampled_month = -1 -- This will cause a new sample to be taken (as month has changed). And an update will be triggered when the the required number of samples have been taken.
                 end
             end
         end,
