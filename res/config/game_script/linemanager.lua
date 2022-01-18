@@ -13,21 +13,23 @@ local enums = require 'cartok/enums'
 local firstLoad = true
 local gui_settingsWindow = nil
 
--- This is the entire data for the mod, it is stored in the savegame as well as loaded in GUI thread for access
+-- This is the entire data for the mod, it is stored in the save game as well as loaded in GUI thread for access
 local state = {
-    version = 1, -- The version of the data, this is for compatibility purposes and only meant to be updated when the data format changes.
+    -- The version of the data, this is for compatibility purposes and only meant to be updated when the state data format changes.
+    version = 2,
     log = {
         debugging = false, -- Debugging on/off.
-        verboseDebugging = true, -- Verbose debugging on/off.
+        verbose_debugging = true, -- Verbose debugging on/off.
     },
-    currentLineData = {}, -- An up-to-date list (since last sampling...) of the Player lines and associated data.
-    last_sampled_month = -1, -- Keeps track of what month number the last sample was taken, in order to re-trigger a new sampling when month changes.
+    line_data = {}, -- An up-to-date list (since last sampling...) of the Player lines and associated data.
+    last_sample_time = -1, -- Keeps track of what month (or time) the last sample was taken, in order to re-trigger a new sampling when month (or time) changes.
+    time_based_sampling = false, -- If true, then os time is used for sampling rather than in-game months.
+    sample_time_interval = 30, -- If os time is used for sampling, take a sample every this number of seconds.
     sample_size = 6, -- Number of samples to average data out over.
     update_interval = 2, -- For every x sampling, do a vehicle update (check if a vehicle should be added or removed)
     sample_restart = 2, -- Following an update of a Line, the number of recorded samples will be reset to this value for the line to delay an update until sufficient data is available.
     samples_since_last_update = 0, -- A counter to keep track of how many samples have been taken since last update, and then re-trigger an update when 'update_interval' is reached.
 }
-
 
 ---@param line_id number
 ---@return boolean success whether a vehicle was removed
@@ -36,12 +38,12 @@ local function removeVehicleFromLine(line_id)
     local lineVehicles = api.engine.system.transportVehicleSystem.getLineVehicles(line_id)
 
     -- Find the oldest vehicle on the line
-    if (#lineVehicles > 0 ) then
+    if (#lineVehicles > 0) then
         local oldestVehicleId = helper.getOldestVehicleId(lineVehicles)
 
         -- Remove/sell the oldest vehicle (instantly sells)
         api.cmd.sendCommand(api.cmd.make.sellVehicle(oldestVehicleId))
-        log.info(" -1 vehicle: " .. helper.getEntityName(line_id) .. " (" .. helper.printLineData(state.currentLineData, line_id) .. ")")
+        log.info(" -1 vehicle: " .. helper.getEntityName(line_id) .. " (" .. helper.printLineData(state.line_data, line_id) .. ")")
         log.debug("vehicle_id: " .. oldestVehicleId .. " line_id: " .. line_id)
 
         return true
@@ -100,7 +102,7 @@ local function addVehicleToLine(line_id)
                 local lineCommand = api.cmd.make.setLine(cmd.resultVehicleEntity, line_id, stop_id)
                 api.cmd.sendCommand(lineCommand)
 
-                log.info(" +1 vehicle: " .. helper.getEntityName(line_id) .. " (" .. helper.printLineData(state.currentLineData, line_id) .. ")")
+                log.info(" +1 vehicle: " .. helper.getEntityName(line_id) .. " (" .. helper.printLineData(state.line_data, line_id) .. ")")
                 log.debug("vehicle_id: " .. cmd.resultVehicleEntity .. " line_id: " .. line_id .. " depot_id: " .. depot_id)
             else
                 log.warn("Unable to add vehicle to line: " .. helper.getEntityName(line_id) .. " - Insufficient cash?")
@@ -125,15 +127,15 @@ local function sampleLines()
     local sampledLines = {}
 
     for line_id, line_data in pairs(sampledLineData) do
-        if state.currentLineData[line_id] then
-            sampledLineData[line_id].samples = state.currentLineData[line_id].samples + 1
+        if state.line_data[line_id] then
+            sampledLineData[line_id].samples = state.line_data[line_id].samples + 1
             -- The below ones are already captured in the fresh sample taken, don't overwrite those values!
-            -- sampledLineData[line_id].vehicles = state.currentLineData[line_id].vehicles
-            -- sampledLineData[line_id].capacity = state.currentLineData[line_id].capacity
-            -- sampledLineData[line_id].occupancy = state.currentLineData[line_id].occupancy
-            sampledLineData[line_id].demand = math.round(((state.currentLineData[line_id].demand * (state.sample_size - 1)) + line_data.demand) / state.sample_size)
-            sampledLineData[line_id].usage = math.round(((state.currentLineData[line_id].usage * (state.sample_size - 1)) + line_data.usage) / state.sample_size)
-            sampledLineData[line_id].rate = math.round(((state.currentLineData[line_id].rate * (state.sample_size - 1)) + line_data.rate) / state.sample_size)
+            -- sampledLineData[line_id].vehicles = state.line_data[line_id].vehicles
+            -- sampledLineData[line_id].capacity = state.line_data[line_id].capacity
+            -- sampledLineData[line_id].occupancy = state.line_data[line_id].occupancy
+            sampledLineData[line_id].demand = math.round(((state.line_data[line_id].demand * (state.sample_size - 1)) + line_data.demand) / state.sample_size)
+            sampledLineData[line_id].usage = math.round(((state.line_data[line_id].usage * (state.sample_size - 1)) + line_data.usage) / state.sample_size)
+            sampledLineData[line_id].rate = math.round(((state.line_data[line_id].rate * (state.sample_size - 1)) + line_data.rate) / state.sample_size)
         else
             sampledLineData[line_id].samples = 1
         end
@@ -143,7 +145,7 @@ local function sampleLines()
     end
 
     -- By initially just using the fresh sampledLineData, no longer existing lines are removed. Does this cause increased memory/CPU usage?
-    state.currentLineData = sampledLineData
+    state.line_data = sampledLineData
 
     -- print general summary for debugging purposes
     log.debug('Sampled Lines: ' .. #sampledLines .. ' (Ignored Lines: ' .. #ignoredLines .. ")")
@@ -186,22 +188,22 @@ local function updateLines()
 
     for _, line_id in pairs(lines) do
         -- TODO: Should check that the line still exists, and still transports passengers.
-        if state.currentLineData[line_id] then
+        if state.line_data[line_id] then
             lineCount = lineCount + 1
-            totalVehicleCount = totalVehicleCount + state.currentLineData[line_id].vehicles
+            totalVehicleCount = totalVehicleCount + state.line_data[line_id].vehicles
 
             -- If a line has sufficient samples, then check whether vehicles should be added/removed.
-            if state.currentLineData[line_id].samples and state.currentLineData[line_id].samples >= state.sample_size then
+            if state.line_data[line_id].samples and state.line_data[line_id].samples >= state.sample_size then
                 -- Check if a vehicle should be added to a Line.
-                if helper.moreVehicleConditions(state.currentLineData, line_id) then
+                if helper.moreVehicleConditions(state.line_data, line_id) then
                     if addVehicleToLine(line_id) then
-                        state.currentLineData[line_id].samples = state.sample_restart
+                        state.line_data[line_id].samples = state.sample_restart
                         totalVehicleCount = totalVehicleCount + 1
                     end
                     -- Check instead whether a vehicle should be removed from a Line.
-                elseif helper.lessVehiclesConditions(state.currentLineData, line_id) then
+                elseif helper.lessVehiclesConditions(state.line_data, line_id) then
                     if removeVehicleFromLine(line_id) then
-                        state.currentLineData[line_id].samples = state.sample_restart
+                        state.line_data[line_id].samples = state.sample_restart
                         totalVehicleCount = totalVehicleCount - 1
                     end
                 end
@@ -213,15 +215,27 @@ local function updateLines()
     log.info("Total Lines: " .. lineCount .. " Total Vehicles: " .. totalVehicleCount .. " (Ignored Lines: " .. ignored .. ")")
 end
 
--- TODO: get it to update periodically independently from the date, at least as an option
 ---updates the trackers of when the next update gets unlocked
 local function checkIfUpdateIsDue()
-    local current_month = helper.getGameMonth()
+    local update_is_due = false
 
-    -- Check if the month has changed since last sample. If so, do another sample. 1 sample/month.
-    if state.last_sampled_month ~= current_month then
-        state.last_sampled_month = current_month
+    if (state.time_based_sampling) then
+        -- Check if sufficient os time has passed since last sample. If so, trigger another sample.
+        local current_os_time = os.time()
+        if current_os_time - state.last_sample_time >= state.sample_time_interval then
+            state.last_sample_time = current_os_time
+            update_is_due = true
+        end
+    else
+        -- Check if the month has changed since last sample. If so, trigger another sample. 1 sample/month.
+        local current_month = helper.getGameMonth()
+        if state.last_sample_time ~= current_month then
+            state.last_sample_time = current_month
+            update_is_due = true
+        end
+    end
 
+    if (update_is_due) then
         sampleLines()
         state.samples_since_last_update = state.samples_since_last_update + 1
 
@@ -268,6 +282,19 @@ local function gui_init()
     gui_settingsWindow:setPinned(true)
     gui_settingsWindow:setVisible(false, false)
 
+    -- Add a header for the Game options
+    local header_GameOptions = api.gui.comp.TextView.new("Game options")
+    settingsBox:addItem(header_GameOptions)
+
+    -- Create a toggle for debugging mode and add it to the SettingsBox (BoxLayout)
+    local checkBox_timeBasedSampling = api.gui.comp.CheckBox.new("Use os time based sampling")
+    checkBox_timeBasedSampling:setSelected(state.time_based_sampling, false)
+    checkBox_timeBasedSampling:onToggle(function(selected)
+        -- Send a script event to say that the debugging setting has been changed.
+        api.cmd.sendCommand(api.cmd.make.sendScriptEvent("LineManager", "settings_gui", "time_based_sampling", selected))
+    end)
+    settingsBox:addItem(checkBox_timeBasedSampling)
+
     -- Add a header for the Debugging options
     local header_Debugging = api.gui.comp.TextView.new("Debugging options")
     settingsBox:addItem(header_Debugging)
@@ -277,16 +304,16 @@ local function gui_init()
     checkBox_debugging:setSelected(state.log.debugging, false)
     checkBox_debugging:onToggle(function(selected)
         -- Send a script event to say that the debugging setting has been changed.
-        api.cmd.sendCommand(api.cmd.make.sendScriptEvent("LineManager", "settingsGui", "debuggingUpdate", selected))
+        api.cmd.sendCommand(api.cmd.make.sendScriptEvent("LineManager", "settings_gui", "debugging", selected))
     end)
     settingsBox:addItem(checkBox_debugging)
 
     -- Create a toggle for verboseDebugging mode
     local checkBox_verboseDebugging = api.gui.comp.CheckBox.new("Verbose Debugging")
-    checkBox_verboseDebugging:setSelected(state.log.verboseDebugging, false)
+    checkBox_verboseDebugging:setSelected(state.log.verbose_debugging, false)
     checkBox_verboseDebugging:onToggle(function(selected)
         -- Send a script event to say that the verboseDebugging setting has been changed.
-        api.cmd.sendCommand(api.cmd.make.sendScriptEvent("LineManager", "settingsGui", "verboseDebuggingUpdate", selected))
+        api.cmd.sendCommand(api.cmd.make.sendScriptEvent("LineManager", "settings_gui", "verbose_debugging", selected))
     end)
     settingsBox:addItem(checkBox_verboseDebugging)
 
@@ -294,7 +321,7 @@ local function gui_init()
     local forceSampleButton = api.gui.comp.Button.new(api.gui.comp.TextView.new("Force Sample"), true)
     forceSampleButton:onClick(function()
         -- Send a script event to say that a forced sample has been requested.
-        api.cmd.sendCommand(api.cmd.make.sendScriptEvent("LineManager", "settingsGui", "forceSample", true))
+        api.cmd.sendCommand(api.cmd.make.sendScriptEvent("LineManager", "settings_gui", "force_sample", true))
     end)
     settingsBox:addItem(forceSampleButton)
 end
@@ -306,16 +333,25 @@ end
 function data()
     return {
         handleEvent = function(filename, id, name, param)
-            if filename == "LineManager" and id == "settingsGui" then
-                if (name == "debuggingUpdate") then
+            if filename == "LineManager" and id == "settings_gui" then
+                if (name == "debugging") then
                     state.log.debugging = param
                     log.setDebugging(param)
-                elseif (name == "verboseDebuggingUpdate") then
-                    state.log.verboseDebugging = param
+                elseif (name == "verbose_debugging") then
+                    state.log.verbose_debugging = param
                     log.setVerboseDebugging(param)
-                elseif (name == "forceSample") then
+                elseif (name == "force_sample") then
                     log.info("** Force Sample ** ")
-                    state.last_sampled_month = -1 -- This will cause a new sample to be taken (as month has changed). And an update will be triggered when the the required number of samples have been taken.
+                    -- This will cause a new sample to be taken (as month/time has changed sufficiently).
+                    -- An update will be triggered when the the required number of samples have been taken.
+                    state.last_sample_time = -1
+                elseif (name == "time_based_sampling") then
+                    state.time_based_sampling = param
+                    if (state.time_based_sampling) then
+                        log.info("** Using os time based sampling. One sample is taken every " .. state.sample_time_interval .. " seconds. **")
+                    else
+                        log.info("** Using in-game month based sampling. One sample is taken on every change of in-game month. **")
+                    end
                 end
             end
         end,
@@ -332,10 +368,15 @@ function data()
         update = function()
             if (firstLoad) then
                 firstLoad = false
-                log.info("Preparing initial settings after load.")
+                log.info("** Preparing initial settings after load **")
                 log.setDebugging(state.log.debugging)
-                log.setVerboseDebugging(state.log.verboseDebugging)
-                log.info("Initial settings loaded.")
+                log.setVerboseDebugging(state.log.verbose_debugging)
+                if (state.time_based_sampling) then
+                    log.info("Using os time based sampling. One sample is taken every " .. state.sample_time_interval .. " seconds.")
+                else
+                    log.info("Using in-game month based sampling. One sample is taken on every change of in-game month.")
+                end
+                log.info("** Initial settings loaded **")
             end
             checkIfUpdateIsDue()
         end,

@@ -22,6 +22,8 @@ This mod is inspired by and uses some functionality from:
   adds/removes vehicles on applicable lines accordingly. Only live data is used.
 * This mod will by default automatically manage the number of vehicles on all passenger lines utilizing
   buses, trams, aircraft, or ships.
+* There is a in-game menu with some basic options, including the option to change sampling to be os time based (rather
+  than in-game month based). The menu is accessed by clicking the "[LM]" text in the bottom in-game status bar.
 * Tested and sensible default rules are used to determine the number of required vehicles on a line.
   However, should this not work as desired, two options as per below are available to tweak the functionality:
 * **(M) - MANUAL**: To disable automatic vehicle management on a specific line, add "**(M)**" to the name of

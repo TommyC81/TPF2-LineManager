@@ -11,6 +11,7 @@ function data()
                     '[list]\n' ..
                     '[*]This mod can be added/removed to existing games as desired - it only measures load factor, rate, and demand, adding/removing vehicles on applicable lines accordingly. Only live data is used.\n' ..
                     '[*]This mod will by default automatically manage the number of vehicles on [u]all passenger lines utilizing buses, trams, aircraft, or ships[/u].\n' ..
+                    '[*]There is a in-game menu with some basic options, including the option to change sampling to be os time based (rather than in-game month based). The menu is accessed by clicking the "[LM]" text in the bottom in-game status bar.' ..
                     '[*]Tested and sensible default rules are used to determine the number of required vehicles on a line. However, should this not work as desired, two options as per below are available to tweak the functionality:\n' ..
                     '[*][b](M) - MANUAL[/b]: To [u]disable automatic vehicle management[/u] on a specific line, add "[b](M)[/b]" to the name of the line (anywhere in the line name).\n' ..
                     '[*][b](R) - RATE[/b]: To use [u]line rate rules[/u] for a specific line, adjusting number of vehicles strictly to ensure line rate exceeds demand (this is more aggressive scaling, effectively ignoring load factor), add "[b](R)[/b]" to the name of the line (anywhere in the line name). [i]Note that this is somewhat experimental and the rules may change, please provide feedback.[/i]\n' ..
