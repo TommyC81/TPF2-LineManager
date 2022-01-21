@@ -16,7 +16,7 @@ local gui_settingsWindow = nil
 -- This is the entire data for the mod, it is stored in the save game as well as loaded in GUI thread for access
 local state = {
     -- The version of the data, this is for compatibility purposes and only meant to be updated when the state data format changes.
-    version = 2,
+    version = 3,
     log = {
         debugging = false, -- Debugging on/off.
         verbose_debugging = true, -- Verbose debugging on/off.
