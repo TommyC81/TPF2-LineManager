@@ -300,6 +300,7 @@ function helper.getLineData()
             local lineCapacity = 0
             local lineOccupancy = 0
             local lineTravellerCount = 0
+            local lineUsage = 0
 
             -- This retrieves the total number of people that have a path that includes travel via this line.
             -- It doesn't mean that the person is at a station of the line, or on a line vehicle.
@@ -331,13 +332,19 @@ function helper.getLineData()
                     end
                 end
 
+                if (lineOccupancy > 0 and lineCapacity > 0) then
+                    lineUsage = math.round(100 * lineOccupancy / lineCapacity)
+                else
+                    lineUsage = 0
+                end
+
                 local name = helper.getEntityName(line_id)
                 lineData[line_id] = {
                     vehicles = lineVehicleCount,
                     capacity = lineCapacity,
                     occupancy = lineOccupancy,
                     demand = lineTravellerCount,
-                    usage = math.round(100 * lineOccupancy / lineCapacity),
+                    usage = lineUsage,
                     rate = helper.getLineRate(line_id),
                     name = name,
                     mode = helper.getLineMode(name),
