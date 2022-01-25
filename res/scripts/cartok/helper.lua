@@ -51,8 +51,7 @@ function helper.moreVehicleConditions(line_data, line_id)
     local rate = line_data[line_id].rate
     local vehicles = line_data[line_id].vehicles
     local mode = line_data[line_id].mode
-    local capacity = line_data[line_id].capacity
-    local avage = line_data[line_id].averageCapacity
+    local averageCapacity = line_data[line_id].averageCapacity
     local rules = {}
 
     local newVehicles = vehicles + 1
@@ -86,7 +85,7 @@ function helper.moreVehicleConditions(line_data, line_id)
             rate < d10, -- get a safety margin of 10% over the real demand
             rate < dv, -- with low vehicle numbers, those 10% might not do the trick
             usage > 90,
-            rate < avage --limits frequency to at most 12min
+            rate < averageCapacity --limits frequency to at most 12min
         }
     elseif mode == "(T)" then
         -- make use of test rules
@@ -115,8 +114,7 @@ function helper.lessVehiclesConditions(line_data, line_id)
     local rate = line_data[line_id].rate
     local vehicles = line_data[line_id].vehicles
     local mode = line_data[line_id].mode
-    local capacity = line_data[line_id].capacity
-    local avage = line_data[line_id].averageCapacity
+    local averageCapacity = line_data[line_id].averageCapacity
     local rules = {}
 
     local newVehicles = vehicles - 1
@@ -151,7 +149,7 @@ function helper.lessVehiclesConditions(line_data, line_id)
                     and d10 < newRate
                     and dv < newRate
                     and newUsage < 80
-                    and newRate > avage
+                    and newRate > averageCapacity
         }
     elseif mode == "(T)" then
         -- make use of test rules
@@ -312,17 +310,26 @@ function helper.getOldestVehicleId(vehicle_id_table)
     return oldestVehicleId
 end
 
+---@param var number | string : the variable that ought to be a number
+---@return number : var as a number or -1
+function helper.numberify(var)
+    if type(var) == "string" then
+        var = tonumber(var)
+    end
+    if type(var) == "number" then
+        return var
+    else
+        print("Expected String or Number")
+        return -1
+    end
+end
+
 ---@param line_id  number | string : the id of the line
 ---@param line_type string : eg "RAIL", "ROAD", "TRAM", "WATER", "AIR"
 ---@return boolean : whether the line is of the provided lineType
 function helper.lineHasType(line_id, line_type)
-    if type(line_id) == "string" then
-        line_id = tonumber(line_id)
-    end
-    if not (type(line_id) == "number") then
-        print("Expected String or Number")
-        return -1
-    end
+
+    line_id = helper.numberify(line_id)
 
     local vehicles = api.engine.system.transportVehicleSystem.getLineVehicles(line_id)
     if vehicles and vehicles[1] then
@@ -337,6 +344,56 @@ end
 ---@return table : all lines for the Player
 function helper.getPlayerLines()
     return api.engine.system.lineSystem.getLinesForPlayer(api.engine.util.getPlayer())
+end
+
+---@param id number : Vehicle id
+---@return number : the capacity of vehicle #id
+function helper.getVehicleCapacity(id)
+    local vehicle = api.engine.getComponent(id, api.type.ComponentType.TRANSPORT_VEHICLE)
+    if vehicle and vehicle.config and vehicle.config.capacities[enums.CargoTypes.PASSENGERS] and vehicle.config.capacities[enums.CargoTypes.PASSENGERS] > 0 then
+        return vehicle.config.capacities[enums.CargoTypes.PASSENGERS]
+    else
+        return 0
+    end
+end
+
+---@param person number : the traveller that should be in the vehicle
+---@param vehicle number : the vehicle the traveller should be in
+---@return boolean : is he?1:0
+function helper.isOccupant(person, vehicle)
+    local traveller = api.engine.getComponent(person, api.type.ComponentType.SIM_PERSON_AT_VEHICLE)
+    if traveller and traveller.vehicle and traveller.vehicle == vehicle then
+        return 1
+    else
+        return 0
+    end
+end
+
+---@param line number : which line are we talking about?
+---@param vehicle number : which vehicle is it now?
+---@param customers userdata : the potential travellers
+---@return number, number : vehicle capacity and occupied seats
+function helper.getCapacityData(line, vehicle, customers)
+    local capacity = helper.getVehicleCapacity(line)
+    local occupied = 0
+    -- This gets the actual people on this line vehicle at this moment i.e. occupying a seat.
+    for _, person in pairs(customers) do
+        occupied = occupied + helper.isOccupant(person, vehicle)
+    end
+    return capacity, occupied
+end
+
+---@param dividend number : absolute number
+---@param divisor number : absolute maximum
+---@return number : relative ratio as percentage
+function helper.roundPercentage(dividend, divisor)
+    if (dividend > 0 and divisor > 0) then
+        local factor = dividend / divisor
+        local percentage = 100 * factor
+        return math.round(percentage)
+    else
+        return 0
+    end
 end
 
 ---@return table : containing line_id, vehicles, capacity, occupancy, usage, demand and rate
@@ -355,7 +412,6 @@ function helper.getLineData()
             local lineCapacity = 0
             local lineOccupancy = 0
             local lineTravellerCount = 0
-            local lineUsage = 0
 
             -- This retrieves the total number of people that have a path that includes travel via this line.
             -- It doesn't mean that the person is at a station of the line, or on a line vehicle.
@@ -363,40 +419,26 @@ function helper.getLineData()
             -- there is a surge in demand, or to (partially) negate poorly balanced lines with some line sections
             -- overloaded and other sections empty - effectively leading to a lower average load on the line.
             local lineTravellers = api.engine.system.simPersonSystem.getSimPersonsForLine(line_id)
-            for _, traveller_id in pairs(lineTravellers) do
-                lineTravellerCount = lineTravellerCount + 1
-            end
+            lineTravellerCount = #lineTravellers
 
             if lineTravellerCount > 0 then
                 ignoredLine = false -- This line is supported and has passengers, and is thus not ignored
 
                 local lineVehicles = api.engine.system.transportVehicleSystem.getLineVehicles(line_id)
+                lineVehicleCount = #lineVehicles
                 for _, vehicle_id in pairs(lineVehicles) do
-                    local vehicle = api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
-                    if vehicle and vehicle.config and vehicle.config.capacities[enums.CargoTypes.PASSENGERS] and vehicle.config.capacities[enums.CargoTypes.PASSENGERS] > 0 then
-                        lineVehicleCount = lineVehicleCount + 1
-                        lineCapacity = lineCapacity + vehicle.config.capacities[enums.CargoTypes.PASSENGERS]
-                    end
 
-                    -- This gets the actual people on this line vehicle at this moment i.e. occupying a seat.
-                    for _, traveller_id in pairs(lineTravellers) do
-                        local traveller = api.engine.getComponent(traveller_id, api.type.ComponentType.SIM_PERSON_AT_VEHICLE)
-                        if traveller and traveller.vehicle and traveller.vehicle == vehicle_id then
-                            lineOccupancy = lineOccupancy + 1
-                        end
-                    end
+                    local capacity, occupied = helper.getCapacityData(line_id, vehicle_id, lineTravellers)
+                    lineCapacity = lineCapacity + capacity
+                    lineOccupancy = lineOccupancy + occupied
+
                 end
 
-                if (lineOccupancy > 0 and lineCapacity > 0) then
-                    lineUsage = math.round(100 * lineOccupancy / lineCapacity)
-                else
-                    lineUsage = 0
-                end
-
+                local lineUsage = helper.roundPercentage(lineOccupancy, lineCapacity)
                 local name = helper.getEntityName(line_id)
                 local rate = helper.getLineRate(line_id)
                 local mode = helper.getLineMode(name)
-                local capacity = lineCapacity / lineVehicleCount
+                local averageVehicleCapacity = lineCapacity / lineVehicleCount
 
                 --TODO: implement line frequency parameter
                 lineData[line_id] = {
@@ -408,7 +450,7 @@ function helper.getLineData()
                     rate = rate,
                     name = name,
                     mode = mode,
-                    averageCapacity = capacity
+                    averageCapacity = averageVehicleCapacity
                 }
             end
         end
@@ -459,7 +501,7 @@ function helper.printArrayWithBreaks(array, prefixSplit, insertLineBreak, maxPre
 
     local output = ""
     local previousPrefix = ""
-    local prefixLevel = 1
+    --    local prefixLevel = 1
 
     -- space the lines by prefix
     for i = 1, #array do
