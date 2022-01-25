@@ -29,6 +29,7 @@ local state = {
     update_interval = 2, -- For every x sampling, do a vehicle update (check if a vehicle should be added or removed)
     sample_restart = 2, -- Following an update of a Line, the number of recorded samples will be reset to this value for the line to delay an update until sufficient data is available.
     samples_since_last_update = 0, -- A counter to keep track of how many samples have been taken since last update, and then re-trigger an update when 'update_interval' is reached.
+    delaying_counter_due_to_being_paused = 0, -- A counter that keeps track of how many attempts at sampling were foiled due to the game being paused.
 }
 
 ---@param line_id number
@@ -70,6 +71,9 @@ local function addVehicleToLine(line_id)
         -- For now filter this to passenger transportation only.
         -- TODO: Extend to further types of cargo.
         if helper.vehicleTransportsPassengers(vehicle_id) then
+
+            --   vehiclePrice=api.engine.getComponent(vehicle_id,) TODO: figure out how the hell to get to the stuff you can see as a player, goddamnit...
+
             api.cmd.sendCommand(api.cmd.make.sendToDepot(vehicle_id, false))
             vehicleToDuplicate = api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
 
@@ -219,12 +223,26 @@ end
 local function checkIfUpdateIsDue()
     local update_is_due = false
 
+    ---TODO: make OS time pause with the game to avoid infinite loop
     if (state.time_based_sampling) then
         -- Check if sufficient os time has passed since last sample. If so, trigger another sample.
         local current_os_time = os.time()
         if current_os_time - state.last_sample_time >= state.sample_time_interval then
-            state.last_sample_time = current_os_time
-            update_is_due = true
+            if game.interface.getGameSpeed() > 0 then
+                if state.delaying_counter_due_to_being_paused == 0 then
+                    state.last_sample_time = current_os_time
+                    update_is_due = true
+                elseif state.delaying_counter_due_to_being_paused == 1 then
+                    state.delaying_counter_due_to_being_paused = 0
+                    state.last_sample_time = current_os_time
+                elseif state.delaying_counter_due_to_being_paused > 1 then
+                    state.delaying_counter_due_to_being_paused = 1
+                end
+            elseif state.delaying_counter_due_to_being_paused then
+                state.delaying_counter_due_to_being_paused = state.delaying_counter_due_to_being_paused + 1
+            else
+                state.delaying_counter_due_to_being_paused = 1
+            end
         end
     else
         -- Check if the month has changed since last sample. If so, trigger another sample. 1 sample/month.
@@ -285,6 +303,10 @@ local function gui_init()
     -- Add a header for the Game options
     local header_GameOptions = api.gui.comp.TextView.new("Game options")
     settingsBox:addItem(header_GameOptions)
+
+    --TODO: Add default mode selector
+
+    --TODO: Add prefix default assigner (List where you can add line prefixes, so they get a different default mode from the global default), if that's even possible
 
     -- Create a toggle for debugging mode and add it to the SettingsBox (BoxLayout)
     local checkBox_timeBasedSampling = api.gui.comp.CheckBox.new("Use os time based sampling")
@@ -383,6 +405,8 @@ function data()
         guiInit = function()
             gui_init()
         end,
+
+
         -- TODO: Add something clever here eventually
         -- guiUpdate = function()
         -- end,

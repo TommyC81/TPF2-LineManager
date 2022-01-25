@@ -10,10 +10,22 @@ local supportedLineModes = {
     "(D)", -- "Default" line management (CARTOK's original rules)
     "(R)", -- Rate focused line management
     "(RC)", -- Conservative rate focused line management (rate is kept as close to demand as possible), reduction as per default rules
+    "(RR)", -- Rate rules by Rustey with a safety margin
     "(T)", -- Test, strict comparison between rate/demand ratio vs (adjusted) usage.
-    --    "(P)"--peak demand must be met TODO: implement peak demand mode
+    --    "(P)", -- peak demand must be met TODO: implement peak demand mode (main rule should be if overcrowded, get more vehicles)
+    --    "(F integer)", -- Commandable Frequency mode TODO: implement a mode where you command F x, x being the demanded frequency in seconds
 }
 local defaultLineMode = "(D)"
+
+---@param newTag string : receives the new tag that gets assumed unless the line name specifically states otherwise
+function helper.setDefaultLineMode(newTag)
+    defaultLineMode = newTag
+end
+
+---@return table : the array of supported line modes for later use
+function helper.getSupported()
+    return supportedLineModes
+end
 
 ---@param lineName string : the name of the line for there is the line mode designator
 ---@return string : line mode designator string
@@ -32,19 +44,26 @@ end
 ---@param line_id number : the id of the line
 ---@return boolean : whether a vehicle should be added to the line
 function helper.moreVehicleConditions(line_data, line_id)
+    --TODO: implement a max safe frequency to avoid throwing more vehicles on a line than any terminal could possibly handle (especially noticeable with planes too small and hovercraft, though it can also happen with trains, buses, trucks and trams)
     -- a bunch of factors
     local usage = line_data[line_id].usage
     local demand = line_data[line_id].demand
     local rate = line_data[line_id].rate
     local vehicles = line_data[line_id].vehicles
     local mode = line_data[line_id].mode
+    local capacity = line_data[line_id].capacity
+    local avage = line_data[line_id].averageCapacity
     local rules = {}
+
+    local newVehicles = vehicles + 1
+    local vehicleFactor = newVehicles / vehicles
+    local newRate = rate * vehicleFactor
 
     if mode == "(D)" then
         -- make use of standard rules
         rules = {
             usage > 50 and demand > rate * 2,
-            usage > 80 and demand > rate * (vehicles + 1) / vehicles,
+            usage > 80 and demand > newRate,
         }
     elseif mode == "(R)" then
         -- make use of strict rate rules
@@ -53,11 +72,21 @@ function helper.moreVehicleConditions(line_data, line_id)
         }
     elseif mode == "(RC)" then
         -- make use of conservative rate rules
-        local adjustedRate = rate * (vehicles + 1) / vehicles
-
         rules = {
-            demand > adjustedRate,
-            rate < demand and adjustedRate > demand and demand - rate > adjustedRate - demand,
+            demand > newRate,
+            rate < demand and newRate > demand and demand - rate > newRate - demand,
+        }
+    elseif mode == "(RR)" then
+        -- Rustey's rate rules
+        local d10 = demand * 1.1
+        local oneVehicle = 1 / vehicles -- how much would one vehicle change
+        local plusOneVehicle = 1 + oneVehicle -- add the rest of the vehicles
+        local dv = demand * plusOneVehicle -- exaggerate demand by what one more vehicle could change
+        rules = {
+            rate < d10, -- get a safety margin of 10% over the real demand
+            rate < dv, -- with low vehicle numbers, those 10% might not do the trick
+            usage > 90,
+            rate < avage --limits frequency to at most 12min
         }
     elseif mode == "(T)" then
         -- make use of test rules
@@ -86,22 +115,49 @@ function helper.lessVehiclesConditions(line_data, line_id)
     local rate = line_data[line_id].rate
     local vehicles = line_data[line_id].vehicles
     local mode = line_data[line_id].mode
+    local capacity = line_data[line_id].capacity
+    local avage = line_data[line_id].averageCapacity
     local rules = {}
+
+    local newVehicles = vehicles - 1
+    local vehicleFactor = newVehicles / vehicles
+    local newRate = rate * vehicleFactor
+    local newUsage = usage * vehicles / newVehicles
 
     if mode == "(D)" or mode == "(RC)" then
         -- make use of standard rules
         rules = {
-            vehicles > 1 and usage < 70 and demand < rate * (vehicles - 1) / vehicles and usage * vehicles / (vehicles - 1) < 100,
+            vehicles > 1
+                    and usage < 70
+                    and demand < newRate
+                    and newUsage < 100
         }
     elseif mode == "(R)" then
         -- make use of strict rate rules
         rules = {
-            vehicles > 1 and demand < rate * (vehicles - 1) / vehicles
+            vehicles > 1
+                    and demand < newRate
+        }
+    elseif mode == "(RR)" then
+        --Rustey's lax rules
+        local d10 = demand * 1.1
+        local oneVehicle = 1 / vehicles -- how much would one vehicle change
+        local plusOneVehicle = 1 + oneVehicle -- add the rest of the vehicles
+        local dv = demand * plusOneVehicle -- exaggerate demand by what one more vehicle could change
+        rules = {
+            --            vehicles > 1 and usage < 40 and d10 < newRate and size > newRate,
+            vehicles > 1
+                    and usage < 40
+                    and d10 < newRate
+                    and dv < newRate
+                    and newUsage < 80
+                    and newRate > avage
         }
     elseif mode == "(T)" then
         -- make use of test rules
         rules = {
-            vehicles > 1 and 1.3 * usage < 100 * rate / demand
+            vehicles > 1
+                    and 1.3 * usage < 100 * rate / demand
         }
     end
 
@@ -238,7 +294,6 @@ function helper.getGameTime()
     end
 end
 
-
 --- @param vehicle_id_table table array of VEHICLE ids
 --- @return number id of the oldest vehicle on the line
 --- finds the oldest vehicle on a line
@@ -339,15 +394,21 @@ function helper.getLineData()
                 end
 
                 local name = helper.getEntityName(line_id)
+                local rate = helper.getLineRate(line_id)
+                local mode = helper.getLineMode(name)
+                local capacity = lineCapacity / lineVehicleCount
+
+                --TODO: implement line frequency parameter
                 lineData[line_id] = {
                     vehicles = lineVehicleCount,
                     capacity = lineCapacity,
                     occupancy = lineOccupancy,
                     demand = lineTravellerCount,
                     usage = lineUsage,
-                    rate = helper.getLineRate(line_id),
+                    rate = rate,
                     name = name,
-                    mode = helper.getLineMode(name),
+                    mode = mode,
+                    averageCapacity = capacity
                 }
             end
         end
@@ -387,13 +448,18 @@ end
 ---@param array table : the array to be strung up
 ---@param prefixSplit string : (optional) the divider between prefix and individual name, default " " (blank space)
 ---@param insertLineBreak boolean : (optional) whether to insert line breaks or not, default true
+---@param maxPrefixDepth boolean : (optional,yet to be implemented) maximum amount of prefixes before a number that warrant an extra line, default 1
 ---@return string : array + some line breaks if applicable
-function helper.printArrayWithBreaks(array, prefixSplit, insertLineBreak)
+function helper.printArrayWithBreaks(array, prefixSplit, insertLineBreak, maxPrefixDepth)
     prefixSplit = prefixSplit or " "
     insertLineBreak = insertLineBreak or true
+    maxPrefixDepth = maxPrefixDepth or 1
+
+    --TODO: implement multi prefix breaking
 
     local output = ""
     local previousPrefix = ""
+    local prefixLevel = 1
 
     -- space the lines by prefix
     for i = 1, #array do
