@@ -4,9 +4,10 @@ A mod for Transport Fever 2 to automatically manage the number of vehicles on li
 
 Steam Workshop link: https://steamcommunity.com/workshop/filedetails/?id=2581894757
 
-Taking into account the load-factor over time, demand, rate, and other factors, this mod will add/remove vehicles
-to lines accordingly. This mod will greatly assist in reducing/eliminating vehicle micro management, and
-will let you focus on the overall design of your transport network(s).
+Taking into account usage, demand, rate, frequency, capacity, and other factors, this mod will automatically
+add/remove vehicles to lines according to configurable rules (comes with sensible default rules out-of-the-box).
+This mod will greatly assist in reducing/eliminating vehicle micro management, and will let you focus on
+the overall design of your transport network(s) instead.
 
 Source code and manual is located here: https://github.com/TommyC81/TPF2-LineManager, any issues should be raised on GitHub.
 Created by https://github.com/TommyC81 with contribution from https://github.com/RusteyBucket.
@@ -21,35 +22,60 @@ This mod is inspired by and uses code snippets from:
 
 ## Information and options
 
+### General information
 * This mod can be added/removed to existing games as desired - it only measures live data and
   adds/removes vehicles on applicable lines accordingly.
 * This mod will by default automatically manage the number of vehicles on all PASSENGER and CARGO lines utilizing
   trucks/buses, trams, aircraft, and ships. Additionally in the settings, you can also enable train management.
-* There is an in-game menu with mod options, including the option to change sampling to be os time based (rather
-  than in-game month based) and adjusting which lines are managed automatically. The menu is accessed by clicking the
-  "[LM]" text in the bottom in-game status bar.
-* Sensible default rules for both PASSENGER and CARGO lines are used by default. However, should this not work as desired,
-  options as per below are available to tweak the functionality:
-* **(M) - MANUAL**: To disable automatic vehicle management on a specific line, add "**(M)**" to the name of
-  the line (anywhere in the line name).
-* **(R:<number>) - RATE**: Line rate rules, adjusting number of vehicles to ensure line rate exceeds the set rate.
-  To use, add "***(R:<number>)**" to the name of the line (anywhere in the line name).
-* **(PR) - PASSENGER (RusteyBucket)**: Alternative PASSENGER line rules created by RusteyBucket. These rules will more
-  aggressively manage vehicles upwards. To use, add "***(PR)**" to the name of the line (anywhere in the line name).
+* When adding a vehicle to a line, an existing vehicle is (effectively) cloned. There is no evaluation of which vehicle
+  will be cloned, so it is therefore recommended to keep a single type of vehicle per line.
+* When removing a vehicle from a line, the oldest vehicle will always be removed. Additionally, the mod will ensure
+  at least 1 vehicle remains on each line.
+* Sensible rules for both PASSENGER and CARGO lines are used by default. However, if this doesn't work as
+  desired, see the line rule section below for more information.
+### In-game menu
+The mod has in in-game menu, that can be accessed via the "[LM]" text in the bottom in-game status bar.
+The following LineManager options area available in the in-game menu:
+* **LineManager enabled** - Enables/disables processing of the mod.
+* **Automatically reverse trains with no path** - When adding trains, the depot finding can sometimes cause a train to
+  be unable to find a path (in simple terms). The manual solution of this is to select the train and reverse it
+  once or twice to re-trigger route/path finding. But instead of doing it manually, the mod can do it for you automatically!
+* **Use OS time based sampling** - By default, a sample/update is triggered when in-game month changes. This spreads
+  sampling/updates out in a reasonable way to collect sensible line data, regardless of in-game speed. However, if you,
+  for instance, use a mod that freezes game time, then you can select this option - updates will then be triggered
+  at regular intervals, around every 30 seconds.
+* **PASSENGER/CARGO - ROAD/TRAM/RAIL/WATER/AIR** - Enables/disables automatic line vehicle management for an entire
+  category. Select as desired. By default, everything except RAIL is selected.
+* **Debugging** - Enables/disables additional debugging output in the in-game console.
+* **Show extended line info** - Enables/disables additional line information output in the in-game console.
+* **Force Sample** - Triggers a sampling to begin immediately, including associated update. Restarts an ongoing sampling
+  if already in progress.
+
+### Line rules
+* **`(P)` - PASSENGER**: Default PASSENGER line rule, assigned automatically to all managed PASSENGER lines.
+  To assign manually, add "**`(P)`**" to the name of the line (anywhere in the line name).
+* **`(C)` - CARGO**: Default CARGO line rule, assigned automatically to all managed CARGO lines.
+  To assign manually, add "**`(C)`**" to the name of the line (anywhere in the line name).
+* **`(M)` - MANUAL**: To disable automatic vehicle management on a specific line, add "**`(M)`**" to the name of
+  the line (anywhere in the line name). LineManager will not amend any vehicles on this line.
+* **`(R:<number>)` - RATE**: Line rate rules, adjusting number of vehicles to ensure line rate meets/exceeds the set rate.
+  To use, add "**`(R:<number>)`**" to the name of the line (anywhere in the line name).
+* **`(PR)` - PASSENGER (RusteyBucket)**: Alternative PASSENGER line rules created by RusteyBucket. These rules will more
+  aggressively manage vehicles upwards. This can be useful for unevenly balanced passenger lines. Perhaps a line feeding a
+  main route and it is acceptable that it runs less optimally to ensure the main route see maximum load. To use,
+  add "**`(PR)`**" to the name of the line (anywhere in the line name).
 
 Examples of line naming:
 * Line name "**BUS ABC-1**" - none of the specific syntax is used, this line will be automatically managed with default rules.
   according to default rules.
 * Line name "**BUS ABC-1 (M)**" - this line is **MANUALLY** managed (no automatic vehicle management).
-* Line name "**BUS ABC-1 (R:100)**" - this line is managed according to **(R) - RATE** line rules, achieving a rate of 100.
+* Line name "**BUS ABC-1 (R:100)**" - this line is managed according to **(R) - RATE** line rules, to achieve a rate of 100.
+* Line name "**BUS ABC-1 (PR)**" - this line is managed according to **(PR) - PASSENGER (RusteyBucket)** line rules.
 
-Other ways to manage lines is to disable automatic management of certain line types and assign rules manually where needed.
+Other ways to manage lines is to disable automatic management of some line categories (or all) and only
+assign rules manually where needed. Manually assigned rules are always processed, regardless of the automatic setting.
 
-The following default rules are available:
-* **(P) - PASSENGER**: Default PASSENGER line rules. To use, add "***(P)**" to the name of the line (anywhere in the line name).
-* **(C) - CARGO**: Default CARGO line rules. To use, add "***(C)**" to the name of the line (anywhere in the line name).
-
-Additionally, if you want to dig into the source and create your own rules, see 'rules.lua' within the source code.
+Additionally, you can (relatively) easily dig into the code and create your own rules, see 'rules.lua' within the source code.
 
 ## Quick start
 
@@ -87,13 +113,10 @@ Additionally, if you want to dig into the source and create your own rules, see 
 
 * Every in-game month (or time period), the mod takes a sample.
 * Workload associated with processing the sample is spread out over several game ticks.
-* Once a sampling run is complete, any identified ADD/REMOVE actions are actioned on the line.
+* Once a sampling run is completed, any identified ADD/REMOVE actions are actioned on the line.
 * Thus, performance impact should be minimal. This has not been studied in-depth, but no noticeable impact of the
   sampling/updates has been observed in games with hundreds of lines/buses/trams/aircraft/ships/trains.
 
-## Untested
-
-* Nothing at the moment.
 
 ## Future plans
 

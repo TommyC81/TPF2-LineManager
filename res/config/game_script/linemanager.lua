@@ -394,7 +394,7 @@ local function gui_init()
     settingsBox:addItem(header_SamplingOptions)
 
     -- Create a toggle for using os time based sampling
-    local checkBox_timeBasedSampling = api.gui.comp.CheckBox.new("Use os time based sampling")
+    local checkBox_timeBasedSampling = api.gui.comp.CheckBox.new("Use OS time based sampling")
     checkBox_timeBasedSampling:setSelected(state.sampling_settings.time_based_sampling, false)
     checkBox_timeBasedSampling:onToggle(function(selected)
         api_helper.sendScriptCommand("settings_gui", "time_based_sampling", selected)
