@@ -1,53 +1,55 @@
 # TPF2-LineManager
 
-A mod for Transport Fever 2 to automatically manage the number of buses/trams/aircraft/ships on passenger lines.
+A mod for Transport Fever 2 to automatically manage the number of vehicles on lines.
 
-Taking into account the load-factor over time, and demand on the line, this mod will buy/sell
-buses/trams/aircraft/ships accordingly, effectively increasing/decreasing capacity on a line as per the actual
-demand. This mod will greatly assist in addressing the tedious micro-management of bus/tram/aircraft/ship lines
-when updating road/tram infrastructure, adding more destinations, and in general updating the overall passenger
-transport network. The mod in fact completely eliminates the bus/tram/aircraft/ship passenger line
-micro-management and will let you focus on the more fun overall design of the transport network.
+Steam Workshop link: https://steamcommunity.com/workshop/filedetails/?id=2581894757
 
-Source code is located here: https://github.com/TommyC81/TPF2-LineManager.
+Taking into account the load-factor over time, demand, rate, and other factors, this mod will add/remove vehicles
+to lines accordingly. This mod will greatly assist in reducing/eliminating vehicle micro management, and
+will let you focus on the overall design of your transport network(s).
+
+Source code and manual is located here: https://github.com/TommyC81/TPF2-LineManager, any issues should be raised on GitHub.
 Created by https://github.com/TommyC81 with contribution from https://github.com/RusteyBucket.
-This mod is inspired by and uses some functionality from:
+This mod uses:
+* https://github.com/rxi/lume created by https://github.com/rxi, with additional updates made by https://github.com/idbrii
+  available on url=https://github.com/idbrii/lua-lume
+
+This mod is inspired by and uses code snippets from:
 * TPF2-Timetables, created by Celmi, available here: https://steamcommunity.com/workshop/filedetails/?id=2408373260
   and source https://github.com/IncredibleHannes/TPF2-Timetables
 * Departure Board, created by kryfield, available here: https://steamcommunity.com/workshop/filedetails/?id=2692112427
 
 ## Information and options
 
-* This mod can be added/removed to existing games as desired - it only measures load factor and demand and
-  adds/removes vehicles on applicable lines accordingly. Only live data is used.
-* This mod will by default automatically manage the number of vehicles on all passenger lines utilizing
-  buses, trams, aircraft, or ships.
-* There is a in-game menu with some basic options, including the option to change sampling to be os time based (rather
-  than in-game month based). The menu is accessed by clicking the "[LM]" text in the bottom in-game status bar.
-* Tested and sensible default rules are used to determine the number of required vehicles on a line.
-  However, should this not work as desired, two options as per below are available to tweak the functionality:
+* This mod can be added/removed to existing games as desired - it only measures live data and
+  adds/removes vehicles on applicable lines accordingly.
+* This mod will by default automatically manage the number of vehicles on all PASSENGER and CARGO lines utilizing
+  trucks/buses, trams, aircraft, and ships. Additionally in the settings, you can also enable train management.
+* There is an in-game menu with mod options, including the option to change sampling to be os time based (rather
+  than in-game month based) and adjusting which lines are managed automatically. The menu is accessed by clicking the
+  "[LM]" text in the bottom in-game status bar.
+* Sensible default rules for both PASSENGER and CARGO lines are used by default. However, should this not work as desired,
+  options as per below are available to tweak the functionality:
 * **(M) - MANUAL**: To disable automatic vehicle management on a specific line, add "**(M)**" to the name of
   the line (anywhere in the line name).
-* **(R) - RATE****: To use alternative line rate rules for a specific line, adjusting number of
-  vehicles strictly to ensure rate exceeds demand (this is more aggressive scaling, effectively ignoring
-  load factor), add "***(R)**" to the name of the line (anywhere in the line name). Note that this
-  is somewhat experimental and the rules may change, please provide feedback.
-* **(RC) - CONSERVATIVE RATE****: To use alternative line rate rules for a specific line, adjusting number of
-  vehicles increasing number of vehicles to as close as possible match line rate to demand, whilst using default
-  rules to reduce vehicles, add "***(RC)**" to the name of the line (anywhere in the line name). Note that this
-  is somewhat experimental and the rules may change, please provide feedback.
-* **(T) - TEST****: To use alternative line rate rules for a specific line, adjusting number of
-  vehicles dynamically comparing usage vs rate/demand ratio to scale up/down the number of vehicles,
-  add "***(T)**" to the name of the line (anywhere in the line name). Note that this
-  is somewhat experimental and the rules may change, please provide feedback.
+* **(R:<number>) - RATE**: Line rate rules, adjusting number of vehicles to ensure line rate exceeds the set rate.
+  To use, add "***(R:<number>)**" to the name of the line (anywhere in the line name).
+* **(PR) - PASSENGER (RusteyBucket)**: Alternative PASSENGER line rules created by RusteyBucket. These rules will more
+  aggressively manage vehicles upwards. To use, add "***(PR)**" to the name of the line (anywhere in the line name).
 
 Examples of line naming:
-* Line name "**BUS ABC-1**" - none of the specific syntax is used, this line will be automatically managed
+* Line name "**BUS ABC-1**" - none of the specific syntax is used, this line will be automatically managed with default rules.
   according to default rules.
 * Line name "**BUS ABC-1 (M)**" - this line is **MANUALLY** managed (no automatic vehicle management).
-* Line name "**BUS ABC-1 (R)**" - this line is managed according to **(R) - RATE** line rules.
-* Line name "**BUS ABC-1 (RC)**" - this line is managed according to **(RC) - CONSERVATIVE RATE** line rules.
-* Line name "**BUS ABC-1 (T)**" - this line is managed according to **(T) - TEST** line rules.
+* Line name "**BUS ABC-1 (R:100)**" - this line is managed according to **(R) - RATE** line rules, achieving a rate of 100.
+
+Other ways to manage lines is to disable automatic management of certain line types and assign rules manually where needed.
+
+The following default rules are available:
+* **(P) - PASSENGER**: Default PASSENGER line rules. To use, add "***(P)**" to the name of the line (anywhere in the line name).
+* **(C) - CARGO**: Default CARGO line rules. To use, add "***(C)**" to the name of the line (anywhere in the line name).
+
+Additionally, if you want to dig into the source and create your own rules, see 'rules.lua' within the source code.
 
 ## Quick start
 
@@ -59,6 +61,7 @@ Examples of line naming:
 ## Quick tips for best results
 
 * Only use one type of vehicle per line (this makes addition of new vehicles more predictable).
+* Don't mix PASSENGER and CARGO on the same line. Although it will work, results may not be optimal.
 * If you need to update/upgrade vehicle type on a line, replace all vehicles at the same time (see above
   related item).
 * Where appropriate, using a smaller vehicle size (less capacity per vehicle) allows better automatic
@@ -66,12 +69,10 @@ Examples of line naming:
 
 ## What the mod does
 
-* The mod will add/remove i.e. buy/sell buses (of the same type as already utilized on the line) according to line
-  utilization and demand, as money permits.
-* When utilization (load factor over time) goes above/below different thresholds along with excessive/insufficient
-  demand on the route, a vehicle will be added/removed accordingly.
-* When a vehicle is sold, it will sell the oldest vehicle on the line. The mod will additionally ensure there is at
-  least 1 vehicle remaining on the line.
+* The mod will add/remove vehicles (of the same type as already utilized on the line) according to rules, as money permits.
+* When rule criteria are met, a vehicle will be added/removed accordingly to each managed line.
+* When a vehicle is sold, it will sell the oldest vehicle on the line.
+* The mod will additionally ensure there is at least 1 vehicle remaining on the line.
 
 ## What the mod does NOT do
 
@@ -84,35 +85,20 @@ Examples of line naming:
 
 ## Performance
 
-* Every in-game month, the mod takes one usage, rate and demand sample per applicable line.
-* Every second in-game month, the mod updates managed lines to add/remove vehicles as appropriate.
-* Thus, performance impact should be negligible. This has not been studied in-depth, but no effect of the
-  sampling/updates has been observed in games with hundreds of lines/buses/trams/aircraft/ships.
+* Every in-game month (or time period), the mod takes a sample.
+* Workload associated with processing the sample is spread out over several game ticks.
+* Once a sampling run is complete, any identified ADD/REMOVE actions are actioned on the line.
+* Thus, performance impact should be minimal. This has not been studied in-depth, but no noticeable impact of the
+  sampling/updates has been observed in games with hundreds of lines/buses/trams/aircraft/ships/trains.
 
 ## Untested
 
-* If a vehicle type is no longer available (outdated) when it is time to add/buy a bus - a silent failure is assumed.
+* Nothing at the moment.
 
 ## Future plans
 
 * No specific plans, except making this stable and add coding improvements as time permits
   (this is also dependent on contribution from users).
-
-## What you can do by mucking around in the mod file
-
-* The `helper.lua` file contains much of the identification logic such as:
-    * `helper.moreVehiclesConditions()` contains the rules that determine if there should be another vehicle added to a
-      line.
-    * `helper.lessVehiclesConditions()` contains the rules that determine if there are too many vehicles on a line.
-    * `helper.supportedRoute()` contains the categories of vehicles supported by this mod (we're not entirely sure what
-      number is what as of yet, though we're on it).
-* The `linemanager.lua` file contains the execution functions that actually make things work. If you're determined, you
-  can change stuff there.
-    * Uncomment the line `log.setLevel(log.levels.DEBUG)` to avail additional in-game console debugging output by default.
-    * A simple in-game menu is available; in the bottom bar of the game gui, look for `[LM]`. In this menu you can
-      enable/disable *Debugging* and *Verbose Debugging* (additional information) as required.
-* Any changes made to the code could obviously cause the game to crash on loading or on reaching the clause that breaks
-  the code. Maybe even worse, who knows.
 
 ## How to Contribute
 

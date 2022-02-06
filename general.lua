@@ -19,6 +19,77 @@ Get transport vehicle info (make sure to replace "vehicle_id")
 Or combine the above two commands into one call using the first line (make sure to replace "line_id")
   api.engine.getComponent( api.engine.system.transportVehicleSystem.getLineVehicles( line_id )[1], api.type.ComponentType.TRANSPORT_VEHICLE )
 
+Get CARGO for a line (make sure to replace "line_id")
+  api.engine.system.simCargoSystem.getSimCargosForLine(line_id)
+
+Get PASSENGERS for a line (make sure to replace "line_id")
+  api.engine.system.simPersonSystem.getSimPersonsForLine(line_id)
+
+Get general information via game.interface
+  game.interface.getEntity(entity_id)
+
+game.interface functions:
+addPlayer
+book
+buildConstruction
+bulldoze
+clearJournal
+findPath
+getBuildingType
+getBuildingTypes
+getCargoType
+getCargoTypes
+getCompanyScore
+getConstructionEntity
+getDateFromNowPlusOffsetDays
+getDepots
+getDestinationDataPerson
+getEntities
+getEntity
+getGameDifficulty
+getGameSpeed
+getGameTime
+getHeight
+getIndustryProduction
+getIndustryProductionLimit
+getIndustryShipping
+getIndustryTransportRating
+getLines
+getLog
+getMillisPerDay
+getName
+getPlayer
+getPlayerJournal
+getStationTransportSamples
+getStations
+getTownCapacities
+getTownCargoSupplyAndLimit
+getTownEmission
+getTownReachability
+getTownTrafficRating
+getTownTransportSamples
+getTowns
+getVehicles
+getWorld
+replaceVehicle
+setBuildInPauseModeAllowed
+setBulldozeable
+setDate
+setGameSpeed
+setMarker
+setMaximumLoan
+setMillisPerDay
+setMinimumLoan
+setMissionState
+setName
+setPlayer
+setTownCapacities
+setTownDevelopmentActive
+setZone
+spawnAnimal
+startEvent
+upgradeConstruction
+
 ** OUTPUT/STRUCTURE FROM VARIOUS COMMANDS **
 
 (All of the below examples are from an ELECTRIC_TRAM line with 1 vehicle on it)
@@ -121,7 +192,7 @@ Or combine the above two commands into one call using the first line (make sure 
     },
   },
   config = {
-    allCaps = {
+    allCaps = { (These are theoretical capacities that may not be in use)
       [1]  = 27, (PASSENGERS)
       [2]  = 0,
       [3]  = 0,
@@ -140,7 +211,7 @@ Or combine the above two commands into one call using the first line (make sure 
       [16] = 0,
       [17] = 0,
     },
-    capacities = {
+    capacities = { (These are capacities that are currently in use)
       [1]  = 27, (PASSENGERS)
       [2]  = 0,
       [3]  = 0,

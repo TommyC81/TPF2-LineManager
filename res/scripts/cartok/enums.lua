@@ -2,6 +2,9 @@
 -- General Transport Fever 2 API documentation can be found here: https://transportfever2.com/wiki/api/index.html
 local enums = {}
 
+function enums.initGlobals()
+end
+
 --- Enumerators for TransportModes
 -- This is based on data from testing and here: https://transportfever2.com/wiki/api/modules/api.type.html#enum.TransportMode
 -- Adjusted by 1 to account for LUA arrays starting at 1, as returned when using the following call: api.engine.getComponent(line_id, api.type.ComponentType.LINE)
@@ -28,7 +31,6 @@ local enums = {}
 --      [16] = 0, (UNKNOWN16)
 --    },
 --
--- TODO: For some reason I'm unable to use the api.type.enum value directly, and must thus use hardcoded values. Why? In-game console works as expected.
 enums.TransportModes = {
     PERSON = 1, -- api.type.enum.TransportMode.PERSON + 1
     CARGO = 2, -- api.type.enum.TransportMode.CARGO + 1
@@ -45,7 +47,19 @@ enums.TransportModes = {
     SMALL_SHIP = 13, -- api.type.enum.TransportMode.SMALL_SHIP + 1
 }
 
+-- This is to convert line.component.carrier to the corresponding text
+enums.Carrier = {
+    [0] = "ROAD",
+    [1] = "RAIL",
+    [2] = "TRAM",
+    [3] = "AIR",
+    [4] = "WATER",
+}
+
 -- Enumerator for CargoTypes
+--
+-- game.interface.getCargoTypes()
+-- { "PASSENGERS", "LOGS", "COAL", "IRON_ORE", "STONE", "GRAIN", "CRUDE", "STEEL", "PLANKS", "PLASTIC", "OIL", "CONSTRUCTION_MATERIALS", "MACHINES", "FUEL", "TOOLS", "FOOD", "GOODS", }
 --
 -- api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
 -- config = {

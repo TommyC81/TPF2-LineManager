@@ -2,254 +2,203 @@
 ---@author RusteyBucket
 -- Contains code and inspiration from 'TPF2-Timetables' created by Celmi, available here: https://steamcommunity.com/workshop/filedetails/?id=2408373260 and source https://github.com/IncredibleHannes/TPF2-Timetables
 -- General Transport Fever 2 API documentation can be found here: https://transportfever2.com/wiki/api/index.html
-local enums = require 'cartok/enums'
 
 local helper = {}
-local supportedLineModes = {
-    "(M)", -- Manual management
-    "(D)", -- "Default" line management (CARTOK's original rules)
-    "(R)", -- Rate focused line management
-    "(RC)", -- Conservative rate focused line management (rate is kept as close to demand as possible), reduction as per default rules
-    "(T)", -- Test, strict comparison between rate/demand ratio vs (adjusted) usage.
-    --    "(P)"--peak demand must be met TODO: implement peak demand mode
-}
-local defaultLineMode = "(D)"
 
----@param lineName string : the name of the line for there is the line mode designator
----@return string : line mode designator string
-function helper.getLineMode(lineName)
-    local current = defaultLineMode
-    for i = 1, #supportedLineModes do
-        if (string.find(lineName, supportedLineModes[i], 1, true) ~= nil) then
-            current = supportedLineModes[i]
-        end
+local api_helper = require 'cartok/api_helper'
+local enums = require 'cartok/enums'
+
+-------------------------------------------------------------
+--------------------- GENERAL HELPER ------------------------
+-------------------------------------------------------------
+
+---@param var number | string : the variable that ought to be a number
+---@return number : var as a number or -1
+---checks and if necessary converts a string to a number
+function helper.numberify(var)
+    if type(var) == "string" then
+        var = tonumber(var)
     end
-    return current
+    if type(var) == "number" then
+        return var
+    else
+        print("Expected String or Number")
+        return -1
+    end
 end
 
+---@param dividend number : absolute number
+---@param divisor number : absolute maximum
+---@return number : relative ratio as percentage
+function helper.roundPercentage(dividend, divisor)
+    if (dividend > 0 and divisor > 0) then
+        local factor = dividend / divisor
+        local percentage = 100 * factor
+        return math.round(percentage)
+    else
+        return 0
+    end
+end
+
+-------------------------------------------------------------
+--------------------- GAME STUFF ----------------------------
+-------------------------------------------------------------
+
 -- TODO: Get more rule options to be switchable as presets
----@param line_data userdata : the LineData (from helper.getLineData)
+---@param line_data userdata : the line_data (from helper.getLineData)
 ---@param line_id number : the id of the line
 ---@return boolean : whether a vehicle should be added to the line
 function helper.moreVehicleConditions(line_data, line_id)
-    -- a bunch of factors
+    -- Factors used in rules
+    local carrier = line_data[line_id].carrier
     local usage = line_data[line_id].usage
     local demand = line_data[line_id].demand
     local rate = line_data[line_id].rate
+    local rate_target = line_data[line_id].rate_target or 0
+    local capacity = line_data[line_id].capacity
     local vehicles = line_data[line_id].vehicles
-    local mode = line_data[line_id].mode
+    local rule = line_data[line_id].rule
     local rules = {}
 
-    if mode == "(D)" then
-        -- make use of standard rules
+    if rule == "P" then
+        -- make use of default PASSENGER rules
         rules = {
             usage > 50 and demand > rate * 2,
             usage > 80 and demand > rate * (vehicles + 1) / vehicles,
         }
-    elseif mode == "(R)" then
-        -- make use of strict rate rules
-        rules = {
-            demand > rate
-        }
-    elseif mode == "(RC)" then
-        -- make use of conservative rate rules
-        local adjustedRate = rate * (vehicles + 1) / vehicles
+    elseif rule == "PR" then
+        -- make use of PASSENGER rules by RusteyBucket
+        local d10 = demand * 1.1
+        local oneVehicle = 1 / vehicles -- how much would one vehicle change
+        local plusOneVehicle = 1 + oneVehicle -- add the rest of the vehicles
+        local dv = demand * plusOneVehicle -- exaggerate demand by what one more vehicle could change
+        local averageCapacity = capacity / vehicles
 
         rules = {
-            demand > adjustedRate,
-            rate < demand and adjustedRate > demand and demand - rate > adjustedRate - demand,
+            rate < d10, -- get a safety margin of 10% over the real demand
+            rate < dv, -- with low vehicle numbers, those 10% might not do the trick
+            usage > 90,
+            rate < averageCapacity --limits frequency to at most 12min
         }
-    elseif mode == "(T)" then
-        -- make use of test rules
+    elseif rule == "C" then
+        -- make use of default CARGO rules
         rules = {
-            0.7 * usage > 100 * rate / demand
+            -- Usage filtering prevents racing in number of vehicles in some (not all) instances when there is blockage on the line.
+            -- The filtering based on usage does however delay the increase of vehicles when a route is starting up until it has stabilized.
+            -- For instance, this won't prevent the addition of more vehicles when existing and fully loaded vehicles are simply stuck in traffic.
+            usage > 40 and (demand > capacity or demand > rate),
+            demand > 2 * capacity or demand > 2 * rate,
+        }
+    elseif rule == "R" then
+        -- make use of RATE rules
+        rules = {
+            rate < rate_target,
         }
     end
 
     -- figuring out whether at least one condition is fulfilled
-    local res = false
     for i = 1, #rules do
         if rules[i] then
-            res = true
+            return true
         end
     end
-    return res
+
+    -- If we made it here, then the conditions to add a vehicle were not met
+    return false
 end
 
----@param line_data userdata : the LineData (from helper.getLineData)
+---@param line_data userdata : the line_data (from helper.getLineData)
 ---@param line_id number : the id of the line
 ---@return boolean : whether a vehicle should be removed from the line
 function helper.lessVehiclesConditions(line_data, line_id)
-    -- a bunch of factors
+    -- Factors used in rules
+    local carrier = line_data[line_id].carrier
     local usage = line_data[line_id].usage
     local demand = line_data[line_id].demand
     local rate = line_data[line_id].rate
+    local rate_target = line_data[line_id].rate_target or 0
+    local capacity = line_data[line_id].capacity
     local vehicles = line_data[line_id].vehicles
-    local mode = line_data[line_id].mode
+    local rule = line_data[line_id].rule
     local rules = {}
 
-    if mode == "(D)" or mode == "(RC)" then
-        -- make use of standard rules
-        rules = {
-            vehicles > 1 and usage < 70 and demand < rate * (vehicles - 1) / vehicles and usage * vehicles / (vehicles - 1) < 100,
-        }
-    elseif mode == "(R)" then
-        -- make use of strict rate rules
-        rules = {
-            vehicles > 1 and demand < rate * (vehicles - 1) / vehicles
-        }
-    elseif mode == "(T)" then
-        -- make use of test rules
-        rules = {
-            vehicles > 1 and 1.3 * usage < 100 * rate / demand
-        }
+    -- Ensure there's always 1 vehicle retained per line.
+    if vehicles <= 1 then
+        return false
     end
 
-    -- figuring out whether at least one condition is fulfilled
-    local res = false
+    if rule == "P" then
+        -- make use of default PASSENGER rules
+        local modifier = (vehicles - 1) / vehicles
+        local inverse_modifier = vehicles / (vehicles - 1)
+
+        rules = {
+            usage < 70 and demand < rate * modifier and usage * inverse_modifier < 100,
+        }
+    elseif rule == "P" then
+        -- make use of PASSENGER rules by RusteyBucket
+        local newVehicles = vehicles - 1
+        local vehicleFactor = newVehicles / vehicles
+        local newRate = rate * vehicleFactor
+        local newUsage = usage * vehicles / newVehicles
+        local averageCapacity = capacity / vehicles
+        local d10 = demand * 1.1
+        local oneVehicle = 1 / vehicles -- how much would one vehicle change
+        local plusOneVehicle = 1 + oneVehicle -- add the rest of the vehicles
+        local dv = demand * plusOneVehicle -- exaggerate demand by what one more vehicle could change
+        rules = {
+            --            vehicles > 1 and usage < 40 and d10 < newRate and size > newRate,
+                vehicles > 1
+                    and usage < 40
+                    and d10 < newRate
+                    and dv < newRate
+                    and newUsage < 80
+                    and newRate > averageCapacity
+        }
+    elseif rule == "C" then
+        -- make use of default CARGO rules
+        local modifier = (vehicles - 1) / vehicles
+
+        rules = {
+            usage < 20,
+            usage < 40 and demand < capacity * modifier and demand < rate * modifier,
+        }
+    elseif rule == "R" then
+        -- make use of RATE rules
+        -- Only process this if a rate_target has actually been set properly.
+        -- Errors in formatting the rate in the line name can lead to weird results otherwise as rate_target is set to 0 in case of formatting error.
+        -- TODO: Should output a warning in case of formatting error.
+        if (rate_target > 0) then
+            local modifier = (vehicles - 1) / vehicles
+
+            rules = {
+                rate * modifier > rate_target,
+            }
+        end
+    end
+
+    -- Check whether at least one condition is fulfilled
     for i = 1, #rules do
         if rules[i] then
-            res = true
+            return true
         end
     end
-    return res
+
+    -- If we made it here, then the conditions to remove a vehicle were not met
+    return false
 end
 
----@param line_id number : the id of the line
----@return boolean : whether the line type is supported by the mod
-function helper.supportedLine(line_id)
-    local lineName = helper.getEntityName(line_id)
-
-    -- if a line contains "(M)", as in "Manual", in its name, then ignore it
-    if (helper.getLineMode(lineName) == "(M)") then
-        return false
-    end
-
-    -- get the line info
-    local line = api.engine.getComponent(line_id, api.type.ComponentType.LINE)
-
-    -- check whether the required parameters exists
-    if not line and line.vehicleInfo and line.vehicleInfo.transportModes then
-        return false
-    end
-
-    local lineTransportModes = line.vehicleInfo.transportModes
-
-    local transportModes = {
-        lineTransportModes[enums.TransportModes.BUS],
-        lineTransportModes[enums.TransportModes.TRAM],
-        lineTransportModes[enums.TransportModes.ELECTRIC_TRAM],
-        lineTransportModes[enums.TransportModes.AIRCRAFT],
-        lineTransportModes[enums.TransportModes.SHIP],
-        lineTransportModes[enums.TransportModes.SMALL_AIRCRAFT],
-        lineTransportModes[enums.TransportModes.SMALL_SHIP],
-    }
-
-    local res = false
-    for i = 1, #transportModes do
-        if transportModes[i] == 1 then
-            res = true
-        end
-    end
-    return res
-end
-
----@param line_data userdata : the LineData (from helper.getLineData)
----@param line_id number : the id of the line
----@return string
----returns usage data string
-function helper.printLineData(line_data, line_id)
-    local use = "Usage: " .. line_data[line_id].usage .. "% "
-    use = use .. "Demand: " .. line_data[line_id].demand .. " "
-    use = use .. "Rate: " .. line_data[line_id].rate .. " "
-    use = use .. "Vehicles: " .. line_data[line_id].vehicles .. " "
-    use = use .. "Mode: " .. line_data[line_id].mode
-    return use
-end
-
----@param line_id number | string : the id of the line
----@return number : lineRate
-function helper.getLineRate(line_id)
-    if type(line_id) == "string" then
-        line_id = tonumber(line_id)
-    end
-    if not (type(line_id) == "number") then
-        return 0
-    end
-
-    local lineEntity = game.interface.getEntity(line_id)
-    if lineEntity and lineEntity.rate then
-        return lineEntity.rate
-    else
-        return 0
-    end
-end
-
----@param vehicle_id number | string : the id of the vehicle
----@return boolean : transportsPassengers
-function helper.vehicleTransportsPassengers(vehicle_id)
-    if type(vehicle_id) == "string" then
-        vehicle_id = tonumber(vehicle_id)
-    end
-    if not (type(vehicle_id) == "number") then
-        return false
-    end
-
-    local vehicleInfo = api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
-    if vehicleInfo and vehicleInfo.config and vehicleInfo.config.capacities[1] and vehicleInfo.config.capacities[1] > 0 then
-        return true
-    else
-        return false
-    end
-end
-
----@return number : gameMonth
-function helper.getGameMonth()
-    return game.interface.getGameTime().date.month
-end
-
----@param entity_id number | string : the id of the entity
----@return string : entityName
-function helper.getEntityName(entity_id)
-    if type(entity_id) == "string" then
-        entity_id = tonumber(entity_id)
-    end
-    if not (type(entity_id) == "number") then
-        return "ERROR"
-    end
-
-    local err, res = pcall(function()
-        return api.engine.getComponent(entity_id, api.type.ComponentType.NAME)
-    end)
-    if err and res and res.name then
-        return res.name
-    else
-        return "ERROR"
-    end
-end
-
----@return number : current GameTime (milliseconds)
-function helper.getGameTime()
-    local time = api.engine.getComponent(0, api.type.ComponentType.GAME_TIME).gameTime
-    if time then
-        return time
-    else
-        return 0
-    end
-end
-
-
---- @param vehicle_id_table table array of VEHICLE ids
---- @return number id of the oldest vehicle on the line
---- finds the oldest vehicle on a line
+---@param vehicle_id_table table array of VEHICLE ids
+---@return number id of the oldest vehicle on the line
+---Finds the oldest vehicle among the provided vehicle id.
 function helper.getOldestVehicleId(vehicle_id_table)
-    local oldestVehicleId = 0
+    local oldestVehicleId = nil
     local oldestVehiclePurchaseTime = 999999999999
 
     for _, vehicle_id in pairs(vehicle_id_table) do
-        local vehicleInfo = api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
-        if vehicleInfo.transportVehicleConfig.vehicles[1].purchaseTime < oldestVehiclePurchaseTime then
-            oldestVehiclePurchaseTime = vehicleInfo.transportVehicleConfig.vehicles[1].purchaseTime
+        local vehicle = api_helper.getVehicle(vehicle_id)
+        if vehicle and vehicle.transportVehicleConfig.vehicles[1].purchaseTime < oldestVehiclePurchaseTime then
+            oldestVehiclePurchaseTime = vehicle.transportVehicleConfig.vehicles[1].purchaseTime
             oldestVehicleId = vehicle_id
         end
     end
@@ -257,131 +206,30 @@ function helper.getOldestVehicleId(vehicle_id_table)
     return oldestVehicleId
 end
 
----@param line_id  number | string : the id of the line
----@param line_type string : eg "RAIL", "ROAD", "TRAM", "WATER", "AIR"
----@return boolean : whether the line is of the provided lineType
-function helper.lineHasType(line_id, line_type)
-    if type(line_id) == "string" then
-        line_id = tonumber(line_id)
-    end
-    if not (type(line_id) == "number") then
-        print("Expected String or Number")
-        return -1
-    end
+---@param vehicle_id_table table array of VEHICLE ids
+---@return number id of the emptiest vehicle on the line
+---Finds the emptiest vehicle among the provided vehicle id.
+function helper.getEmptiestVehicleId(vehicle_id_table)
+    local emptiestVehicleId = nil
+    local emptiestVehicleOccupancy = 999999999999
+    local vehicle2cargoMap = api_helper.getVehicle2Cargo2SimEntitesMap()
 
-    local vehicles = api.engine.system.transportVehicleSystem.getLineVehicles(line_id)
-    if vehicles and vehicles[1] then
-        local component = api.engine.getComponent(vehicles[1], api.type.ComponentType.TRANSPORT_VEHICLE)
-        if component and component.carrier then
-            return component.carrier == api.type.enum.Carrier[line_type]
-        end
-    end
-    return false
-end
-
----@return table : all lines for the Player
-function helper.getPlayerLines()
-    return api.engine.system.lineSystem.getLinesForPlayer(api.engine.util.getPlayer())
-end
-
----@return table : containing line_id, vehicles, capacity, occupancy, usage, demand and rate
----@return table : id of ignored lines
-function helper.getLineData()
-    local lines = helper.getPlayerLines()
-    local lineData = {}
-    local ignoredLines = {}
-
-    for _, line_id in pairs(lines) do
-        local ignoredLine = true
-
-        -- Check type of line first
-        if helper.supportedLine(line_id) then
-            local lineVehicleCount = 0
-            local lineCapacity = 0
-            local lineOccupancy = 0
-            local lineTravellerCount = 0
-            local lineUsage = 0
-
-            -- This retrieves the total number of people that have a path that includes travel via this line.
-            -- It doesn't mean that the person is at a station of the line, or on a line vehicle.
-            -- This is used as "demand" and is useful for scaling up line rate (capacity) preemptively when
-            -- there is a surge in demand, or to (partially) negate poorly balanced lines with some line sections
-            -- overloaded and other sections empty - effectively leading to a lower average load on the line.
-            local lineTravellers = api.engine.system.simPersonSystem.getSimPersonsForLine(line_id)
-            for _, traveller_id in pairs(lineTravellers) do
-                lineTravellerCount = lineTravellerCount + 1
-            end
-
-            if lineTravellerCount > 0 then
-                ignoredLine = false -- This line is supported and has passengers, and is thus not ignored
-
-                local lineVehicles = api.engine.system.transportVehicleSystem.getLineVehicles(line_id)
-                for _, vehicle_id in pairs(lineVehicles) do
-                    local vehicle = api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
-                    if vehicle and vehicle.config and vehicle.config.capacities[enums.CargoTypes.PASSENGERS] and vehicle.config.capacities[enums.CargoTypes.PASSENGERS] > 0 then
-                        lineVehicleCount = lineVehicleCount + 1
-                        lineCapacity = lineCapacity + vehicle.config.capacities[enums.CargoTypes.PASSENGERS]
-                    end
-
-                    -- This gets the actual people on this line vehicle at this moment i.e. occupying a seat.
-                    for _, traveller_id in pairs(lineTravellers) do
-                        local traveller = api.engine.getComponent(traveller_id, api.type.ComponentType.SIM_PERSON_AT_VEHICLE)
-                        if traveller and traveller.vehicle and traveller.vehicle == vehicle_id then
-                            lineOccupancy = lineOccupancy + 1
-                        end
-                    end
-                end
-
-                if (lineOccupancy > 0 and lineCapacity > 0) then
-                    lineUsage = math.round(100 * lineOccupancy / lineCapacity)
-                else
-                    lineUsage = 0
-                end
-
-                local name = helper.getEntityName(line_id)
-                lineData[line_id] = {
-                    vehicles = lineVehicleCount,
-                    capacity = lineCapacity,
-                    occupancy = lineOccupancy,
-                    demand = lineTravellerCount,
-                    usage = lineUsage,
-                    rate = helper.getLineRate(line_id),
-                    name = name,
-                    mode = helper.getLineMode(name),
-                }
+    for _, vehicle_id in pairs(vehicle_id_table) do
+        if vehicle2cargoMap[vehicle_id] then
+            local vehicleOccupancy = helper.reduceOccupancyTable(vehicle2cargoMap[vehicle_id])
+            if vehicleOccupancy < emptiestVehicleOccupancy then
+                emptiestVehicleOccupancy = vehicleOccupancy
+                emptiestVehicleId = vehicle_id
             end
         end
-
-        if ignoredLine then
-            table.insert(ignoredLines, line_id)
-        end
     end
 
-    return lineData, ignoredLines
+    return emptiestVehicleId
 end
 
----strings together line name and line id depending on the provided settings
----@param line_id number : the id of the line
----@param printLineNumber boolean : (optional) whether to print the line number, default true
----@param printLineName boolean : (optional) whether to print the line name, default true
----@return string : the line name in desired form
-function helper.printLine(line_id, printLineNumber, printLineName)
-    printLineNumber = printLineNumber or true
-    printLineName = printLineName or true
-
-    local output = ""
-    local name = helper.getEntityName(line_id)
-
-    if (printLineNumber and printLineName) then
-        output = name .. " (" .. line_id .. ")"
-    elseif (printLineName) then
-        output = name
-    elseif (printLineNumber) then
-        output = line_id
-    end
-
-    return output
-end
+-------------------------------------------------------------
+--------------------- PRINT STUFF ---------------------------
+-------------------------------------------------------------
 
 ---Converts array to string and optionally inserts a line break whenever the first word in the array changes
 ---@param array table : the array to be strung up

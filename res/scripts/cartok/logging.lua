@@ -1,7 +1,7 @@
 ---@author CARTOK
 -- Contains code from 'TPF2-Timetables' created by Celmi, available here: https://steamcommunity.com/workshop/filedetails/?id=2408373260 and source https://github.com/IncredibleHannes/TPF2-Timetables
 -- General Transport Fever 2 API documentation can be found here: https://transportfever2.com/wiki/api/index.html
-local logging = {}
+local log = {}
 
 local TRACE = 1
 local DEBUG = 2
@@ -11,7 +11,7 @@ local ERROR = 5
 
 local DEFAULT = INFO
 
-logging.levelNames = {
+local levelNames = {
     [TRACE] = 'TRACE',
     [DEBUG] = 'DEBUG',
     [INFO] = 'INFO',
@@ -19,7 +19,10 @@ logging.levelNames = {
     [ERROR] = 'ERROR',
 }
 
-logging.levels = {
+local currentLogLevel = DEFAULT
+local showExtendedLineInfo = false
+
+log.levels = {
     TRACE = TRACE,
     DEBUG = DEBUG,
     INFO = INFO,
@@ -27,86 +30,81 @@ logging.levels = {
     ERROR = ERROR,
 }
 
-logging.currentLogLevel = INFO
-logging.verboseDebugging = true
-
----@param level number (Optional) The logging level, refer to logging.levels for applicable levels, default is 'INFO' (3).
+---@param level number (Optional) The logging level, refer to log.levels for applicable levels, default is 'INFO' (3).
 ---Set the logging level to be used, this filters what messages are shown in the in-game console.
-function logging.setLevel(level)
-    logging.currentLogLevel = level or DEFAULT
-    logging.info("Logging level set to " .. logging.levelNames[logging.currentLogLevel] .. ".")
+function log.setLevel(level)
+    currentLogLevel = level or DEFAULT
+    log.info("Logging level set to: " .. levelNames[currentLogLevel])
 end
 
----@param debugging boolean (Optional) Toggles logging level between DEBUG (true) and INFO (false), default is DEBUG (true).
----Set the logging level to be used, this filters what messages are shown in the in-game console.
-function logging.setDebugging(debugging)
-    if (debugging) then
-        logging.setLevel(logging.levels.DEBUG)
+---@param param boolean (optional) whether extended line info should used, default is false
+---set whether extended line info should be used
+function log.setShowExtendedLineInfo(param)
+    if (param ~= nil ) then
+        showExtendedLineInfo = param
     else
-        logging.setLevel(logging.levels.INFO)
+        showExtendedLineInfo = true
     end
+    log.info("ShowExtendedLineInfo set to: " .. tostring(showExtendedLineInfo))
 end
 
----@param verbose boolean (Optional) Whether verbose debug messages should be used, default is true.
----Set whether verbose debugging messages should be used.
-function logging.setVerboseDebugging(verbose)
-    if (verbose ~= nil ) then
-        logging.verboseDebugging = verbose
-    else
-        logging.verboseDebugging = true
-    end
-    logging.info("VerboseDebugging set to " .. tostring(logging.verboseDebugging) .. ".")
+---@return boolean : whether current logging level is 'DEBUG' or greater
+---used to determine whether debug messages should be displayed in the in-game console
+function log.isDebugging()
+    return currentLogLevel >= DEBUG
 end
 
----@return boolean isDebugging Whether current logging level is 'DEBUG' or greater.
----Used to check if logging level is debugging or greater. Useful for determining if extended debug messages should be prepared for displaying in the in-game console.
-function logging.isDebugging()
-    return logging.currentLogLevel >= DEBUG
-end
-
----@return boolean isVerboseDebugging Whether current logging level is 'DEBUG' or greater.
----Used to check if logging level is debugging or greater and verbose debugging messages should be used. Useful for determining if extended debug messages should be prepared for displaying in the in-game console.
-function logging.isVerboseDebugging()
-    return logging.currentLogLevel >= DEBUG and logging.verboseDebugging
+---@return boolean : whether the option to show extended line info is selected
+---used to determine whether extended line info messages should be displayed in the in-game console
+function log.isShowExtendedLineInfo()
+    return currentLogLevel >= INFO and showExtendedLineInfo
 end
 
 ---@param level number message level
 ---@param message string the message
----Sends a message of the specified level to the in-game console. Refer to logging.levels for applicable levels.
-function logging.log(level, message)
-    if level >= logging.currentLogLevel then
-        print('[LineManager][' .. os.date('%H:%M:%S') .. '][' .. logging.levelNames[level] .. '] ' .. message) -- Date/time output shortened from %Y-%m-%d %H:%M:%S
+---Sends a message of the specified level to the in-game console. Refer to log.levels for applicable levels.
+function log.log(level, message)
+    if level >= currentLogLevel then
+        print('[LineManager][' .. os.date('%H:%M:%S') .. '][' .. levelNames[level] .. '] ' .. message) -- Date/time output shortened from %Y-%m-%d %H:%M:%S
     end
 end
 
 ---@param message string The message.
 ---Send a 'TRACE' message to the in-game console (only displayed if logging level is 'TRACE').
-function logging.trace(message)
-    logging.log(TRACE, message)
+function log.trace(message)
+    log.log(TRACE, message)
 end
 
 ---@param message string The message.
 ---Send a 'DEBUG' message to the in-game console (only displayed if logging level is 'DEBUG' or greater).
-function logging.debug(message)
-    logging.log(DEBUG, message)
+function log.debug(message)
+    log.log(DEBUG, message)
 end
 
 ---@param message string The message.
 ---Send a 'INFO' message to the in-game console (only displayed if logging level is 'INFO' or greater).
-function logging.info(message)
-    logging.log(INFO, message)
+function log.info(message)
+    log.log(INFO, message)
+end
+
+---@param message string The message.
+---Send a 'INFO' message to the in-game console (only displayed if logging level is 'INFO' or greater, and showExtendedLineInfo is true).
+function log.lineInfo(message)
+    if showExtendedLineInfo then
+        log.log(INFO, message)
+    end
 end
 
 ---@param message string The message.
 ---Send a 'WARN' message to the in-game console (only displayed if logging level is 'WARN' or greater).
-function logging.warn(message)
-    logging.log(WARN, message)
+function log.warn(message)
+    log.log(WARN, message)
 end
 
 ---@param message string The message.
 ---Send a 'ERROR' message to the in-game console (only displayed if logging level is 'ERROR' or greater).
-function logging.error(message)
-    logging.log(ERROR, message)
+function log.error(message)
+    log.log(ERROR, message)
 end
 
-return logging
+return log
