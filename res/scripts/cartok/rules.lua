@@ -36,6 +36,7 @@ rules.line_rules = {
     },
 }
 
+-- The default rules that are applied automatically (when enabled for a category of lines)
 rules.defaultPassengerLineRule = "P"
 rules.defaultCargoLineRule = "C"
 
@@ -61,7 +62,7 @@ function rules.moreVehicleConditions(line_data_single)
     local line_rules = {}
 
     if rule == "P" then
-        -- make use of default PASSENGER rules
+        -- Make use of default PASSENGER rules
         local modifier = (vehicles + 1) / vehicles
 
         if carrier == "RAIL" or carrier == "AIR" then
@@ -76,7 +77,7 @@ function rules.moreVehicleConditions(line_data_single)
             }
         end
     elseif rule == "PR" then
-        -- make use of PASSENGER rules by RusteyBucket
+        -- Make use of PASSENGER rules by RusteyBucket
         local d10 = demand * 1.1
         local oneVehicle = 1 / vehicles -- how much would one vehicle change
         local plusOneVehicle = 1 + oneVehicle -- add the rest of the vehicles
@@ -90,7 +91,7 @@ function rules.moreVehicleConditions(line_data_single)
             samples > 5 and frequency > 720 --limits frequency to at most 12min (720 seconds)
         }
     elseif rule == "C" then
-        -- make use of default CARGO rules
+        -- Make use of default CARGO rules
         line_rules = {
             -- Usage filtering prevents racing in number of vehicles in some (not all) instances when there is blockage on the line.
             -- The filtering based on usage does however delay the increase of vehicles when a route is starting up until it has stabilized.
@@ -99,13 +100,13 @@ function rules.moreVehicleConditions(line_data_single)
             samples > 5 and demand > 2 * capacity or demand > 2 * rate,
         }
     elseif rule == "R" then
-        -- make use of RATE rules
+        -- Make use of RATE rules
         line_rules = {
             samples > 5 and rate < target,
         }
     end
 
-    -- figuring out whether at least one condition is fulfilled
+    -- Check whether at least one condition is fulfilled
     for i = 1, #line_rules do
         if line_rules[i] then
             return true
@@ -143,7 +144,7 @@ function rules.lessVehiclesConditions(line_data_single)
     end
 
     if rule == "P" then
-        -- make use of default PASSENGER rules
+        -- Make use of default PASSENGER rules
         local modifier = (vehicles - 1) / vehicles
         local inverse_modifier = vehicles / (vehicles - 1)
 
@@ -152,7 +153,7 @@ function rules.lessVehiclesConditions(line_data_single)
             samples > 10 and usage < 50 and demand < rate,
         }
     elseif rule == "PR" then
-        -- make use of PASSENGER rules by RusteyBucket
+        -- Make use of PASSENGER rules by RusteyBucket
         local newVehicles = vehicles - 1
         local vehicleFactor = newVehicles / vehicles
         local newRate = rate * vehicleFactor
@@ -162,10 +163,9 @@ function rules.lessVehiclesConditions(line_data_single)
         local oneVehicle = 1 / vehicles -- how much would one vehicle change
         local plusOneVehicle = 1 + oneVehicle -- add the rest of the vehicles
         local dv = demand * plusOneVehicle -- exaggerate demand by what one more vehicle could change
+
         line_rules = {
-            --            vehicles > 1 and usage < 40 and d10 < newRate and size > newRate,
             samples > 5
-            and vehicles > 1
             and usage < 40
             and d10 < newRate
             and dv < newRate
@@ -173,7 +173,7 @@ function rules.lessVehiclesConditions(line_data_single)
             and newRate > averageCapacity
         }
     elseif rule == "C" then
-        -- make use of default CARGO rules
+        -- Make use of default CARGO rules
         local modifier = (vehicles - 1) / vehicles
 
         line_rules = {
@@ -181,7 +181,8 @@ function rules.lessVehiclesConditions(line_data_single)
             samples > 5 and usage < 40 and demand < capacity * modifier and demand < rate * modifier,
         }
     elseif rule == "R" then
-        -- make use of RATE rules
+        -- Make use of RATE rules
+
         -- Only process this if a target has actually been set properly.
         -- Errors in formatting the rate in the line name can lead to weird results otherwise as target is set to 0 in case of formatting error.
         -- TODO: Should output a warning in case of formatting error.
