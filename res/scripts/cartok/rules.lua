@@ -44,7 +44,7 @@ rules.defaultCargoLineRule = "C"
 function rules.moreVehicleConditions(line_data_single)
     -- Factors that can be used in rules
     local carrier = line_data_single.carrier -- "ROAD", "TRAM", "RAIL", "WATER" or "AIR"
-    local type = line_data_single.type -- "PASSENGER" or "CARGO"
+    local type = line_data_single.type -- "PASSENGER" or "CARGO" (if the line handles both PASSENGER and CARGO, then the greater demand will determine type)
     local rule = line_data_single.rule -- the line rule
     local rule_manual = line_data_single.rule_manual -- whether the line rule was assigned manually (rather than automatically)
     local rate = line_data_single.rate -- *averaged* line rate
@@ -121,7 +121,7 @@ end
 function rules.lessVehiclesConditions(line_data_single)
     -- Factors that can be used in rules
     local carrier = line_data_single.carrier -- "ROAD", "TRAM", "RAIL", "WATER" or "AIR"
-    local type = line_data_single.type -- "PASSENGER" or "CARGO"
+    local type = line_data_single.type -- "PASSENGER" or "CARGO" (if the line handles both PASSENGER and CARGO, then the greater demand will determine type)
     local rule = line_data_single.rule -- the line rule
     local rule_manual = line_data_single.rule_manual -- whether the line rule was assigned manually (rather than automatically)
     local rate = line_data_single.rate -- *averaged* line rate
