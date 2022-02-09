@@ -12,9 +12,10 @@ local helper = require 'cartok/helper'
 local api_helper = require 'cartok/api_helper'
 local sampling = require 'cartok/sampling'
 
-local firstRun = true
+local firstRun = true -- Keeps track of the first update run (to do some init)
+local skipTick = false -- To skip processing every second tick
 local updateCounter = 0
-local UPDATE_FREQUENCY = 20
+local UPDATE_FREQUENCY = 10
 local gui_settingsWindow = nil
 
 -- This is the entire data for the mod, it is stored in the save game as well as loaded in GUI thread for access
@@ -47,7 +48,7 @@ local state = {
     sampling_settings = {
         last_sample_time = -1, -- Keeps track of what month (or time) the last sample was taken, in order to re-trigger a new sampling when month (or time) changes.
         time_based_sampling = false, -- If true, then os time is used for sampling rather than in-game months.
-        sample_time_interval = 30, -- If os time is used for sampling, take a sample every this number of seconds.
+        sample_time_interval = 30, -- If OS time is used for sampling, take a sample every this number of seconds.
         window_size = 5, -- The moving average window size that sampled data are averaged out over.
     },
     line_data = {}, -- An up-to-date list (since last sampling...) of the Player lines and associated data.
@@ -79,9 +80,11 @@ local function lineInfoString(line_id)
     if state.line_data[line_id].rule_manual then
         managed = "(MANUAL)"
     end
+
     local rule = state.line_data[line_id].rule
-    if rule == "R" then
-        rule = rule .. ":" .. state.line_data[line_id].target
+    local target = state.line_data[line_id].target
+    if target > 0 then
+        rule = rule .. ":" .. target
     end
 
     local str  = state.line_data[line_id].type .. " - "
@@ -134,7 +137,7 @@ local function removeVehicleFromLine(line_id)
             success = true
         end
     else
-        log.error("Only one vehicle left on line: " .. state.line_data[line_id].name .. " - Requested vehicle removal cancelled. This message indicates a code error, please report it.")
+        log.error("Only one vehicle left on line '" .. state.line_data[line_id].name .. "' - Requested vehicle removal cancelled. This message indicates a code error, please report it.")
     end
 
     return success
@@ -176,7 +179,7 @@ local function addVehicleToLine(line_id)
             end
         end
     else
-        log.error("There are no vehicles on line: " .. state.line_data[line_id].name .. " - Requested vehicle addition cancelled. This message indicates a code error, please report it.")
+        log.error("There are no vehicles on line '" .. state.line_data[line_id].name .. "' - Requested vehicle addition cancelled. This message indicates a code error, please report it.")
     end
 
     if depot_id then
@@ -200,11 +203,11 @@ local function addVehicleToLine(line_id)
 
                 success = true
             else
-                log.warn("Unable to add vehicle to line: " .. state.line_data[line_id].name .. " - Insufficient cash?")
+                log.warn("Unable to add vehicle to line '" .. state.line_data[line_id].name .. "' - Insufficient cash?")
             end
         end)
     else
-        log.warn("Unable to add vehicle to line: " .. state.line_data[line_id].name .. " - Either no available depot, or not possible to find a depot on this update.")
+        log.warn("Unable to add vehicle to line '" .. state.line_data[line_id].name .. "' - Either no available depot, or not possible to find a depot on this update.")
         log.debug("line_id: " .. line_id)
     end
 
@@ -295,14 +298,6 @@ local function everyTickUpdate()
 
         log.info("============ Updating ============")
         updateLines()
-
-        -- In case the sampling or updating process has taken longer than expected, update last_sample_time
-        if (state.sampling_settings.time_based_sampling) then
-            state.sampling_settings.last_sample_time = os.time()
-        else
-            state.sampling_settings.last_sample_time = api_helper.getGameMonth()
-        end
-
     -- If sampling is in state finished, check if a new sampling is due
     elseif sampling.isStateFinished() or sampling.isStateStopped() then
         local sampling_is_due = false
@@ -614,24 +609,29 @@ function data()
             end
         end,
         update = function(data)
-            -- First run
-            if firstRun then
-                firstRun = false
-                firstRunOnly()
-            end
-            -- If linemanager is enabled and game is not paused
-            if state.linemanager_settings.enabled and game.interface.getGameSpeed() > 0 then
-                -- Regular update
-                updateCounter = updateCounter + 1
-                if updateCounter >= UPDATE_FREQUENCY then
-                    updateCounter = 0
-                    regularUpdate()
+            if skipTick then
+                skipTick = false
+            else
+                skipTick = true
+                -- First run
+                if firstRun then
+                    firstRun = false
+                    firstRunOnly()
                 end
-                -- Every tick update
-                everyTickUpdate()
-            -- If game is paused and we're using os time based sampling, then "freeze" the time of the last sample taken
-            elseif state.sampling_settings.time_based_sampling then
-                state.sampling_settings.last_sample_time = state.sampling_settings.last_sample_time + (os.time() - state.sampling_settings.last_sample_time)
+                -- If linemanager is enabled and game is not paused
+                if state.linemanager_settings.enabled and game.interface.getGameSpeed() > 0 then
+                    -- Regular update
+                    updateCounter = updateCounter + 1
+                    if updateCounter >= UPDATE_FREQUENCY then
+                        updateCounter = 0
+                        regularUpdate()
+                    end
+                    -- Every tick update
+                    everyTickUpdate()
+                -- If game is paused and we're using os time based sampling, then "freeze" the time of the last sample taken
+                elseif state.sampling_settings.time_based_sampling then
+                    state.sampling_settings.last_sample_time = state.sampling_settings.last_sample_time + (os.time() - state.sampling_settings.last_sample_time)
+                end
             end
         end,
         guiInit = gui_init,
