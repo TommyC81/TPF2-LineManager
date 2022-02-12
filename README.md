@@ -31,8 +31,9 @@ This mod is inspired by and uses code snippets from:
   will be cloned, so it is therefore recommended to keep a single type of vehicle per line.
 * When removing a vehicle from a line, the oldest vehicle will always be removed. Additionally, the mod will ensure
   at least 1 vehicle remains on each line.
-* Sensible rules for both PASSENGER and CARGO lines are used by default. However, if this doesn't work as
-  desired, see the line rule section below for more information.
+* Sensible rules for both PASSENGER and CARGO lines are used by default (if automatic vehicle management is enabled for the
+  respective category of lines). However, if this doesn't work as desired, see the "Line rules" section below for more information.
+
 ### In-game menu
 The mod has in in-game menu, that can be accessed via the "[LM]" text in the bottom in-game status bar.
 The following LineManager options area available in the in-game menu:
@@ -53,13 +54,14 @@ The following LineManager options area available in the in-game menu:
 
 ### Line rules
 * **`(P)` - PASSENGER**: Default PASSENGER line rule, assigned automatically to all managed PASSENGER lines.
-  To assign manually, add "**`(P)`**" to the name of the line (anywhere in the line name).
+  To assign manually, add "**(P)**" to the name of the line (anywhere in the line name).
 * **`(C)` - CARGO**: Default CARGO line rule, assigned automatically to all managed CARGO lines.
-  To assign manually, add "**`(C)`**" to the name of the line (anywhere in the line name).
-* **`(M)` - MANUAL**: To disable automatic vehicle management on a specific line, add "**`(M)`**" to the name of
+  To assign manually, add "**(C)**" to the name of the line (anywhere in the line name).
+* **`(M)` - MANUAL**: To disable automatic vehicle management on a specific line, add "**(M)**" to the name of
   the line (anywhere in the line name). LineManager will not amend any vehicles on this line.
 * **`(R:<number>)` - RATE**: Line rate rules, adjusting number of vehicles to ensure line rate meets/exceeds the set rate.
-  To use, add "**`(R:<number>)`**" to the name of the line (anywhere in the line name).
+  To use, add "**(R:xxx)**" to the name of the line (anywhere in the line name). Note that xxx is to be replaced with the
+  desired rate.
 * **`(PR)` - PASSENGER (RusteyBucket)**: Alternative PASSENGER line rules created by RusteyBucket. These rules will more
   aggressively manage vehicles upwards. This can be useful for unevenly balanced passenger lines. Perhaps a line feeding a
   main route and it is acceptable that it runs less optimally to ensure the main route see maximum load. To use,
