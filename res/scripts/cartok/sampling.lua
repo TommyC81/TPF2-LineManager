@@ -533,9 +533,14 @@ function sampling.process()
     -- If not finished, work our way through the data preparation until completed
     if sampling.isStateWaiting() then
         setStatePreparingInitialData()
-    elseif sampling.isStatePreparingInitialData() and prepareInitialData() then
-        log.debug("sampling: prepareInitialData() completed successfully")
-        setStatePreparingLineData()
+    elseif sampling.isStatePreparingInitialData() then
+        if prepareInitialData() then
+            log.debug("sampling: prepareInitialData() completed successfully")
+            setStatePreparingLineData()
+        else
+            log.debug("sampling: prepareInitialData() no data to process yet, stopping sampling")
+            setStateStopped()
+        end
     elseif sampling.isStatePreparingLineData() and prepareLineData() then
         log.debug("sampling: prepareLineData() completed successfully")
         setStateMergingLineData()

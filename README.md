@@ -74,7 +74,7 @@ Examples of line naming:
 * Line name "**BUS ABC-1 (R:100)**" - this line is managed according to **(R) - RATE** line rules, to achieve a rate of 100.
 * Line name "**BUS ABC-1 (PR)**" - this line is managed according to **(PR) - PASSENGER (RusteyBucket)** line rules.
 
-Other ways to manage lines is to disable automatic management of some line categories (or all) and only
+Other ways to manage vehicles is to disable automatic management of some line categories (or all) and only
 assign rules manually where needed. Manually assigned rules are always processed, regardless of the automatic setting.
 
 Additionally, you can (relatively) easily dig into the code and create your own rules, see 'rules.lua' within the source code.
