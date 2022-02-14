@@ -160,7 +160,11 @@ local function addVehicleToLine(line_id)
     -- This merely tries to send an existing vehicle on the line to the depot, checks if succeeds then cancel the depot call but uses the depot data.
     -- Unfortunately sending a vehicle to a depot empties the vehicle.
     if #lineVehicles > 0 then
-        for _, vehicle_id in pairs(lineVehicles) do
+        -- Find the emptiest vehicle (this will help with the depot testing as the impact will be smallest, although less likely to find a depot)
+        -- Note that there may also be a delay between the cache being set up and sampling completing, so it might no longer be the emptiest vehicle
+        local vehicle_id = sampling.getEmptiestVehicle(lineVehicles)
+
+        if vehicle_id then
             -- Start by checking that the vehicle is EN_ROUTE (this prevents some weird routing issues, in particular with RAIL and when at a station)
             vehicleToDuplicate = api_helper.getVehicle(vehicle_id)
             if vehicleToDuplicate and api_helper.isVehicleEnRoute(vehicleToDuplicate) then
@@ -173,8 +177,6 @@ local function addVehicleToLine(line_id)
                     stop_id = vehicleToDuplicate.stopIndex
 
                     api_helper.sendVehicleToLine(vehicle_id, line_id, stop_id)
-
-                    break -- Stop looking for a vehicle that can be sent to depot.
                 end
             end
         end
