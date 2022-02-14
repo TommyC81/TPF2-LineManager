@@ -565,17 +565,23 @@ end
 ---returns the (cached) emptiest vehicle id
 function sampling.getEmptiestVehicle(vehicle_ids)
     log.debug("sampling: getEmptiestVehicle() started")
-    local currentSmallestLoad = 9999999999
+    local emptiestVehicleLoad = 9999999999
     local emptiestVehicleId = nil
 
     if sampling.isStateFinished() and vehicle_ids and #vehicle_ids > 0 then
         for _, vehicle_id in pairs(vehicle_ids) do
-            if vehicleOccupancyCache[vehicle_id] and vehicleOccupancyCache[vehicle_id].TOTAL < currentSmallestLoad then
+            -- If vehicle is not cached, assume it is because of no load and stop here
+            if not vehicleOccupancyCache[vehicle_id] then
                 emptiestVehicleId = vehicle_id
-                currentSmallestLoad = vehicleOccupancyCache[vehicle_id].TOTAL
+                emptiestVehicleLoad = 0
+                break
+            -- If vehicle is cached, then use it
+            elseif vehicleOccupancyCache[vehicle_id] and vehicleOccupancyCache[vehicle_id].TOTAL < emptiestVehicleLoad then
+                emptiestVehicleId = vehicle_id
+                emptiestVehicleLoad = vehicleOccupancyCache[vehicle_id].TOTAL
             end
         end
-        log.debug("sampling: getEmptiestVehicle() found vehicle " .. emptiestVehicleId .. " with current load: " .. currentSmallestLoad)
+        log.debug("sampling: getEmptiestVehicle() found vehicle " .. tostring(emptiestVehicleId) .. " with current load: " .. tostring(emptiestVehicleLoad))
     end
 
     return emptiestVehicleId
