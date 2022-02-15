@@ -258,11 +258,58 @@ local function updateLines()
     if problemCount > 0 then
         log.warn( problemCount .. " managed lines had problems and were skipped in this update")
     end
+
+    if log.isShowExtendedLineInfo() then
+        local manualLines = {}
+        local automaticLines = {}
+        local ignoredLines = {}
+        local logOutput = ""
+
+        -- Populate the tables with managed/ignored lines
+        for _, line_id in pairs(lines) do
+            -- If a line exists in line_data and is managed, then continue
+            if state.line_data[line_id] then
+                if state.line_data[line_id].managed then
+                    if state.line_data[line_id].rule_manual then
+                        table.insert(manualLines, state.line_data[line_id].name)
+                    else
+                        table.insert(automaticLines, state.line_data[line_id].name)
+                    end
+                else
+                    table.insert(ignoredLines, state.line_data[line_id].name)
+                end
+            end
+        end
+
+        -- Print manually managed lines
+        if #manualLines > 0 then
+            table.sort(manualLines)
+            logOutput = "Manually managed lines:\n"
+            logOutput = logOutput .. helper.tableToStringWithLineBreaks(manualLines)
+            log.info(logOutput)
+        end
+
+        -- Print automatically managed lines
+        if #automaticLines > 0 then
+            table.sort(automaticLines)
+            logOutput = "Automatically managed lines:\n"
+            logOutput = logOutput .. helper.tableToStringWithLineBreaks(automaticLines)
+            log.info(logOutput)
+        end
+
+        -- Print ignored lines
+        if #ignoredLines > 0 then
+            table.sort(ignoredLines)
+            logOutput = "Ignored lines:\n"
+            logOutput = logOutput .. helper.tableToStringWithLineBreaks(ignoredLines)
+            log.info(logOutput)            
+        end
+    end
 end
 
 -- This functions runs exactly once (and first) when a game is loaded
 local function firstRunOnly()
-    log.setLevel(state.log_settings.level)
+    log.info("linemanager: firstRunOnly() starting")
     log.info("LineManager enabled is set to: " .. tostring(state.linemanager_settings.enabled))
     log.info("Automatically reverse trains with no path is set to: " .. tostring(state.linemanager_settings.reverse_no_path_trains))
     if (state.sampling_settings.time_based_sampling) then
@@ -272,11 +319,14 @@ local function firstRunOnly()
         log.info("Using in-game month based sampling.")
         log.info("One sample is taken on every change of in-game month.")
     end
-    log.debug("linemanager: firstRunOnly() completed successfully")
+    log.setLevel(state.log_settings.level)
+    log.setShowExtendedLineInfo(state.log_settings.showExtendedLineInfo)
+    log.info("linemanager: firstRunOnly() completed successfully")
 end
 
 -- This functions runs regularly every UPDATE_FREQUENCY number of ticks
 local function regularUpdate()
+    log.debug("linemanager: regularUpdate() starting")
     if state.linemanager_settings.reverse_no_path_trains then
         -- Reverse direction of no path trains to resolve stuck trains
         local noPathTrains = api_helper.getNoPathTrains()
@@ -503,15 +553,6 @@ local function gui_init()
     local header_Debugging = api.gui.comp.TextView.new("** Debugging options **")
     settingsBox:addItem(header_Debugging)
 
-    -- Create a toggle for debugging mode and add it to the SettingsBox (BoxLayout)
-    local checkBox_debugging = api.gui.comp.CheckBox.new("Debugging")
-    checkBox_debugging:setSelected(state.log_settings.level == log.levels.DEBUG, false)
-    checkBox_debugging:onToggle(function(selected)
-        -- Send a script event to say that the debugging setting has been changed.
-        api_helper.sendScriptCommand("settings_gui", "debugging", selected)
-    end)
-    settingsBox:addItem(checkBox_debugging)
-
     -- Create a toggle for showExtendedLineInfo mode
     local checkBox_showExtendedLineInfo = api.gui.comp.CheckBox.new("Show extended line info")
     checkBox_showExtendedLineInfo:setSelected(state.log_settings.showExtendedLineInfo, false)
@@ -520,6 +561,15 @@ local function gui_init()
         api_helper.sendScriptCommand("settings_gui", "show_extended_line_Info", selected)
     end)
     settingsBox:addItem(checkBox_showExtendedLineInfo)
+
+    -- Create a toggle for debugging mode and add it to the SettingsBox (BoxLayout)
+    local checkBox_debugging = api.gui.comp.CheckBox.new("Show debugging information")
+    checkBox_debugging:setSelected(state.log_settings.level == log.levels.DEBUG, false)
+    checkBox_debugging:onToggle(function(selected)
+        -- Send a script event to say that the debugging setting has been changed.
+        api_helper.sendScriptCommand("settings_gui", "debugging", selected)
+    end)
+    settingsBox:addItem(checkBox_debugging)
 
     -- Add a force sample button
     local forceSampleButton = api.gui.comp.Button.new(api.gui.comp.TextView.new("Force Sample"), true)
@@ -548,6 +598,7 @@ function data()
                             log.setLevel(log.levels.INFO)
                         end
                     elseif (name == "show_extended_line_Info") then
+                        state.log_settings.showExtendedLineInfo = param
                         log.setShowExtendedLineInfo(param)
                     elseif (name == "force_sample") then
                         log.info("Forcing a sample")

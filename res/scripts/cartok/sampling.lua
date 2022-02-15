@@ -183,7 +183,7 @@ local function checkIfManagedLine(rule, rule_manual, type, carrier)
     end
 
     -- If automatic line management is enabled for the type and carrier, the it is supported
-    if autoSettings and  autoSettings[type] and autoSettings[type][carrier] and autoSettings[type][carrier] == true then
+    if autoSettings and autoSettings[type] and autoSettings[type][carrier] and autoSettings[type][carrier] == true then
         return true
     end
 
@@ -294,8 +294,8 @@ local function prepareLineData()
             else
                 local lineName = ""
                 local lineCarrier = api_helper.getCarrierFromVehicle(lineVehicles[1]) -- Retrieve the carrier from the first vehicle of the line
-                local lineType = ""
-                local lineRule = ""
+                local lineType = "PASSENGER" -- Use this as a default to avoid lines being indicated as ignored when there's no current demand
+                local lineRule = "P" -- Same as above, use this as a default. This will be overwritten below.
                 local lineRuleManual = false -- Keeps track if the line rule was assigned manually
                 local lineRate = 0
                 local lineFrequency = 0
@@ -312,7 +312,7 @@ local function prepareLineData()
                 -- Get all cargo planning to use the line
                 local lineDemandCargo = #api_helper.getSimCargosForLine(line_id)
 
-                -- Use the most demanded type as the lineType
+                -- Use the most demanded type as the lineType.
                 if lineDemandPassengers > lineDemandCargo then
                     lineType = "PASSENGER"
                     lineDemand = lineDemandPassengers
@@ -562,7 +562,9 @@ function sampling.getSampledLineData()
     end
 end
 
----returns the (cached) emptiest vehicle id
+---@param vehicle_ids table array of VEHICLE ids
+---@return number id of the emptiest vehicle of the provided vehicle_ids
+---returns the id of the (cached) emptiest vehicle in the provided vehicle_ids
 function sampling.getEmptiestVehicle(vehicle_ids)
     log.debug("sampling: getEmptiestVehicle() started")
     local emptiestVehicleLoad = 9999999999
@@ -581,7 +583,7 @@ function sampling.getEmptiestVehicle(vehicle_ids)
                 emptiestVehicleLoad = vehicleOccupancyCache[vehicle_id].TOTAL
             end
         end
-        log.debug("sampling: getEmptiestVehicle() found vehicle " .. tostring(emptiestVehicleId) .. " with current load: " .. tostring(emptiestVehicleLoad))
+        log.debug("sampling: getEmptiestVehicle() found vehicle '" .. api_helper.getEntityName(emptiestVehicleId) .. "' with current load: " .. emptiestVehicleLoad)
     end
 
     return emptiestVehicleId

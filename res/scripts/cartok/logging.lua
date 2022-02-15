@@ -43,7 +43,7 @@ function log.setShowExtendedLineInfo(param)
     if (param ~= nil ) then
         showExtendedLineInfo = param
     else
-        showExtendedLineInfo = true
+        showExtendedLineInfo = false
     end
     log.info("ShowExtendedLineInfo set to: " .. tostring(showExtendedLineInfo))
 end
@@ -51,13 +51,13 @@ end
 ---@return boolean : whether current logging level is 'DEBUG' or greater
 ---used to determine whether debug messages should be displayed in the in-game console
 function log.isDebugging()
-    return currentLogLevel >= DEBUG
+    return currentLogLevel <= DEBUG
 end
 
 ---@return boolean : whether the option to show extended line info is selected
 ---used to determine whether extended line info messages should be displayed in the in-game console
 function log.isShowExtendedLineInfo()
-    return currentLogLevel >= INFO and showExtendedLineInfo
+    return currentLogLevel <= INFO and showExtendedLineInfo
 end
 
 ---@param level number message level
