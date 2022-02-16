@@ -150,11 +150,12 @@ end
 ---Returns the target based on line_name and identifier, or 0 if not found or incorrectly formatted.
 local function getTarget(line_name, identifier)
     if (line_name ~= nil and identifier ~= nil) then
-        local _, identifier_end = string.find(line_name, identifier, 1, true)
-        if (identifier_end ~= nil) then
-            local text_end = string.find(line_name, ")", identifier_end + 1, true)
+        local _, identifier_start_end = string.find(line_name, identifier, 1, true)
+        if (identifier_start_end ~= nil) then
+            -- rules.IDENTIFIER_END is the rule ending character(s), what is between the starting identifier and this character(s) is the number we're looking for.
+            local text_end = string.find(line_name, rules.IDENTIFIER_END, identifier_start_end + 1, true)
             if (text_end ~= nil) then
-                local target = tonumber(string.sub(line_name, identifier_end + 1, text_end - 1))
+                local target = tonumber(string.sub(line_name, identifier_start_end + 1, text_end - 1))
                 if (type(target) == "number") then
                     return target
                 end
@@ -182,7 +183,7 @@ local function checkIfManagedLine(rule, rule_manual, type, carrier)
         return true
     end
 
-    -- If automatic line management is enabled for the type and carrier, the it is supported
+    -- If automatic line management is enabled for the type and carrier, then it is supported
     if autoSettings and autoSettings[type] and autoSettings[type][carrier] and autoSettings[type][carrier] == true then
         return true
     end

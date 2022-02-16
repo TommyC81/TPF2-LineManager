@@ -1,38 +1,43 @@
 local rules = {}
 
+-- If you need to change what identifier delimiters are being used, perhaps for compatibility with another mod, change these
+rules.IDENTIFIER_START = "("
+rules.IDENTIFIER_END = ")"
+
+-- The rule definitions
 rules.line_rules = {
     M = { -- Manual management
         name = "MANUAL",
         description = "Manual line management - no automatic line management features will be used for this line.",
-        identifier = "(M)",
+        identifier = rules.IDENTIFIER_START .. "M" .. rules.IDENTIFIER_END, -- Default: "(M)"
         uses_target = false,
     },
     P = { -- PASSENGER
         name = "PASSENGER",
         description = "A balanced set of default rules for PASSENGER line management.",
-        identifier = "(P)",
+        identifier = rules.IDENTIFIER_START .. "P" .. rules.IDENTIFIER_END, -- Default: "(P)"
         uses_target = false,
     },
     PR = { -- PASSENGER (RUSTEYBUCKET)
         name = "PASSENGER (RusteyBucket)",
         description = "PASSENGER line management rules by RusteyBucket.",
-        identifier = "(PR)",
+        identifier = rules.IDENTIFIER_START .. "PR" .. rules.IDENTIFIER_END, -- Default: "(PR)"
         uses_target = false,
     },
     C = { -- CARGO
         name = "CARGO",
         description = "A balanced set of default rules for CARGO line management.",
-        identifier = "(C)",
+        identifier = rules.IDENTIFIER_START .. "C" .. rules.IDENTIFIER_END, -- Default: "(C)"
         uses_target = false,
     },
     R = { -- RATE
         name = "RATE",
         description = "Ensures that a set rate is achieved. This is configured by adding the target rate behind the colon, like so: '(R:100)'.",
         -- This is an example of how a target can be used, make sure to set the identifier with only first part up to where the number is to start.
-        -- Leave out the end parentis, it will be searched for automatically, and the number between the identifier and the end parentis will be used.
+        -- Leave out the end identifier, it will be searched for automatically, and the number between the identifier and the end identifier will be used.
         -- If a line is incorrectly formatted by the user (i.e. can't interpret a number), then a warning will be shown in the game console.
-        identifier = "(R:",
-        uses_target = true,
+        identifier = rules.IDENTIFIER_START .. "R:", -- Default: "(R:"
+        uses_target = true, -- Since this is true, the 'rules.IDENTIFIER_END' is not required above (it will be searched for automatically to determine the number in-between the identifier above and the rules.IDENTIFIER_END)
     },
 }
 
@@ -45,7 +50,7 @@ rules.defaultCargoLineRule = "C"
 function rules.moreVehicleConditions(line_data_single)
     -- Factors that can be used in rules
     local carrier = line_data_single.carrier -- "ROAD", "TRAM", "RAIL", "WATER" or "AIR"
-    local type = line_data_single.type -- "PASSENGER" or "CARGO" (if the line handles both PASSENGER and CARGO, then the greater demand will determine type)
+    local type = line_data_single.type -- "PASSENGER" or "CARGO" (if the line handles both PASSENGER and CARGO, then the greater demand will determine type). Will default to "PASSENGER" if no demand is detected.
     local rule = line_data_single.rule -- the line rule
     local rule_manual = line_data_single.rule_manual -- whether the line rule was assigned manually (rather than automatically)
     local rate = line_data_single.rate -- *averaged* line rate
@@ -122,7 +127,7 @@ end
 function rules.lessVehiclesConditions(line_data_single)
     -- Factors that can be used in rules
     local carrier = line_data_single.carrier -- "ROAD", "TRAM", "RAIL", "WATER" or "AIR"
-    local type = line_data_single.type -- "PASSENGER" or "CARGO" (if the line handles both PASSENGER and CARGO, then the greater demand will determine type)
+    local type = line_data_single.type -- "PASSENGER" or "CARGO" (if the line handles both PASSENGER and CARGO, then the greater demand will determine type). Will default to "PASSENGER" if no demand is detected.
     local rule = line_data_single.rule -- the line rule
     local rule_manual = line_data_single.rule_manual -- whether the line rule was assigned manually (rather than automatically)
     local rate = line_data_single.rate -- *averaged* line rate
