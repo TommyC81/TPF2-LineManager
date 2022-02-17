@@ -6,39 +6,42 @@
 -- Further information of GUI states and functions can be found here: https://www.transportfever2.com/wiki/doku.php?id=modding:userinterface
 
 -- Include all required helper functions and scripts to make this mod work
-local gui = require 'gui'
 local log = require 'cartok/logging'
 local helper = require 'cartok/helper'
 local api_helper = require 'cartok/api_helper'
 local sampling = require 'cartok/sampling'
+local lume = require 'cartok/lume'
 
 local firstRun = true -- Keeps track of the first update run (to do some init)
 local skipTick = false -- To skip processing every second tick
 local updateCounter = 0
 local UPDATE_FREQUENCY = 10
+
 local gui_settingsWindow = nil
+local gui_notificationWindow = nil
 
 -- This is the entire data for the mod, it is stored in the save game as well as loaded in GUI thread for access
 local state = {
     -- The version of the data, this is for compatibility purposes and only meant to be updated when the state data format changes.
-    version = 24,
+    version = 25,
+    version_change = true, -- This simply keeps track of whether the state version has changed. This is meant to always default to true, it will be removed when no longer the case (overridden by save game data).
     log_settings = {
         level = 3, -- The log level (3 = INFO)
-        showExtendedLineInfo = false, -- Show extended line info.
+        show_extended_line_info = false, -- Whether to show extended line info in the console.
     },
     auto_settings = {
         PASSENGER = {
-            ROAD = true,
-            TRAM = true,
+            ROAD = false,
+            TRAM = false,
             RAIL = false,
-            AIR = true,
-            WATER = true,
+            AIR = false,
+            WATER = false,
         },
         CARGO = {
-            ROAD = true,
+            ROAD = false,
             RAIL = false,
-            AIR = true,
-            WATER = true,
+            AIR = false,
+            WATER = false,
         },
     },
     linemanager_settings = {
@@ -49,7 +52,6 @@ local state = {
         last_sample_time = -1, -- Keeps track of what month (or time) the last sample was taken, in order to re-trigger a new sampling when month (or time) changes.
         time_based_sampling = false, -- If true, then os time is used for sampling rather than in-game months.
         sample_time_interval = 30, -- If OS time is used for sampling, take a sample every this number of seconds.
-        window_size = 5, -- The moving average window size that sampled data are averaged out over.
     },
     line_data = {}, -- An up-to-date list (since last sampling...) of the Player lines and associated data.
 }
@@ -69,8 +71,8 @@ sampling.setLog(log)
 -- capacity = current PASSENGER/CARGO capacity
 -- occupancy = current PASSENGER/CARGO occupancy
 -- demand = current PASSENGER/CARGO demand
--- usage = current PASSENGER/CARGO usage usage, 0-100
--- managed = whether the line should be managed by the mod
+-- usage = current PASSENGER/CARGO usage usage, 0-100 (%)
+-- managed = whether the line should be managed or not by the mod
 -- samples = total number of samples taken for the line since it was last updated (i.e. vehicle added/removed)
 -- action = the evaluated action to take for the line (i.e. add or remove vehicle); "ADD", "REMOVE" or ""
 -- last_action = the last action taken for this line; "ADD", "REMOVE" (or "" if no previous action exists)
@@ -156,7 +158,6 @@ local function addVehicleToLine(line_id)
 
     -- TODO: Test whether enough money is available or don't empty the vehicle when it's hopeless anyway.
     -- TODO: Figure out a better way to find the closest depot (or one at all).
-    -- TODO: As another interim mitigation, could consider looking for the emptiest vehicle instead.
     -- This merely tries to send an existing vehicle on the line to the depot, checks if succeeds then cancel the depot call but uses the depot data.
     -- Unfortunately sending a vehicle to a depot empties the vehicle.
     if #lineVehicles > 0 then
@@ -320,7 +321,15 @@ local function firstRunOnly()
         log.info("One sample is taken on every change of in-game month.")
     end
     log.setLevel(state.log_settings.level)
-    log.setShowExtendedLineInfo(state.log_settings.showExtendedLineInfo)
+    log.setShowExtendedLineInfo(state.log_settings.show_extended_line_info)
+
+    if state.version_change then
+        log.info("The version of the state data has changed. Game has been paused to allow review of LineManager settings and changes.")
+        game.interface.setGameSpeed(0)
+    else
+        log.info("The state data version is up-to-date.")
+    end
+
     log.info("linemanager: firstRunOnly() completed successfully")
 end
 
@@ -374,7 +383,7 @@ local function everyTickUpdate()
         -- If sampling is due, then start the sampler
         if (sampling_is_due) then
             log.info("============ Sampling ============")
-            sampling.start(state.line_data, state.sampling_settings, state.auto_settings)
+            sampling.start(state.line_data, state.auto_settings)
         end
     end
 end
@@ -383,7 +392,7 @@ end
 --------------------- GUI STUFF -----------------------------
 -------------------------------------------------------------
 
-local function gui_buttonClick()
+local function gui_settingsButtonClick()
     if not gui_settingsWindow:isVisible() then
         gui_settingsWindow:setVisible(true, false)
     else
@@ -391,10 +400,10 @@ local function gui_buttonClick()
     end
 end
 
-local function gui_init()
+local function gui_initSettingsWindow()
     -- Create LineManager button in the main GUI
     local button = api.gui.comp.Button.new(api.gui.comp.TextView.new("[LM]"), true)
-    button:onClick(gui_buttonClick)
+    button:onClick(gui_settingsButtonClick)
     local gameInfoLayout = api.gui.util.getById("gameInfo"):getLayout()
     gameInfoLayout:addItem(api.gui.comp.Component.new("VerticalLine"))
     gameInfoLayout:addItem(button)
@@ -412,7 +421,7 @@ local function gui_init()
     gui_settingsWindow:setPinButtonVisible(true)
     gui_settingsWindow:setResizable(false)
     gui_settingsWindow:setSize(api.gui.util.Size.new(300, 450))
-    gui_settingsWindow:setPosition(0, 0)
+    gui_settingsWindow:setPosition(100, 100)
     gui_settingsWindow:setPinned(true)
     gui_settingsWindow:setVisible(false, false)
 
@@ -553,11 +562,11 @@ local function gui_init()
     local header_Debugging = api.gui.comp.TextView.new("** Debugging options **")
     settingsBox:addItem(header_Debugging)
 
-    -- Create a toggle for showExtendedLineInfo mode
+    -- Create a toggle for show_extended_line_info mode
     local checkBox_showExtendedLineInfo = api.gui.comp.CheckBox.new("Show extended line info")
-    checkBox_showExtendedLineInfo:setSelected(state.log_settings.showExtendedLineInfo, false)
+    checkBox_showExtendedLineInfo:setSelected(state.log_settings.show_extended_line_info, false)
     checkBox_showExtendedLineInfo:onToggle(function(selected)
-        -- Send a script event to say that the showExtendedLineInfo setting has been changed.
+        -- Send a script event to say that the show_extended_line_info setting has been changed.
         api_helper.sendScriptCommand("settings_gui", "show_extended_line_Info", selected)
     end)
     settingsBox:addItem(checkBox_showExtendedLineInfo)
@@ -580,6 +589,54 @@ local function gui_init()
     settingsBox:addItem(forceSampleButton)
 end
 
+local function gui_initNotificationWindow()
+    --TODO: The below is very manual and prone to future errors, make it a bit "smarter".
+
+    -- SETTINGS WINDOW
+    -- Create a BoxLayout to hold all options
+    local notificationBox = api.gui.layout.BoxLayout.new("VERTICAL")
+
+    -- Create the SETTINGS window
+    gui_notificationWindow = api.gui.comp.Window.new("LineManager Notification", notificationBox)
+    gui_notificationWindow:setTitle("LineManager Notification")
+    gui_notificationWindow:addHideOnCloseHandler()
+    gui_notificationWindow:setMovable(true)
+    gui_notificationWindow:setPinButtonVisible(true)
+    gui_notificationWindow:setResizable(false)
+    gui_notificationWindow:setSize(api.gui.util.Size.new(785, 510))
+    gui_notificationWindow:setPosition(100, 100)
+    gui_notificationWindow:setPinned(true)
+    gui_notificationWindow:setVisible(true, false)
+
+    -- LINEMANAGER NOTIFICATION
+    local notification_text = "This is either the first run using LineManager, or the LineManager data format has been updated.\n"
+    notification_text = notification_text .. "This means that LineManager default settings are in use.\n\n"
+    notification_text = notification_text .. "Check your in-game LineManager settings (use button at bottom of this window, or the '[LM]' button in the game status bar at the bottom of the screen), and review the manual to confirm any important functionality changes.\n"
+    notification_text = notification_text .. "The LineManager manual is available here: https://github.com/TommyC81/TPF2-LineManager\n\n"
+    notification_text = notification_text .. "Note specifically that LineManager now uses brackets to set manual line rules i.e. '[' and ']' (previously, parenthesis were used).\n\n"
+    notification_text = notification_text .. "By default, all automatic line management is disabled - it can be enabled as required in the LineManager settings. Depending on your preference and type of game, you may prefer to enable automatic line management for some/all types of lines, or only use manually assigned rules, or a combination thereof. There is no right or wrong.\n\n"
+    notification_text = notification_text .. "To tell LineManager to manage only specific lines, or adjust the rule used for a specific line, manual rules may be assigned as per below (add text within '' to the line name):\n"
+    notification_text = notification_text .. "'[P]' to assign default PASSENGER line rules to a line.\n"
+    notification_text = notification_text .. "'[C]' to assign default CARGO line rules to a line.\n"
+    notification_text = notification_text .. "'[R:100]' to set a line to achieve a rate of 100. Change number as required.\n"
+    notification_text = notification_text .. "'[PR]' to assign RusteyBucket's PASSENGER line rules to a line.\n\n"
+    notification_text = notification_text .. "If automatic line management is enabled for a certain type of line, then the below rule is also useful to inhibit automatic management as required for specific lines:\n"
+    notification_text = notification_text .. "'[M]' to designate a line as manually managed only i.e. disable automatic line management.\n\n"
+    notification_text = notification_text .. "The game has been paused to allow you time to review settings and changes. Un-pause the game when you are ready to continue.\n"
+    notification_text = lume.wordwrap(notification_text, 115)
+
+    local text_LineManagerNotificationText = api.gui.comp.TextView.new(notification_text)
+    notificationBox:addItem(text_LineManagerNotificationText)
+
+    -- Add a force sample button
+    local openSettingsButton = api.gui.comp.Button.new(api.gui.comp.TextView.new("Click here to open LineManager settings"), true)
+    openSettingsButton:onClick(function()
+        gui_notificationWindow:setVisible(false, false)
+        gui_settingsButtonClick()
+    end)
+    notificationBox:addItem(openSettingsButton)
+end
+
 -------------------------------------------------------------
 --------------------- MOD STUFF -----------------------------
 -------------------------------------------------------------
@@ -587,9 +644,9 @@ end
 function data()
     return {
         handleEvent = function(filename, id, name, param)
-            if filename == "LineManager" then
+            if filename == "linemanager.lua" then
                 if id == "settings_gui" then
-                    if (name == "debugging") then
+                    if name == "debugging" then
                         if param == true then
                             state.log_settings.level = log.levels.DEBUG
                             log.setLevel(log.levels.DEBUG)
@@ -597,57 +654,60 @@ function data()
                             state.log_settings.level = log.levels.INFO
                             log.setLevel(log.levels.INFO)
                         end
-                    elseif (name == "show_extended_line_Info") then
-                        state.log_settings.showExtendedLineInfo = param
+                    elseif name == "show_extended_line_Info" then
+                        state.log_settings.show_extended_line_info = param
                         log.setShowExtendedLineInfo(param)
-                    elseif (name == "force_sample") then
+                    elseif name == "force_sample" then
                         log.info("Forcing a sample")
                         -- This will cause a new sample to be taken (as month/time has changed sufficiently).
                         -- An update will be triggered when the the required number of samples have been taken.
                         state.sampling_settings.last_sample_time = -1
-                    elseif (name == "linemanager_enabled") then
+                    elseif name == "linemanager_enabled" then
                         state.linemanager_settings.enabled = param
                         log.info("LineManager enabled set to: " .. tostring(param))
-                    elseif (name == "reverse_no_path_trains") then
+                    elseif name == "reverse_no_path_trains" then
                         state.linemanager_settings.reverse_no_path_trains = param
                         log.info("Automatically reverse trains with no path set to: " .. tostring(param))
-                    elseif (name == "time_based_sampling") then
+                    elseif name == "time_based_sampling" then
                         state.sampling_settings.time_based_sampling = param
-                        if (state.sampling_settings.time_based_sampling) then
+                        if state.sampling_settings.time_based_sampling then
                             log.info("Using os time based sampling.")
                             log.info("One sample is taken every " .. state.sampling_settings.sample_time_interval .. " seconds.")
                         else
                             log.info("Using in-game month based sampling.")
                             log.info("One sample is taken on every change of in-game month.")
                         end
-                    elseif (name == "auto_passenger_road") then
+                    elseif name == "auto_passenger_road" then
                         state.auto_settings.PASSENGER.ROAD = param
                         log.info("Automatic management of PASSENGER / ROAD line vehicles set to: " .. tostring(param))
-                    elseif (name == "auto_passenger_tram") then
+                    elseif name == "auto_passenger_tram" then
                         state.auto_settings.PASSENGER.TRAM = param
                         log.info("Automatic management of PASSENGER / TRAM line vehicles set to: " .. tostring(param))
-                    elseif (name == "auto_passenger_rail") then
+                    elseif name == "auto_passenger_rail" then
                         state.auto_settings.PASSENGER.RAIL = param
                         log.info("Automatic management of PASSENGER / RAIL line vehicles set to: " .. tostring(param))
-                    elseif (name == "auto_passenger_water") then
+                    elseif name == "auto_passenger_water" then
                         state.auto_settings.PASSENGER.WATER = param
                         log.info("Automatic management of PASSENGER / WATER line vehicles set to: " .. tostring(param))
-                    elseif (name == "auto_passenger_air") then
+                    elseif name == "auto_passenger_air" then
                         state.auto_settings.PASSENGER.AIR = param
                         log.info("Automatic management of PASSENGER / AIR line vehicles set to: " .. tostring(param))
-                    elseif (name == "auto_cargo_road") then
+                    elseif name == "auto_cargo_road" then
                         state.auto_settings.CARGO.ROAD = param
                         log.info("Automatic management of CARGO / ROAD line vehicles set to: " .. tostring(param))
-                    elseif (name == "auto_cargo_rail") then
+                    elseif name == "auto_cargo_rail" then
                         state.auto_settings.CARGO.RAIL = param
                         log.info("Automatic management of CARGO / RAIL line vehicles set to: " .. tostring(param))
-                    elseif (name == "auto_cargo_water") then
+                    elseif name == "auto_cargo_water" then
                         state.auto_settings.CARGO.WATER = param
                         log.info("Automatic management of CARGO / WATER line vehicles set to: " .. tostring(param))
-                    elseif (name == "auto_cargo_air") then
+                    elseif name == "auto_cargo_air" then
                         state.auto_settings.CARGO.AIR = param
                         log.info("Automatic management of CARGO / AIR line vehicles set to: " .. tostring(param))
                     end
+                elseif id == "notification_gui" and name == "state_version_change_handled" then
+                    state.version_change = nil
+                    log.debug("State version change has been handled")
                 end
             end
         end,
@@ -687,6 +747,12 @@ function data()
                 end
             end
         end,
-        guiInit = gui_init,
+        guiInit = function()
+            gui_initSettingsWindow()
+            if state.version_change then
+                gui_initNotificationWindow()
+                api_helper.sendScriptCommand("notification_gui", "state_version_change_handled")
+            end
+        end,
     }
 end

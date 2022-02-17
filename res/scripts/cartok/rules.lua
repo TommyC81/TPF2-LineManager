@@ -1,42 +1,42 @@
 local rules = {}
 
 -- If you need to change what identifier delimiters are being used, perhaps for compatibility with another mod, change these
-rules.IDENTIFIER_START = "("
-rules.IDENTIFIER_END = ")"
+rules.IDENTIFIER_START = "["
+rules.IDENTIFIER_END = "]"
 
 -- The rule definitions
 rules.line_rules = {
     M = { -- Manual management
         name = "MANUAL",
         description = "Manual line management - no automatic line management features will be used for this line.",
-        identifier = rules.IDENTIFIER_START .. "M" .. rules.IDENTIFIER_END, -- Default: "(M)"
+        identifier = rules.IDENTIFIER_START .. "M" .. rules.IDENTIFIER_END, -- Default: "[M]"
         uses_target = false,
     },
     P = { -- PASSENGER
         name = "PASSENGER",
         description = "A balanced set of default rules for PASSENGER line management.",
-        identifier = rules.IDENTIFIER_START .. "P" .. rules.IDENTIFIER_END, -- Default: "(P)"
+        identifier = rules.IDENTIFIER_START .. "P" .. rules.IDENTIFIER_END, -- Default: "[P]"
         uses_target = false,
     },
     PR = { -- PASSENGER (RUSTEYBUCKET)
         name = "PASSENGER (RusteyBucket)",
         description = "PASSENGER line management rules by RusteyBucket.",
-        identifier = rules.IDENTIFIER_START .. "PR" .. rules.IDENTIFIER_END, -- Default: "(PR)"
+        identifier = rules.IDENTIFIER_START .. "PR" .. rules.IDENTIFIER_END, -- Default: "[PR]"
         uses_target = false,
     },
     C = { -- CARGO
         name = "CARGO",
         description = "A balanced set of default rules for CARGO line management.",
-        identifier = rules.IDENTIFIER_START .. "C" .. rules.IDENTIFIER_END, -- Default: "(C)"
+        identifier = rules.IDENTIFIER_START .. "C" .. rules.IDENTIFIER_END, -- Default: "[C]"
         uses_target = false,
     },
     R = { -- RATE
         name = "RATE",
-        description = "Ensures that a set rate is achieved. This is configured by adding the target rate behind the colon, like so: '(R:100)'.",
+        description = "Ensures that a set rate is achieved. This is configured by adding the target rate behind the colon, like so: '[R:100]'.",
         -- This is an example of how a target can be used, make sure to set the identifier with only first part up to where the number is to start.
         -- Leave out the end identifier, it will be searched for automatically, and the number between the identifier and the end identifier will be used.
         -- If a line is incorrectly formatted by the user (i.e. can't interpret a number), then a warning will be shown in the game console.
-        identifier = rules.IDENTIFIER_START .. "R:", -- Default: "(R:"
+        identifier = rules.IDENTIFIER_START .. "R:", -- Default: "[R:"
         uses_target = true, -- Since this is true, the 'rules.IDENTIFIER_END' is not required above (it will be searched for automatically to determine the number in-between the identifier above and the rules.IDENTIFIER_END)
     },
 }

@@ -7,6 +7,8 @@ local sampling = {}
 
 local log = nil --require 'cartok/logging'
 
+local SAMPLING_WINDOW_SIZE = 4 -- This must be 2 or greater, or...danger. Lower number means quicker changes to data and vice versa.
+
 local MAX_LINES_TO_PROCESS_PER_RUN = 3 -- How many lines to process per run
 local MAX_VEHICLES_TO_PROCESS_PER_RUN = 10 -- How many vehicles to process per run
 
@@ -30,7 +32,6 @@ local sampledLineData = nil
 
 local autoSettings = nil
 local lineDataReference = nil
-local samplingSettings = nil
 
 function sampling.setLog(input_log)
     log = input_log
@@ -114,6 +115,15 @@ local function roundPercentage(dividend, divisor)
     else
         return 0
     end
+end
+
+---@param existing_value number : the existing value
+---@param new_value number : the new value to be averaged into the existing value
+---@param precision number : optional, how precise the averaged result should be (as per lume.round)
+---@return number : the average based on the provided numbers
+local function calculateAverage(existing_value, new_value, precision)
+    -- This effectively gives weight to previous data equal to '(SAMPLING_WINDOW_SIZE - 1) / SAMPLING_WINDOW_SIZE'. If SAMPLING_WINDOW_SIZE is 4, the previous data get 75% weight
+    return lume.round(((existing_value * (SAMPLING_WINDOW_SIZE - 1)) + new_value) / SAMPLING_WINDOW_SIZE, precision)
 end
 
 ---@param line_name string The name of the line for there is the line rule designator.
@@ -418,8 +428,6 @@ local function mergeLineData()
     log.debug("sampling: mergeLineData() starting")
     local finished = true
     local processed_lines = 0
-    local total_samples = samplingSettings.window_size
-    local samples_for_previous_data = total_samples - 1 -- This effectively gives weight to previous data equal to '(window_size - 1) / window_size'. If window_size is 5, the previous data get 80% weight
 
     -- Merge existing line_data into the sampled line_data
     for line_id, line_data in pairs(sampledLineData) do
@@ -429,11 +437,11 @@ local function mergeLineData()
                 sampledLineData[line_id].samples = lineDataReference[line_id].samples + 1
                 -- Preserve last_action
                 sampledLineData[line_id].last_action = lineDataReference[line_id].last_action
-                -- Calculate moving average for demand, usage and rate to even out the numbers. Use samplingSettings.window_size for this.
-                sampledLineData[line_id].demand = lume.round(((lineDataReference[line_id].demand * samples_for_previous_data) + line_data.demand) / total_samples)
-                sampledLineData[line_id].usage = lume.round(((lineDataReference[line_id].usage * samples_for_previous_data) + line_data.usage) / total_samples)
-                sampledLineData[line_id].rate = lume.round(((lineDataReference[line_id].rate * samples_for_previous_data) + line_data.rate) / total_samples)
-                sampledLineData[line_id].frequency = lume.round(((lineDataReference[line_id].frequency * samples_for_previous_data) + line_data.frequency) / total_samples, 0.1) -- Round this to better precision as the numbers tend to be smaller
+                -- Calculate moving average for demand, usage and rate to even out the numbers.
+                sampledLineData[line_id].demand = calculateAverage(lineDataReference[line_id].demand, line_data.demand)
+                sampledLineData[line_id].usage = calculateAverage(lineDataReference[line_id].usage, line_data.usage)
+                sampledLineData[line_id].rate = calculateAverage(lineDataReference[line_id].rate, line_data.rate)
+                sampledLineData[line_id].frequency = calculateAverage(lineDataReference[line_id].frequency, line_data.frequency, 0.1) -- Round this to better precision as the numbers tend to be smaller
             else
                 -- If not already existing, then start samples from 1. No need to process the data further.
                 sampledLineData[line_id].samples = 1
@@ -500,15 +508,13 @@ local function applyRules()
 end
 
 ---@param line_data_reference table : a reference to state.line_data
----@param sampling_settings table : a reference to state.sampling_settings
 ---@param auto_settings table : a reference to state.auto_settings
 ---@return boolean : whether the sampling process was started
 ---starts the sampling process (if state is STATE_FINISHED, and parameters are provided)
-function sampling.start(line_data_reference, sampling_settings, auto_settings)
+function sampling.start(line_data_reference, auto_settings)
     log.debug("sampling: start()")
-    if (sampling.isStateStopped() or sampling.isStateFinished()) and line_data_reference and sampling_settings and auto_settings then
+    if (sampling.isStateStopped() or sampling.isStateFinished()) and line_data_reference and auto_settings then
         lineDataReference = line_data_reference
-        samplingSettings = sampling_settings
         autoSettings = auto_settings
         restart() -- Reset all variables and set STATE_WAITING
 

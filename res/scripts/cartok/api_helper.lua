@@ -148,9 +148,9 @@ function api_helper.getSimCargosForLine(line_id)
     return api.engine.system.simCargoSystem.getSimCargosForLine(line_id)
 end
 
----sends a script command for "LineManager"
+---sends a script command for "linemanager.lua"
 function api_helper.sendScriptCommand(id, name, param)
-    api.cmd.sendCommand(api.cmd.make.sendScriptEvent("LineManager", id, name, param))
+    api.cmd.sendCommand(api.cmd.make.sendScriptEvent("linemanager.lua", id, name, param))
 end
 
 ---@return table : the id's of the problem lines
