@@ -305,7 +305,7 @@ local function prepareLineData()
             else
                 local lineName = ""
                 local lineCarrier = api_helper.getCarrierFromVehicle(lineVehicles[1]) -- Retrieve the carrier from the first vehicle of the line
-                local lineType = "PASSENGER" -- Use this as a default to avoid lines being indicated as ignored when there's no current demand
+                local lineType = ""
                 local lineRule = "P" -- Same as above, use this as a default. This will be overwritten below.
                 local lineRuleManual = false -- Keeps track if the line rule was assigned manually
                 local lineRate = 0
@@ -323,13 +323,19 @@ local function prepareLineData()
                 -- Get all cargo planning to use the line
                 local lineDemandCargo = #api_helper.getSimCargosForLine(line_id)
 
-                -- Use the most demanded type as the lineType.
+                -- Use the most demanded type as the lineType
                 if lineDemandPassengers > lineDemandCargo then
                     lineType = "PASSENGER"
                     lineDemand = lineDemandPassengers
                 elseif lineDemandCargo > lineDemandPassengers then
                     lineType = "CARGO"
                     lineDemand = lineDemandCargo
+                -- If neither of the previous rules have stuck, then re-use previous type (if set to a sensible value)
+                elseif lineDataReference[line_id] and lineDataReference[line_id].type and (lineDataReference[line_id].type == "PASSENGER" or lineDataReference[line_id].type == "CARGO") then
+                    lineType = lineDataReference[line_id].type
+                -- If all else fails, set to PASSENGER to have a starting point
+                else
+                    lineType = "PASSENGER" -- Use this as a default to avoid lines being indicated as ignored when there's no current demand
                 end
 
                 lineName = api_helper.getEntityName(line_id)

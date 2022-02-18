@@ -102,7 +102,7 @@ function rules.moreVehicleConditions(line_data_single)
             -- The filtering based on usage does however delay the increase of vehicles when a route is starting up until it has stabilized.
             -- For instance, this won't prevent the addition of more vehicles when existing and fully loaded vehicles are simply stuck in traffic.
             samples > 5 and usage > 40 and (demand > capacity or demand > rate),
-            samples > 5 and demand > 2 * capacity or demand > 2 * rate,
+            samples > 5 and usage > 25 and (demand > 2 * capacity or demand > 2 * rate),
         }
     elseif rule == "R" then
         -- Make use of RATE rules
