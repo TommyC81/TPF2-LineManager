@@ -62,7 +62,6 @@ function rules.moreVehicleConditions(line_data_single)
     local demand = line_data_single.demand -- *averaged* line demand i.e. total number of PASSENGER or CARGO intending to use the line, including already on the line
     local usage = line_data_single.usage -- *averaged* line usage i.e. occupancy/capacity
     local samples = line_data_single.samples -- number of samples collected for the line since last action taken (this is reset after each action)
-    local samples_total = line_data_single.samples_total -- number of samples collected for the line since it was most recently observed to have any vehicles on it (this is only reset when there are no vehicles on a line)
     local last_action = line_data_single.last_action -- the last action taken to manage the line; "ADD" or "REMOVE" (or "" if no previous action exists)
 
     local line_rules = {}
@@ -152,7 +151,6 @@ function rules.lessVehiclesConditions(line_data_single)
     local demand = line_data_single.demand -- *averaged* line demand i.e. total number of PASSENGER or CARGO intending to use the line, including already on the line
     local usage = line_data_single.usage -- *averaged* line usage i.e. occupancy/capacity
     local samples = line_data_single.samples -- number of samples collected for the line since last action taken (this is reset after each action)
-    local samples_total = line_data_single.samples_total -- number of samples collected for the line since it was most recently observed to have any vehicles on it (this is only reset when there are no vehicles on a line)
     local last_action = line_data_single.last_action -- the last action taken to manage the line; "ADD" or "REMOVE" (or "" if no previous action exists)
 
     local line_rules = {}

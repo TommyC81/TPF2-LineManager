@@ -440,7 +440,6 @@ local function mergeLineData()
         if line_data and line_data.TO_BE_MERGED then
             if stateLineData[line_id] then
                 -- Add to existing samples
-                sampledLineData[line_id].samples_total = stateLineData[line_id].samples_total + 1
                 sampledLineData[line_id].samples = stateLineData[line_id].samples + 1
                 -- Preserve last_action
                 sampledLineData[line_id].last_action = stateLineData[line_id].last_action
@@ -451,7 +450,6 @@ local function mergeLineData()
                 sampledLineData[line_id].frequency = calculateAverage(stateLineData[line_id].frequency, line_data.frequency, 0.1) -- Round this to better precision as the numbers tend to be smaller
             else
                 -- If not already existing, then start samples from 1. No need to process the data further.
-                sampledLineData[line_id].samples_total = 1
                 sampledLineData[line_id].samples = 1
                 -- Set a blank last_action
                 sampledLineData[line_id].last_action = ""
