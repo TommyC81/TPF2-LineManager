@@ -392,7 +392,7 @@ end
 --------------------- GUI STUFF -----------------------------
 -------------------------------------------------------------
 
-local function gui_settingsButtonClick()
+local function gui_LMButtonClick()
     if not gui_settingsWindow:isVisible() then
         gui_settingsWindow:setVisible(true, false)
     else
@@ -400,10 +400,66 @@ local function gui_settingsButtonClick()
     end
 end
 
+local function gui_initNotificationWindow()
+    --TODO: The below is very manual and prone to future errors, make it a bit "smarter".
+
+    -- SETTINGS WINDOW
+    -- Create a BoxLayout to hold all options
+    local notificationBox = api.gui.layout.BoxLayout.new("VERTICAL")
+
+    -- Create the SETTINGS window
+    gui_notificationWindow = api.gui.comp.Window.new("LineManager Notification", notificationBox)
+    gui_notificationWindow:setTitle("LineManager Notification")
+    gui_notificationWindow:addHideOnCloseHandler()
+    gui_notificationWindow:setMovable(true)
+    gui_notificationWindow:setPinButtonVisible(true)
+    gui_notificationWindow:setResizable(false)
+    gui_notificationWindow:setSize(api.gui.util.Size.new(785, 540))
+    gui_notificationWindow:setPosition(100, 100)
+    gui_notificationWindow:setPinned(true)
+    gui_notificationWindow:setVisible(false, false)
+
+    -- LINEMANAGER NOTIFICATION
+    local notification_text = "This is either the first run using LineManager, or the LineManager data format has been updated.\n"
+    notification_text = notification_text .. "This means that LineManager default settings are in use.\n"
+    notification_text = notification_text .. "\n"
+    notification_text = notification_text .. "Check your in-game LineManager settings (use button at bottom of this window, or the '[LM]' button in the game status bar at the bottom of the screen), and review the manual to confirm any important functionality changes.\n"
+    notification_text = notification_text .. "The LineManager manual is available here (copy the link and paste into your web browser):\n"
+    notification_text = notification_text .. "                   https://github.com/TommyC81/TPF2-LineManager\n"
+    notification_text = notification_text .. "\n"
+    notification_text = notification_text .. "Note specifically that LineManager now uses brackets to set manual line rules i.e. '[' and ']' (previously, parenthesis were used).\n"
+    notification_text = notification_text .. "\n"
+    notification_text = notification_text .. "By default, all automatic line management is disabled - it can be enabled as required in the LineManager settings. Depending on your preference and type of game, you may prefer to enable automatic line management for some/all types of lines, or only use manually assigned rules, or a combination thereof. There is no right or wrong.\n"
+    notification_text = notification_text .. "\n"
+    notification_text = notification_text .. "To tell LineManager to manage only specific lines, or adjust the rule used for a specific line, manual rules may be assigned as per below (add text within '' to the line name):\n"
+    notification_text = notification_text .. "'[P]' to assign default PASSENGER line rules to a line.\n"
+    notification_text = notification_text .. "'[C]' to assign default CARGO line rules to a line.\n"
+    notification_text = notification_text .. "'[R:100]' to set a line to achieve a rate of 100. Change number as required.\n"
+    notification_text = notification_text .. "'[PR]' to assign RusteyBucket's PASSENGER line rules to a line.\n"
+    notification_text = notification_text .. "\n"
+    notification_text = notification_text .. "If automatic line management is enabled for a certain type of line, then the below rule is also useful to inhibit automatic management as required for specific lines:\n"
+    notification_text = notification_text .. "'[M]' to designate a line as manually managed only i.e. disable automatic line management.\n"
+    notification_text = notification_text .. "\n"
+    notification_text = notification_text .. "The game has been paused to allow you time to review settings and changes. Un-pause the game when you are ready to continue.\n"
+    notification_text = lume.wordwrap(notification_text, 115)
+
+    local text_LineManagerNotificationText = api.gui.comp.TextView.new(notification_text)
+    text_LineManagerNotificationText:setSelectable(true)
+    notificationBox:addItem(text_LineManagerNotificationText)
+
+    -- Add a force sample button
+    local openSettingsButton = api.gui.comp.Button.new(api.gui.comp.TextView.new("Click here to open LineManager settings"), true)
+    openSettingsButton:onClick(function()
+        gui_notificationWindow:setVisible(false, false)
+        gui_LMButtonClick()
+    end)
+    notificationBox:addItem(openSettingsButton)
+end
+
 local function gui_initSettingsWindow()
     -- Create LineManager button in the main GUI
     local button = api.gui.comp.Button.new(api.gui.comp.TextView.new("[LM]"), true)
-    button:onClick(gui_settingsButtonClick)
+    button:onClick(gui_LMButtonClick)
     local gameInfoLayout = api.gui.util.getById("gameInfo"):getLayout()
     gameInfoLayout:addItem(api.gui.comp.Component.new("VerticalLine"))
     gameInfoLayout:addItem(button)
@@ -420,7 +476,7 @@ local function gui_initSettingsWindow()
     gui_settingsWindow:setMovable(true)
     gui_settingsWindow:setPinButtonVisible(true)
     gui_settingsWindow:setResizable(false)
-    gui_settingsWindow:setSize(api.gui.util.Size.new(300, 450))
+    gui_settingsWindow:setSize(api.gui.util.Size.new(300, 480))
     gui_settingsWindow:setPosition(100, 100)
     gui_settingsWindow:setPinned(true)
     gui_settingsWindow:setVisible(false, false)
@@ -587,54 +643,14 @@ local function gui_initSettingsWindow()
         api_helper.sendScriptCommand("settings_gui", "force_sample", true)
     end)
     settingsBox:addItem(forceSampleButton)
-end
 
-local function gui_initNotificationWindow()
-    --TODO: The below is very manual and prone to future errors, make it a bit "smarter".
-
-    -- SETTINGS WINDOW
-    -- Create a BoxLayout to hold all options
-    local notificationBox = api.gui.layout.BoxLayout.new("VERTICAL")
-
-    -- Create the SETTINGS window
-    gui_notificationWindow = api.gui.comp.Window.new("LineManager Notification", notificationBox)
-    gui_notificationWindow:setTitle("LineManager Notification")
-    gui_notificationWindow:addHideOnCloseHandler()
-    gui_notificationWindow:setMovable(true)
-    gui_notificationWindow:setPinButtonVisible(true)
-    gui_notificationWindow:setResizable(false)
-    gui_notificationWindow:setSize(api.gui.util.Size.new(785, 510))
-    gui_notificationWindow:setPosition(100, 100)
-    gui_notificationWindow:setPinned(true)
-    gui_notificationWindow:setVisible(true, false)
-
-    -- LINEMANAGER NOTIFICATION
-    local notification_text = "This is either the first run using LineManager, or the LineManager data format has been updated.\n"
-    notification_text = notification_text .. "This means that LineManager default settings are in use.\n\n"
-    notification_text = notification_text .. "Check your in-game LineManager settings (use button at bottom of this window, or the '[LM]' button in the game status bar at the bottom of the screen), and review the manual to confirm any important functionality changes.\n"
-    notification_text = notification_text .. "The LineManager manual is available here: https://github.com/TommyC81/TPF2-LineManager\n\n"
-    notification_text = notification_text .. "Note specifically that LineManager now uses brackets to set manual line rules i.e. '[' and ']' (previously, parenthesis were used).\n\n"
-    notification_text = notification_text .. "By default, all automatic line management is disabled - it can be enabled as required in the LineManager settings. Depending on your preference and type of game, you may prefer to enable automatic line management for some/all types of lines, or only use manually assigned rules, or a combination thereof. There is no right or wrong.\n\n"
-    notification_text = notification_text .. "To tell LineManager to manage only specific lines, or adjust the rule used for a specific line, manual rules may be assigned as per below (add text within '' to the line name):\n"
-    notification_text = notification_text .. "'[P]' to assign default PASSENGER line rules to a line.\n"
-    notification_text = notification_text .. "'[C]' to assign default CARGO line rules to a line.\n"
-    notification_text = notification_text .. "'[R:100]' to set a line to achieve a rate of 100. Change number as required.\n"
-    notification_text = notification_text .. "'[PR]' to assign RusteyBucket's PASSENGER line rules to a line.\n\n"
-    notification_text = notification_text .. "If automatic line management is enabled for a certain type of line, then the below rule is also useful to inhibit automatic management as required for specific lines:\n"
-    notification_text = notification_text .. "'[M]' to designate a line as manually managed only i.e. disable automatic line management.\n\n"
-    notification_text = notification_text .. "The game has been paused to allow you time to review settings and changes. Un-pause the game when you are ready to continue.\n"
-    notification_text = lume.wordwrap(notification_text, 115)
-
-    local text_LineManagerNotificationText = api.gui.comp.TextView.new(notification_text)
-    notificationBox:addItem(text_LineManagerNotificationText)
-
-    -- Add a force sample button
-    local openSettingsButton = api.gui.comp.Button.new(api.gui.comp.TextView.new("Click here to open LineManager settings"), true)
-    openSettingsButton:onClick(function()
-        gui_notificationWindow:setVisible(false, false)
-        gui_settingsButtonClick()
+    -- Add a show LINEMANAGER NOTIFICATION window button
+    local showNotificationWindowButton = api.gui.comp.Button.new(api.gui.comp.TextView.new("Show notification window"), true)
+    showNotificationWindowButton:onClick(function()
+        gui_settingsWindow:setVisible(false, false)
+        gui_notificationWindow:setVisible(true, false)
     end)
-    notificationBox:addItem(openSettingsButton)
+    settingsBox:addItem(showNotificationWindowButton)
 end
 
 -------------------------------------------------------------
@@ -749,8 +765,9 @@ function data()
         end,
         guiInit = function()
             gui_initSettingsWindow()
+            gui_initNotificationWindow()
             if state.version_change then
-                gui_initNotificationWindow()
+                gui_notificationWindow:setVisible(true, false)
                 api_helper.sendScriptCommand("notification_gui", "state_version_change_handled")
             end
         end,

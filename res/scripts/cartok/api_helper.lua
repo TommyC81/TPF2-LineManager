@@ -33,10 +33,7 @@ function api_helper.getCarrierFromLine(line_id)
     local vehicles = api_helper.getLineVehicles(line_id)
 
     if vehicles and vehicles[1] then
-        local component = api_helper.getVehicle(vehicles[1])
-        if component and component.carrier then
-            carrier = enums.Carrier[component.carrier]
-        end
+        carrier = api_helper.getCarrierFromVehicle(vehicles[1])
     end
 
     return carrier

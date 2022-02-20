@@ -59,9 +59,10 @@ function rules.moreVehicleConditions(line_data_single)
     local vehicles = line_data_single.vehicles -- number of vehicles currently on the line
     local capacity = line_data_single.capacity -- total capacity of the vehicles on the line
     local occupancy = line_data_single.occupancy -- total current occupancy on the vehicles on the line
-    local demand = line_data_single.demand -- *averaged* line demand i.e. number of PASSENGER or CARGO intending to use the line
+    local demand = line_data_single.demand -- *averaged* line demand i.e. total number of PASSENGER or CARGO intending to use the line, including already on the line
     local usage = line_data_single.usage -- *averaged* line usage i.e. occupancy/capacity
-    local samples = line_data_single.samples -- number of samples collected for the line since last action taken
+    local samples = line_data_single.samples -- number of samples collected for the line since last action taken (this is reset after each action)
+    local samples_total = line_data_single.samples_total -- number of samples collected for the line since it was most recently observed to have any vehicles on it (this is only reset when there are no vehicles on a line)
     local last_action = line_data_single.last_action -- the last action taken to manage the line; "ADD" or "REMOVE" (or "" if no previous action exists)
 
     local line_rules = {}
@@ -97,13 +98,25 @@ function rules.moreVehicleConditions(line_data_single)
         }
     elseif rule == "C" then
         -- Make use of default CARGO rules
-        line_rules = {
-            -- Usage filtering prevents racing in number of vehicles in some (not all) instances when there is blockage on the line.
-            -- The filtering based on usage does however delay the increase of vehicles when a route is starting up until it has stabilized.
-            -- For instance, this won't prevent the addition of more vehicles when existing and fully loaded vehicles are simply stuck in traffic.
-            samples > 5 and usage > 40 and (demand > capacity or demand > rate),
-            samples > 5 and usage > 25 and (demand > 2 * capacity or demand > 2 * rate),
-        }
+        local modifier = (vehicles + 1) / vehicles
+
+        if carrier == "RAIL" or carrier == "AIR" or carrier == "WATER" then
+            line_rules = {
+                -- Usage filtering prevents racing in number of vehicles in some (not all) instances when there is blockage on the line.
+                -- The filtering based on usage does however delay the increase of vehicles when a route is starting up until it has stabilized.
+                -- For instance, this won't prevent the addition of more vehicles when existing and fully loaded vehicles are simply stuck in traffic.
+                samples > 10 and usage > 45 and (demand > capacity * modifier or demand > rate * modifier),
+                samples > 5 and usage > 45 and (demand > 2 * capacity * modifier or demand > 2 * rate * modifier),
+            }
+        else
+            line_rules = {
+                -- Usage filtering prevents racing in number of vehicles in some (not all) instances when there is blockage on the line.
+                -- The filtering based on usage does however delay the increase of vehicles when a route is starting up until it has stabilized.
+                -- For instance, this won't prevent the addition of more vehicles when existing and fully loaded vehicles are simply stuck in traffic.
+                samples > 5 and usage > 40 and (demand > capacity * modifier or demand > rate * modifier),
+                samples > 5 and usage > 25 and (demand > 2 * capacity * modifier or demand > 2 * rate * modifier),
+            }
+        end
     elseif rule == "R" then
         -- Make use of RATE rules
         line_rules = {
@@ -136,9 +149,10 @@ function rules.lessVehiclesConditions(line_data_single)
     local vehicles = line_data_single.vehicles -- number of vehicles currently on the line
     local capacity = line_data_single.capacity -- total capacity of the vehicles on the line
     local occupancy = line_data_single.occupancy -- total current occupancy on the vehicles on the line
-    local demand = line_data_single.demand -- *averaged* line demand i.e. number of PASSENGER or CARGO intending to use the line
+    local demand = line_data_single.demand -- *averaged* line demand i.e. total number of PASSENGER or CARGO intending to use the line, including already on the line
     local usage = line_data_single.usage -- *averaged* line usage i.e. occupancy/capacity
-    local samples = line_data_single.samples -- number of samples collected for the line since last action taken
+    local samples = line_data_single.samples -- number of samples collected for the line since last action taken (this is reset after each action)
+    local samples_total = line_data_single.samples_total -- number of samples collected for the line since it was most recently observed to have any vehicles on it (this is only reset when there are no vehicles on a line)
     local last_action = line_data_single.last_action -- the last action taken to manage the line; "ADD" or "REMOVE" (or "" if no previous action exists)
 
     local line_rules = {}

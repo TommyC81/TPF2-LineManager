@@ -30,8 +30,8 @@ local problemVehicleCache = nil
 
 local sampledLineData = nil
 
-local autoSettings = nil
-local lineDataReference = nil
+local stateAutoSettings = nil
+local stateLineData = nil
 
 function sampling.setLog(input_log)
     log = input_log
@@ -194,7 +194,7 @@ local function checkIfManagedLine(rule, rule_manual, type, carrier)
     end
 
     -- If automatic line management is enabled for the type and carrier, then it is supported
-    if autoSettings and autoSettings[type] and autoSettings[type][carrier] and autoSettings[type][carrier] == true then
+    if stateAutoSettings and stateAutoSettings[type] and stateAutoSettings[type][carrier] and stateAutoSettings[type][carrier] == true then
         return true
     end
 
@@ -331,8 +331,8 @@ local function prepareLineData()
                     lineType = "CARGO"
                     lineDemand = lineDemandCargo
                 -- If neither of the previous rules have stuck, then re-use previous type (if set to a sensible value)
-                elseif lineDataReference[line_id] and lineDataReference[line_id].type and (lineDataReference[line_id].type == "PASSENGER" or lineDataReference[line_id].type == "CARGO") then
-                    lineType = lineDataReference[line_id].type
+                elseif stateLineData[line_id] and stateLineData[line_id].type and (stateLineData[line_id].type == "PASSENGER" or stateLineData[line_id].type == "CARGO") then
+                    lineType = stateLineData[line_id].type
                 -- If all else fails, set to PASSENGER to have a starting point
                 else
                     lineType = "PASSENGER" -- Use this as a default to avoid lines being indicated as ignored when there's no current demand
@@ -438,18 +438,20 @@ local function mergeLineData()
     -- Merge existing line_data into the sampled line_data
     for line_id, line_data in pairs(sampledLineData) do
         if line_data and line_data.TO_BE_MERGED then
-            if lineDataReference[line_id] then
+            if stateLineData[line_id] then
                 -- Add to existing samples
-                sampledLineData[line_id].samples = lineDataReference[line_id].samples + 1
+                sampledLineData[line_id].samples_total = stateLineData[line_id].samples_total + 1
+                sampledLineData[line_id].samples = stateLineData[line_id].samples + 1
                 -- Preserve last_action
-                sampledLineData[line_id].last_action = lineDataReference[line_id].last_action
+                sampledLineData[line_id].last_action = stateLineData[line_id].last_action
                 -- Calculate moving average for demand, usage and rate to even out the numbers.
-                sampledLineData[line_id].demand = calculateAverage(lineDataReference[line_id].demand, line_data.demand)
-                sampledLineData[line_id].usage = calculateAverage(lineDataReference[line_id].usage, line_data.usage)
-                sampledLineData[line_id].rate = calculateAverage(lineDataReference[line_id].rate, line_data.rate)
-                sampledLineData[line_id].frequency = calculateAverage(lineDataReference[line_id].frequency, line_data.frequency, 0.1) -- Round this to better precision as the numbers tend to be smaller
+                sampledLineData[line_id].demand = calculateAverage(stateLineData[line_id].demand, line_data.demand)
+                sampledLineData[line_id].usage = calculateAverage(stateLineData[line_id].usage, line_data.usage)
+                sampledLineData[line_id].rate = calculateAverage(stateLineData[line_id].rate, line_data.rate)
+                sampledLineData[line_id].frequency = calculateAverage(stateLineData[line_id].frequency, line_data.frequency, 0.1) -- Round this to better precision as the numbers tend to be smaller
             else
                 -- If not already existing, then start samples from 1. No need to process the data further.
+                sampledLineData[line_id].samples_total = 1
                 sampledLineData[line_id].samples = 1
                 -- Set a blank last_action
                 sampledLineData[line_id].last_action = ""
@@ -513,15 +515,15 @@ local function applyRules()
     return finished
 end
 
----@param line_data_reference table : a reference to state.line_data
----@param auto_settings table : a reference to state.auto_settings
+---@param state_line_data table : a reference to state.line_data
+---@param state_auto_settings table : a reference to state.auto_settings
 ---@return boolean : whether the sampling process was started
 ---starts the sampling process (if state is STATE_FINISHED, and parameters are provided)
-function sampling.start(line_data_reference, auto_settings)
+function sampling.start(state_line_data, state_auto_settings)
     log.debug("sampling: start()")
-    if (sampling.isStateStopped() or sampling.isStateFinished()) and line_data_reference and auto_settings then
-        lineDataReference = line_data_reference
-        autoSettings = auto_settings
+    if (sampling.isStateStopped() or sampling.isStateFinished()) and state_line_data and state_auto_settings then
+        stateLineData = state_line_data
+        stateAutoSettings = state_auto_settings
         restart() -- Reset all variables and set STATE_WAITING
 
         return true
