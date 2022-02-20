@@ -7,7 +7,7 @@ local sampling = {}
 
 local log = nil --require 'cartok/logging'
 
-local SAMPLING_WINDOW_SIZE = 4 -- This must be 2 or greater, or...danger. Lower number means quicker changes to data and vice versa.
+local SAMPLING_WINDOW_SIZE = 5 -- This must be 2 or greater, or...danger. Lower number means quicker changes to data and vice versa.
 
 local MAX_LINES_TO_PROCESS_PER_RUN = 3 -- How many lines to process per run
 local MAX_VEHICLES_TO_PROCESS_PER_RUN = 10 -- How many vehicles to process per run
@@ -444,15 +444,20 @@ local function mergeLineData()
                 -- Preserve last_action
                 sampledLineData[line_id].last_action = stateLineData[line_id].last_action
                 -- Calculate moving average for demand, usage and rate to even out the numbers.
-                sampledLineData[line_id].demand = calculateAverage(stateLineData[line_id].demand, line_data.demand)
-                sampledLineData[line_id].usage = calculateAverage(stateLineData[line_id].usage, line_data.usage)
-                sampledLineData[line_id].rate = calculateAverage(stateLineData[line_id].rate, line_data.rate)
-                sampledLineData[line_id].frequency = calculateAverage(stateLineData[line_id].frequency, line_data.frequency, 0.1) -- Round this to better precision as the numbers tend to be smaller
+                sampledLineData[line_id].demand_average = calculateAverage(stateLineData[line_id].demand, line_data.demand)
+                sampledLineData[line_id].usage_average = calculateAverage(stateLineData[line_id].usage, line_data.usage)
+                sampledLineData[line_id].rate_average = calculateAverage(stateLineData[line_id].rate, line_data.rate)
+                sampledLineData[line_id].frequency_average = calculateAverage(stateLineData[line_id].frequency, line_data.frequency, 0.1) -- Round this to better precision as the numbers tend to be smaller
             else
                 -- If not already existing, then start samples from 1. No need to process the data further.
                 sampledLineData[line_id].samples = 1
                 -- Set a blank last_action
                 sampledLineData[line_id].last_action = ""
+                -- Set averages to the same as currently sampled
+                sampledLineData[line_id].demand_average = line_data.demand
+                sampledLineData[line_id].usage_average = line_data.usage
+                sampledLineData[line_id].rate_average = line_data.rate
+                sampledLineData[line_id].frequency_average = line_data.frequency
             end
 
             -- Update markers

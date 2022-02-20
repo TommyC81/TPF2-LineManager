@@ -65,13 +65,17 @@ sampling.setLog(log)
 -- rule = which line vehicle management rule to apply (see rules.lua)
 -- rule_manual = whether the rule was manually assigned or not
 -- rate = the current transport rate of the line
--- frequency = the frequency of the line (in seconds)
+-- rate_average = the average transport rate of the line
+-- frequency = the current frequency of the line (in seconds)
+-- frequency_average = the average frequency of the line (in seconds)
 -- target = the target of any applicable special rule, otherwise 0 (only used by "(R:<number>)" rule at the moment)
 -- vehicles = number of vehicles on the line
 -- capacity = current PASSENGER/CARGO capacity
 -- occupancy = current PASSENGER/CARGO occupancy
 -- demand = current PASSENGER/CARGO demand
+-- demand_average = average PASSENGER/CARGO demand
 -- usage = current PASSENGER/CARGO usage usage, 0-100 (%)
+-- usage_average = average PASSENGER/CARGO usage usage, 0-100 (%)
 -- managed = whether the line should be managed or not by the mod
 -- samples = total number of samples taken for the line since it was last updated (i.e. vehicle added/removed)
 -- action = the evaluated action to take for the line (i.e. add or remove vehicle); "ADD", "REMOVE" or ""
@@ -97,9 +101,9 @@ local function lineInfoString(line_id)
 end
 
 local function lineDataString(line_id)
-    local str  = "Usage: " .. state.line_data[line_id].usage .. "% "
-    str = str .. "Demand: " .. state.line_data[line_id].demand .. " "
-    str = str .. "Rate: " .. state.line_data[line_id].rate .. " "
+    local str  = "Usage: " .. state.line_data[line_id].usage_average .. "% "
+    str = str .. "Demand: " .. state.line_data[line_id].demand_average .. " "
+    str = str .. "Rate: " .. state.line_data[line_id].rate_average .. " "
     str = str .. "Capacity: " .. state.line_data[line_id].capacity .. " "
     str = str .. "Vehicles: " .. state.line_data[line_id].vehicles
     return str

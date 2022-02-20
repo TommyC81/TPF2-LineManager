@@ -35,8 +35,15 @@ rules.line_rules = {
         description = "Ensures that a set rate is achieved. This is configured by adding the target rate behind the colon, like so: '[R:100]'.",
         -- This is an example of how a target can be used, make sure to set the identifier with only first part up to where the number is to start.
         -- Leave out the end identifier, it will be searched for automatically, and the number between the identifier and the end identifier will be used.
-        -- If a line is incorrectly formatted by the user (i.e. can't interpret a number), then a warning will be shown in the game console.
+        -- If a line is incorrectly formatted by the user (i.e. can't interpret the target number), then a warning will be shown in the game console.
         identifier = rules.IDENTIFIER_START .. "R:", -- Default: "[R:"
+        uses_target = true, -- Since this is true, the 'rules.IDENTIFIER_END' is not required above (it will be searched for automatically to determine the number in-between the identifier above and the rules.IDENTIFIER_END)
+    },
+    U = { -- USAGE
+        name = "USAGE",
+        description = "Ensures that a set usage is achieved. This is configured by adding the target usage behind the colon, like so: '[U:50]' (make sure this number is between 0-100).",
+        -- If a line is incorrectly formatted by the user (i.e. can't interpret the target number), then a warning will be shown in the game console.
+        identifier = rules.IDENTIFIER_START .. "U:", -- Default: "[R:"
         uses_target = true, -- Since this is true, the 'rules.IDENTIFIER_END' is not required above (it will be searched for automatically to determine the number in-between the identifier above and the rules.IDENTIFIER_END)
     },
 }
@@ -53,14 +60,18 @@ function rules.moreVehicleConditions(line_data_single)
     local type = line_data_single.type -- "PASSENGER" or "CARGO" (if the line handles both PASSENGER and CARGO, then the greater demand will determine type). Will default to "PASSENGER" if no demand is detected.
     local rule = line_data_single.rule -- the line rule
     local rule_manual = line_data_single.rule_manual -- whether the line rule was assigned manually (rather than automatically)
-    local rate = line_data_single.rate -- *averaged* line rate
-    local frequency = line_data_single.frequency -- *averaged* line frequency in seconds
+    local rate = line_data_single.rate_average -- *current* line rate
+    local rate_average = line_data_single.rate_average -- *averaged* line rate
+    local frequency = line_data_single.frequency -- *current* line frequency in seconds
+    local frequency_average = line_data_single.frequency_average -- *averaged* line frequency in seconds
     local target = line_data_single.target -- target for whatever has been set
-    local vehicles = line_data_single.vehicles -- number of vehicles currently on the line
-    local capacity = line_data_single.capacity -- total capacity of the vehicles on the line
-    local occupancy = line_data_single.occupancy -- total current occupancy on the vehicles on the line
-    local demand = line_data_single.demand -- *averaged* line demand i.e. total number of PASSENGER or CARGO intending to use the line, including already on the line
-    local usage = line_data_single.usage -- *averaged* line usage i.e. occupancy/capacity
+    local vehicles = line_data_single.vehicles -- *current* number of vehicles currently on the line
+    local capacity = line_data_single.capacity -- *current* total capacity of the vehicles on the line
+    local occupancy = line_data_single.occupancy -- *current* total current occupancy on the vehicles on the line
+    local demand = line_data_single.demand -- *current* line demand i.e. total number of PASSENGER or CARGO intending to use the line, including already on the line
+    local demand_average = line_data_single.demand_average -- *averaged* line demand i.e. total number of PASSENGER or CARGO intending to use the line, including already on the line
+    local usage = line_data_single.usage -- *current* line usage i.e. occupancy/capacity
+    local usage_average = line_data_single.usage_average -- *averaged* line usage i.e. occupancy/capacity
     local samples = line_data_single.samples -- number of samples collected for the line since last action taken (this is reset after each action)
     local last_action = line_data_single.last_action -- the last action taken to manage the line; "ADD" or "REMOVE" (or "" if no previous action exists)
 
@@ -72,28 +83,28 @@ function rules.moreVehicleConditions(line_data_single)
 
         if carrier == "RAIL" or carrier == "AIR" then
             line_rules = {
-                samples > 10 and usage > 60 and demand > rate * 2,
-                samples > 10 and usage > 80 and demand > rate * modifier,
+                samples > 10 and usage > 60 and usage_average > 60 and demand > rate * 2 and demand_average > rate_average * 2,
+                samples > 10 and usage > 80 and usage_average > 80 and demand > rate * modifier and demand_average > rate_average * modifier,
             }
         else
             line_rules = {
-                samples > 5 and usage > 50 and demand > rate * 2,
-                samples > 5 and usage > 80 and demand > rate * modifier,
+                samples > 5 and usage > 50 and usage_average > 50 and demand > rate * 2 and demand_average > rate_average * 2,
+                samples > 5 and usage > 80 and usage_average > 80 and demand > rate * modifier and demand_average > rate_average * modifier,
             }
         end
     elseif rule == "PR" then
         -- Make use of PASSENGER rules by RusteyBucket
-        local d10 = demand * 1.1
+        local d10 = demand_average * 1.1
         local oneVehicle = 1 / vehicles -- how much would one vehicle change
         local plusOneVehicle = 1 + oneVehicle -- add the rest of the vehicles
-        local dv = demand * plusOneVehicle -- exaggerate demand by what one more vehicle could change
+        local dv = demand_average * plusOneVehicle -- exaggerate demand by what one more vehicle could change
         local averageCapacity = capacity / vehicles
 
         line_rules = {
-            samples > 5 and rate < d10, -- get a safety margin of 10% over the real demand
-            samples > 5 and rate < dv, -- with low vehicle numbers, those 10% might not do the trick
-            samples > 5 and usage > 90,
-            samples > 5 and frequency > 720 --limits frequency to at most 12min (720 seconds)
+            samples > 5 and rate_average < d10, -- get a safety margin of 10% over the real demand
+            samples > 5 and rate_average < dv, -- with low vehicle numbers, those 10% might not do the trick
+            samples > 5 and usage_average > 90,
+            samples > 5 and frequency_average > 720 --limits frequency to at most 12min (720 seconds)
         }
     elseif rule == "C" then
         -- Make use of default CARGO rules
@@ -104,22 +115,29 @@ function rules.moreVehicleConditions(line_data_single)
                 -- Usage filtering prevents racing in number of vehicles in some (not all) instances when there is blockage on the line.
                 -- The filtering based on usage does however delay the increase of vehicles when a route is starting up until it has stabilized.
                 -- For instance, this won't prevent the addition of more vehicles when existing and fully loaded vehicles are simply stuck in traffic.
-                samples > 10 and usage > 45 and (demand > capacity * modifier or demand > rate * modifier),
-                samples > 5 and usage > 45 and (demand > 2 * capacity * modifier or demand > 2 * rate * modifier),
+                samples > 10 and usage > 45 and usage_average > 45 and ((demand > capacity * modifier and demand_average > capacity * modifier) or (demand > rate * modifier and demand_average > rate_average * modifier)),
+                samples > 5 and usage > 45 and usage_average > 45 and ((demand > capacity * modifier * 2 and demand_average > capacity * modifier * 2) or (demand > rate * modifier * 2 and demand_average > rate_average * modifier * 2)),
             }
         else
             line_rules = {
                 -- Usage filtering prevents racing in number of vehicles in some (not all) instances when there is blockage on the line.
                 -- The filtering based on usage does however delay the increase of vehicles when a route is starting up until it has stabilized.
                 -- For instance, this won't prevent the addition of more vehicles when existing and fully loaded vehicles are simply stuck in traffic.
-                samples > 5 and usage > 40 and (demand > capacity * modifier or demand > rate * modifier),
-                samples > 5 and usage > 25 and (demand > 2 * capacity * modifier or demand > 2 * rate * modifier),
+                samples > 5 and usage > 40 and usage_average > 45 and ((demand > capacity * modifier and demand_average > capacity * modifier) or (demand > rate * modifier and demand_average > rate_average * modifier)),
+                samples > 5 and usage > 25 and usage_average > 45 and ((demand > capacity * modifier * 2 and demand_average > capacity * modifier * 2) or (demand > rate * modifier * 2 and demand_average > rate_average * modifier * 2)),
             }
         end
     elseif rule == "R" then
         -- Make use of RATE rules
         line_rules = {
-            samples > 5 and rate < target,
+            samples > 5 and rate < target and rate_average < target,
+        }
+    elseif rule == "U" then
+        -- Make use of USAGE rules
+        local modifier = vehicles / (vehicles + 1)
+
+        line_rules = {
+            samples > 5 and usage * modifier > target and usage_average * modifier > target,
         }
     end
 
@@ -142,14 +160,18 @@ function rules.lessVehiclesConditions(line_data_single)
     local type = line_data_single.type -- "PASSENGER" or "CARGO" (if the line handles both PASSENGER and CARGO, then the greater demand will determine type). Will default to "PASSENGER" if no demand is detected.
     local rule = line_data_single.rule -- the line rule
     local rule_manual = line_data_single.rule_manual -- whether the line rule was assigned manually (rather than automatically)
-    local rate = line_data_single.rate -- *averaged* line rate
-    local frequency = line_data_single.frequency -- *averaged* line frequency in seconds
+    local rate = line_data_single.rate_average -- *current* line rate
+    local rate_average = line_data_single.rate_average -- *averaged* line rate
+    local frequency = line_data_single.frequency -- *current* line frequency in seconds
+    local frequency_average = line_data_single.frequency_average -- *averaged* line frequency in seconds
     local target = line_data_single.target -- target for whatever has been set
-    local vehicles = line_data_single.vehicles -- number of vehicles currently on the line
-    local capacity = line_data_single.capacity -- total capacity of the vehicles on the line
-    local occupancy = line_data_single.occupancy -- total current occupancy on the vehicles on the line
-    local demand = line_data_single.demand -- *averaged* line demand i.e. total number of PASSENGER or CARGO intending to use the line, including already on the line
-    local usage = line_data_single.usage -- *averaged* line usage i.e. occupancy/capacity
+    local vehicles = line_data_single.vehicles -- *current* number of vehicles currently on the line
+    local capacity = line_data_single.capacity -- *current* total capacity of the vehicles on the line
+    local occupancy = line_data_single.occupancy -- *current* total current occupancy on the vehicles on the line
+    local demand = line_data_single.demand -- *current* line demand i.e. total number of PASSENGER or CARGO intending to use the line, including already on the line
+    local demand_average = line_data_single.demand_average -- *averaged* line demand i.e. total number of PASSENGER or CARGO intending to use the line, including already on the line
+    local usage = line_data_single.usage -- *current* line usage i.e. occupancy/capacity
+    local usage_average = line_data_single.usage_average -- *averaged* line usage i.e. occupancy/capacity
     local samples = line_data_single.samples -- number of samples collected for the line since last action taken (this is reset after each action)
     local last_action = line_data_single.last_action -- the last action taken to manage the line; "ADD" or "REMOVE" (or "" if no previous action exists)
 
@@ -166,24 +188,24 @@ function rules.lessVehiclesConditions(line_data_single)
         local inverse_modifier = vehicles / (vehicles - 1)
 
         line_rules = {
-            samples > 5 and usage < 70 and demand < rate * modifier and usage * inverse_modifier < 100,
-            samples > 10 and usage < 50 and demand < rate,
+            samples > 5 and usage < 70 and usage_average < 70 and demand < rate * modifier and demand_average < rate_average * modifier and usage * inverse_modifier < 100 and usage_average * inverse_modifier < 100,
+            samples > 10 and usage < 50 and usage_average < 50 and demand < rate and demand_average < rate_average,
         }
     elseif rule == "PR" then
         -- Make use of PASSENGER rules by RusteyBucket
         local newVehicles = vehicles - 1
         local vehicleFactor = newVehicles / vehicles
-        local newRate = rate * vehicleFactor
-        local newUsage = usage * vehicles / newVehicles
+        local newRate = rate_average * vehicleFactor
+        local newUsage = usage_average * vehicles / newVehicles
         local averageCapacity = capacity / vehicles
-        local d10 = demand * 1.1
+        local d10 = demand_average * 1.1
         local oneVehicle = 1 / vehicles -- how much would one vehicle change
         local plusOneVehicle = 1 + oneVehicle -- add the rest of the vehicles
-        local dv = demand * plusOneVehicle -- exaggerate demand by what one more vehicle could change
+        local dv = demand_average * plusOneVehicle -- exaggerate demand by what one more vehicle could change
 
         line_rules = {
             samples > 5
-            and usage < 40
+            and usage_average < 40
             and d10 < newRate
             and dv < newRate
             and newUsage < 80
@@ -194,8 +216,8 @@ function rules.lessVehiclesConditions(line_data_single)
         local modifier = (vehicles - 1) / vehicles
 
         line_rules = {
-            samples > 5 and usage < 20,
-            samples > 5 and usage < 40 and demand < capacity * modifier and demand < rate * modifier,
+            samples > 5 and usage < 20 and usage_average < 20,
+            samples > 5 and usage < 40 and usage_average < 40 and demand < capacity * modifier and demand_average < capacity * modifier and demand < rate * modifier and demand_average < rate_average * modifier,
         }
     elseif rule == "R" then
         -- Make use of RATE rules
@@ -207,9 +229,14 @@ function rules.lessVehiclesConditions(line_data_single)
             local modifier = (vehicles - 1) / vehicles
 
             line_rules = {
-                samples > 5 and rate * modifier > target,
+                samples > 5 and rate * modifier > target and rate_average * modifier > target,
             }
         end
+    elseif rule == "U" then
+        -- Make use of USAGE rules
+        line_rules = {
+            samples > 5 and usage < target and usage_average < target,
+        }
     end
 
     -- Check whether at least one condition is fulfilled
