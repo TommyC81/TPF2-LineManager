@@ -23,8 +23,8 @@ local gui_notificationWindow = nil
 -- This is the entire data for the mod, it is stored in the save game as well as loaded in GUI thread for access
 local state = {
     -- The version of the data, this is for compatibility purposes and only meant to be updated when the state data format changes.
-    version = 25,
-    version_change = true, -- This simply keeps track of whether the state version has changed. This is meant to always default to true, it will be removed when no longer the case (overridden by save game data).
+    version = 26,
+    version_change = true, -- This simply keeps track of whether the state version has changed. This is meant to always default to true, it will be set to false when no longer the case (and then stored in the save game data).
     log_settings = {
         level = 3, -- The log level (3 = INFO)
         show_extended_line_info = false, -- Whether to show extended line info in the console.
@@ -39,6 +39,7 @@ local state = {
         },
         CARGO = {
             ROAD = false,
+            TRAM = false,
             RAIL = false,
             AIR = false,
             WATER = false,
@@ -261,7 +262,7 @@ local function updateLines()
     local ignoredLineCount = #lines - lineCount
     log.info("==> SUMMARY: " .. lineCount .. " lines and " .. vehicleCount .. " vehicles managed (" .. ignoredLineCount .. " lines not managed)")
     if problemCount > 0 then
-        log.warn( problemCount .. " managed lines had problems and were skipped in this update")
+        log.warn(problemCount .. " managed lines had problems and were skipped in this update")
     end
 
     if log.isShowExtendedLineInfo() then
@@ -307,7 +308,7 @@ local function updateLines()
             table.sort(ignoredLines)
             logOutput = "Ignored lines:\n"
             logOutput = logOutput .. helper.tableToStringWithLineBreaks(ignoredLines)
-            log.info(logOutput)            
+            log.info(logOutput)
         end
     end
 end
@@ -405,7 +406,7 @@ local function gui_LMButtonClick()
 end
 
 local function gui_initNotificationWindow()
-    --TODO: The below is very manual and prone to future errors, make it a bit "smarter".
+    -- TODO: The below is very manual and prone to future errors, make it a bit "smarter".
 
     -- SETTINGS WINDOW
     -- Create a BoxLayout to hold all options
@@ -528,12 +529,11 @@ local function gui_initSettingsWindow()
     local header_PassengerOptions = api.gui.comp.TextView.new("PASSENGER")
     passengerOptionBox:addItem(header_PassengerOptions)
 
-    -- TODO: Was trying to set up a table with selection icons, just couldn't get anything within a table to display for unknown reason.
-	local selectPassengerRoad  = api.gui.comp.CheckBox.new("ROAD") -- api.gui.comp.ToggleButton.new(api.gui.comp.ImageView.new("ui/icons/game-menu/hud_filter_road_vehicles.tga"))
-	local selectPassengerTram  = api.gui.comp.CheckBox.new("TRAM") -- api.gui.comp.ToggleButton.new(api.gui.comp.ImageView.new("ui/button/medium/vehicle_tram.tga"))
-	local selectPassengerRail  = api.gui.comp.CheckBox.new("RAIL") -- api.gui.comp.ToggleButton.new(api.gui.comp.ImageView.new("ui/button/medium/vehicle_train_electric.tga"))
-	local selectPassengerWater = api.gui.comp.CheckBox.new("WATER") -- api.gui.comp.ToggleButton.new(api.gui.comp.ImageView.new("ui/icons/game-menu/hud_filter_ships.tga"))
-	local selectPassengerAir   = api.gui.comp.CheckBox.new("AIR") -- api.gui.comp.ToggleButton.new(api.gui.comp.ImageView.new("ui/icons/game-menu/hud_filter_planes.tga"))
+    local selectPassengerRoad = api.gui.comp.CheckBox.new("ROAD")
+    local selectPassengerTram = api.gui.comp.CheckBox.new("TRAM")
+    local selectPassengerRail = api.gui.comp.CheckBox.new("RAIL")
+    local selectPassengerWater = api.gui.comp.CheckBox.new("WATER")
+    local selectPassengerAir = api.gui.comp.CheckBox.new("AIR")
 
     selectPassengerRoad:setSelected(state.auto_settings.PASSENGER.ROAD, false)
     selectPassengerRoad:onToggle(function(selected)
@@ -541,25 +541,25 @@ local function gui_initSettingsWindow()
         api_helper.sendScriptCommand("settings_gui", "auto_passenger_road", selected)
     end)
 
-	selectPassengerTram:setSelected(state.auto_settings.PASSENGER.TRAM, false)
+    selectPassengerTram:setSelected(state.auto_settings.PASSENGER.TRAM, false)
     selectPassengerTram:onToggle(function(selected)
         -- Send a script event to say that the debugging setting has been changed.
         api_helper.sendScriptCommand("settings_gui", "auto_passenger_tram", selected)
     end)
 
-	selectPassengerRail:setSelected(state.auto_settings.PASSENGER.RAIL, false)
+    selectPassengerRail:setSelected(state.auto_settings.PASSENGER.RAIL, false)
     selectPassengerRail:onToggle(function(selected)
         -- Send a script event to say that the debugging setting has been changed.
         api_helper.sendScriptCommand("settings_gui", "auto_passenger_rail", selected)
     end)
 
-	selectPassengerWater:setSelected(state.auto_settings.PASSENGER.AIR, false)
+    selectPassengerWater:setSelected(state.auto_settings.PASSENGER.AIR, false)
     selectPassengerWater:onToggle(function(selected)
         -- Send a script event to say that the debugging setting has been changed.
         api_helper.sendScriptCommand("settings_gui", "auto_passenger_water", selected)
     end)
 
-	selectPassengerAir:setSelected(state.auto_settings.PASSENGER.WATER, false)
+    selectPassengerAir:setSelected(state.auto_settings.PASSENGER.WATER, false)
     selectPassengerAir:onToggle(function(selected)
         -- Send a script event to say that the debugging setting has been changed.
         api_helper.sendScriptCommand("settings_gui", "auto_passenger_air", selected)
@@ -578,11 +578,11 @@ local function gui_initSettingsWindow()
     local header_CargoOptions = api.gui.comp.TextView.new("CARGO")
     cargoOptionBox:addItem(header_CargoOptions)
 
-    -- TODO: Was trying to set up a table with selection icons, just couldn't get anything within a table to display for unknown reason.
-	local selectCargoRoad  = api.gui.comp.CheckBox.new("ROAD") -- api.gui.comp.ToggleButton.new(api.gui.comp.ImageView.new("ui/icons/game-menu/hud_filter_road_vehicles.tga"))
-	local selectCargoRail  = api.gui.comp.CheckBox.new("RAIL") -- api.gui.comp.ToggleButton.new(api.gui.comp.ImageView.new("ui/button/medium/vehicle_train_electric.tga"))
-	local selectCargoWater = api.gui.comp.CheckBox.new("WATER") -- api.gui.comp.ToggleButton.new(api.gui.comp.ImageView.new("ui/icons/game-menu/hud_filter_ships.tga"))
-	local selectCargoAir   = api.gui.comp.CheckBox.new("AIR") -- api.gui.comp.ToggleButton.new(api.gui.comp.ImageView.new("ui/icons/game-menu/hud_filter_planes.tga"))
+    local selectCargoRoad = api.gui.comp.CheckBox.new("ROAD")
+    local selectCargoTram = api.gui.comp.CheckBox.new("TRAM")
+    local selectCargoRail = api.gui.comp.CheckBox.new("RAIL")
+    local selectCargoWater = api.gui.comp.CheckBox.new("WATER")
+    local selectCargoAir = api.gui.comp.CheckBox.new("AIR")
 
     selectCargoRoad:setSelected(state.auto_settings.CARGO.ROAD, false)
     selectCargoRoad:onToggle(function(selected)
@@ -590,25 +590,32 @@ local function gui_initSettingsWindow()
         api_helper.sendScriptCommand("settings_gui", "auto_cargo_road", selected)
     end)
 
-	selectCargoRail:setSelected(state.auto_settings.CARGO.RAIL, false)
+    selectCargoTram:setSelected(state.auto_settings.CARGO.TRAM, false)
+    selectCargoTram:onToggle(function(selected)
+        -- Send a script event to say that the debugging setting has been changed.
+        api_helper.sendScriptCommand("settings_gui", "auto_cargo_tram", selected)
+    end)
+
+    selectCargoRail:setSelected(state.auto_settings.CARGO.RAIL, false)
     selectCargoRail:onToggle(function(selected)
         -- Send a script event to say that the debugging setting has been changed.
         api_helper.sendScriptCommand("settings_gui", "auto_cargo_rail", selected)
     end)
 
-	selectCargoWater:setSelected(state.auto_settings.CARGO.AIR, false)
+    selectCargoWater:setSelected(state.auto_settings.CARGO.AIR, false)
     selectCargoWater:onToggle(function(selected)
         -- Send a script event to say that the debugging setting has been changed.
         api_helper.sendScriptCommand("settings_gui", "auto_cargo_water", selected)
     end)
 
-	selectCargoAir:setSelected(state.auto_settings.CARGO.WATER, false)
+    selectCargoAir:setSelected(state.auto_settings.CARGO.WATER, false)
     selectCargoAir:onToggle(function(selected)
         -- Send a script event to say that the debugging setting has been changed.
         api_helper.sendScriptCommand("settings_gui", "auto_cargo_air", selected)
     end)
 
     cargoOptionBox:addItem(selectCargoRoad)
+    cargoOptionBox:addItem(selectCargoTram)
     cargoOptionBox:addItem(selectCargoRail)
     cargoOptionBox:addItem(selectCargoWater)
     cargoOptionBox:addItem(selectCargoAir)
@@ -715,6 +722,9 @@ function data()
                     elseif name == "auto_cargo_road" then
                         state.auto_settings.CARGO.ROAD = param
                         log.info("Automatic management of CARGO / ROAD line vehicles set to: " .. tostring(param))
+                    elseif name == "auto_cargo_tram" then
+                        state.auto_settings.CARGO.TRAM = param
+                        log.info("Automatic management of CARGO / TRAM line vehicles set to: " .. tostring(param))
                     elseif name == "auto_cargo_rail" then
                         state.auto_settings.CARGO.RAIL = param
                         log.info("Automatic management of CARGO / RAIL line vehicles set to: " .. tostring(param))
@@ -726,7 +736,7 @@ function data()
                         log.info("Automatic management of CARGO / AIR line vehicles set to: " .. tostring(param))
                     end
                 elseif id == "notification_gui" and name == "state_version_change_handled" then
-                    state.version_change = nil
+                    state.version_change = false
                     log.debug("State version change has been handled")
                 end
             end
