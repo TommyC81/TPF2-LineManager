@@ -2,7 +2,13 @@ local api_helper = {}
 
 local enums = require 'cartok/enums'
 
----@param entity_id number | string : the id of the entity
+---@param entity_id number : the id of the entity
+---@return boolean : whether the entity exists
+function api_helper.entityExists(entity_id)
+    return api.engine.entityExists(entity_id)
+end
+
+---@param entity_id number : the id of the entity
 ---@return string : entityName
 function api_helper.getEntityName(entity_id)
     local err, res = pcall(function()
@@ -23,6 +29,18 @@ end
 ---@return table : details of the vehicle
 function api_helper.getVehicle(vehicle_id)
     return api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
+end
+
+---@return table : details of the entity at terminal
+function api_helper.getEntityAtTerminal(entity_id)
+    local err, res = pcall(function()
+        return api.engine.getComponent(entity_id, api.type.ComponentType.SIM_ENTITY_AT_TERMINAL)
+    end)
+    if err then
+        return res
+    else
+        return nil
+    end
 end
 
 ---@param line_id table id of the line
@@ -80,16 +98,52 @@ function api_helper.getGameTime()
     end
 end
 
+---@return number : current game tick count
+function api_helper.getGameTicks()
+    local time = api.engine.getComponent(0, api.type.ComponentType.GAME_TIME).tickCount
+    if time then
+        return time
+    else
+        return 0
+    end
+end
+
+---@return number : current game update count
+function api_helper.getGameUpdates()
+    local time = api.engine.getComponent(0, api.type.ComponentType.GAME_TIME).updateCount
+    if time then
+        return time
+    else
+        return 0
+    end
+end
+
 ---@param line_id number : the id of the line
 ---@return number : line rate (or 0 if not found)
 ---@return number : line frequency (or 0 if not found)
-function api_helper.getLineRateAndFrequency(line_id)
+function api_helper.getLineInformation(line_id)
+    local rate = 0
+    local frequency = 0
+    local transported_last_month = 0
+    local transported_last_year = 0
+    local stops = 0
+
     local lineEntity = game.interface.getEntity(line_id)
-    if lineEntity and lineEntity.rate then
-        return lineEntity.rate, lineEntity.frequency
-    else
-        return 0, 0
+    if lineEntity and lineEntity.rate then -- If it has rate, then it should be a line
+        rate = lineEntity.rate
+        frequency = lineEntity.frequency
+        transported_last_month = lineEntity.itemsTransported._lastMonth._sum
+        transported_last_year = lineEntity.itemsTransported._lastYear._sum
+        stops = #lineEntity.stops
     end
+
+    return {
+        rate = rate,
+        frequency = frequency,
+        transported_last_month = transported_last_month,
+        transported_last_year = transported_last_year,
+        stops = stops,
+    }
 end
 
 ---@param line_id number : the id of the line

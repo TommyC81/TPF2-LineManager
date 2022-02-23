@@ -2,23 +2,29 @@ local rules = require 'cartok/rules'
 local enums = require 'cartok/enums'
 local api_helper = require 'cartok/api_helper'
 local lume = require 'cartok/lume'
+local timer = require 'cartok/timer'
 
 local sampling = {}
 
 local log = nil --require 'cartok/logging'
 
-local SAMPLING_WINDOW_SIZE = 5 -- This must be 2 or greater, or...danger. Lower number means quicker changes to data and vice versa.
+local SAMPLING_WINDOW_SIZE = 4 -- This must be 2 or greater, or...danger. Lower number means quicker changes to data and vice versa.
+local SAMPLING_WINDOW_SIZE_LONG = SAMPLING_WINDOW_SIZE * 3 -- This provides a slower average over a longer time
 
-local MAX_LINES_TO_PROCESS_PER_RUN = 3 -- How many lines to process per run
-local MAX_VEHICLES_TO_PROCESS_PER_RUN = 10 -- How many vehicles to process per run
+local NO_ENTITY = -1
+
+local MAX_LINES_TO_PROCESS_PER_RUN = 10 -- How many lines to process per run
+local MAX_VEHICLES_TO_PROCESS_PER_RUN = 25 -- How many vehicles to process per run
+local MAX_ENTITIES_TO_PROCESS_PER_RUN = 100 -- How many entities to process per run
 
 local STATE_STOPPED = 1
 local STATE_WAITING = 2
 local STATE_PREPARING_INITIAL_DATA = 3
 local STATE_PREPARING_LINE_DATA = 4
-local STATE_MERGING_LINE_DATA = 5
-local STATE_APPLYING_RULES = 6
-local STATE_FINISHED = 7
+local STATE_SAMPLING_WAITING_CARGO = 5
+local STATE_MERGING_LINE_DATA = 6
+local STATE_APPLYING_RULES = 7
+local STATE_FINISHED = 8
 
 local sampling_state = STATE_STOPPED -- To track the progress of the sampling
 
@@ -27,6 +33,10 @@ local finishedOnce = nil
 local vehicleOccupancyCache = nil
 local problemLineCache = nil
 local problemVehicleCache = nil
+
+local simEntityAtTerminalCache = nil -- Holder for all SIM_ENTITY_AT_TERMINAL: api.engine.getComponent(entity_id, api.type.ComponentType.SIM_ENTITY_AT_TERMINAL)
+local lineSimPersonCache = nil -- Holder for line SimPerson: api.engine.system.simPersonSystem.getSimPersonsForLine(line_id)
+local lineSimCargoCache = nil -- Holder for line SimCargo: api.engine.system.simCargoSystem.getSimCargosForLine(line_id)
 
 local sampledLineData = nil
 
@@ -41,7 +51,7 @@ local function setStateStopped()
     sampling_state = STATE_STOPPED
 end
 
-function sampling.isStateStopped()
+local function isStateStopped()
     return sampling_state == STATE_STOPPED
 end
 
@@ -49,7 +59,7 @@ local function setStateWaiting()
     sampling_state = STATE_WAITING
 end
 
-function sampling.isStateWaiting()
+local function isStateWaiting()
     return sampling_state == STATE_WAITING
 end
 
@@ -57,7 +67,7 @@ local function setStatePreparingInitialData()
     sampling_state = STATE_PREPARING_INITIAL_DATA
 end
 
-function sampling.isStatePreparingInitialData()
+local function isStatePreparingInitialData()
     return sampling_state == STATE_PREPARING_INITIAL_DATA
 end
 
@@ -65,15 +75,23 @@ local function setStatePreparingLineData()
     sampling_state = STATE_PREPARING_LINE_DATA
 end
 
-function sampling.isStatePreparingLineData()
+local function isStatePreparingLineData()
     return sampling_state == STATE_PREPARING_LINE_DATA
+end
+
+local function setStateSamplingWaitingCargo()
+    sampling_state = STATE_SAMPLING_WAITING_CARGO
+end
+
+local function isStateSamplingWaitingCargo()
+    return sampling_state == STATE_SAMPLING_WAITING_CARGO
 end
 
 local function setStateMergingLineData()
     sampling_state = STATE_MERGING_LINE_DATA
 end
 
-function sampling.isStateMergingLineData()
+local function isStateMergingLineData()
     return sampling_state == STATE_MERGING_LINE_DATA
 end
 
@@ -81,7 +99,7 @@ local function setStateApplyingRules()
     sampling_state = STATE_APPLYING_RULES
 end
 
-function sampling.isStateApplyingRules()
+local function isStateApplyingRules()
     return sampling_state == STATE_APPLYING_RULES
 end
 
@@ -90,12 +108,22 @@ local function setStateFinished()
     finishedOnce = true
 end
 
-function sampling.isStateFinished()
+local function isStateFinished()
     return sampling_state == STATE_FINISHED
 end
 
----this returns true only on the first if the state is finished
-function sampling.isStateFinishedOnce()
+---checks whether the sampling is currently stopped
+function sampling.isStopped()
+    return isStateStopped()
+end
+
+---checks whether the sampling is currently finished
+function sampling.isFinished()
+    return isStateFinished()
+end
+
+---checks whether the sampling is currently finished - only returns true on the first check (if finished)
+function sampling.isFinishedOnce()
     if finishedOnce and sampling_state == STATE_FINISHED then
         finishedOnce = false
         return true
@@ -117,13 +145,14 @@ local function roundPercentage(dividend, divisor)
     end
 end
 
+---@param window_size number : the size of the window to average new data out over
 ---@param existing_value number : the existing value
 ---@param new_value number : the new value to be averaged into the existing value
 ---@param precision number : optional, how precise the averaged result should be (as per lume.round)
 ---@return number : the average based on the provided numbers
-local function calculateAverage(existing_value, new_value, precision)
-    -- This effectively gives weight to previous data equal to '(SAMPLING_WINDOW_SIZE - 1) / SAMPLING_WINDOW_SIZE'. If SAMPLING_WINDOW_SIZE is 4, the previous data get 75% weight
-    return lume.round(((existing_value * (SAMPLING_WINDOW_SIZE - 1)) + new_value) / SAMPLING_WINDOW_SIZE, precision)
+local function calculateAverage(window_size, existing_value, new_value, precision)
+    -- This effectively gives weight to previous data equal to '(window_size - 1) /window_size'. If window_size is 4, the previous data get 75% weight. If window_size is 10, the previous data get 90% weight.
+    return lume.round(((existing_value * (window_size - 1)) + new_value) / window_size, precision)
 end
 
 ---@param line_name string The name of the line for there is the line rule designator.
@@ -225,6 +254,38 @@ local function checkIfLineHasProblem(line_id, line_vehicles)
     return false
 end
 
+---@param short_period number : the short period
+---@param long_period number : the long period
+---@param previous_trend number : (optional) the previous trend value
+---@return number : the updated trend value, positive numbers is for how long the short_period has remained above the long_period and vice versa
+---checks for how long the short_period has remained above/below the long_period and returns an updated trend value
+local function calculateTrend(short_period, long_period, previous_trend)
+    previous_trend = previous_trend or 0
+    local new_trend = 0
+
+    if previous_trend == 0 then
+        if short_period < long_period then
+            new_trend = -1
+        elseif short_period > long_period then
+            new_trend = 1
+        end
+    elseif previous_trend > 0 then
+        if short_period < long_period then
+            new_trend = -1
+        elseif short_period > long_period then
+            new_trend = previous_trend + 1
+        end
+    elseif previous_trend < 0 then
+        if short_period < long_period then
+            new_trend = previous_trend - 1
+        elseif short_period > long_period then
+            new_trend = 1
+        end
+    end
+
+    return new_trend
+end
+
 ---resets all sampling variables and sets STATE_WAITING, thus restarting the sampling process
 local function restart()
     log.debug("sampling: restart()")
@@ -233,6 +294,9 @@ local function restart()
     problemLineCache = {}
     problemVehicleCache = {}
     sampledLineData = {}
+    simEntityAtTerminalCache = {}
+    lineSimPersonCache = {}
+    lineSimCargoCache = {}
     setStateWaiting()
 end
 
@@ -269,14 +333,14 @@ local function prepareInitialData()
         local passengers = #cargo_table[enums.CargoTypes.PASSENGERS] -- = 1, which is PASSENGERS
         local cargoes = 0
 
-        for i = 2, 17 do -- These are all other cargo items
+        for i = 2, #cargo_table do -- These are all other cargo items, 2-17 by default
             cargoes = cargoes + #cargo_table[i]
         end
 
         vehicleOccupancyCache[vehicle_id] = {
             PASSENGER = passengers,
             CARGO = cargoes,
-            TOTAL = passengers + cargoes
+            TOTAL = passengers + cargoes,
         }
     end
 
@@ -295,7 +359,7 @@ local function prepareLineData()
 
     -- Prepare sampledLineData with detailed data of each line
     for line_id, line_data in pairs(sampledLineData) do
-        if line_data and line_data.TO_BE_PREPARED then
+        if line_data.TO_BE_PREPARED then
             local lineVehicles = api_helper.getLineVehicles(line_id) -- Start by getting the vehicles to check if any further processing needs to be done at all
             local lineVehiclesInDepot = 0 -- This is used as an indicator of a line problem
 
@@ -312,16 +376,24 @@ local function prepareLineData()
                 local lineFrequency = 0
                 local lineTarget = 0
                 local lineCapacity = 0
+                local lineCapacityPerVehicle = 0
                 local lineOccupancy = 0
                 local lineDemand = 0
                 local lineUsage = 0
                 local lineManaged = false
                 local lineHasProblem = false
+                local lineStops = 0
+                local lineTransportedLastMonth = 0
+                local lineTransportedLastYear = 0
 
-                -- Get all passengers planning to use the line
-                local lineDemandPassengers = #api_helper.getSimPersonsForLine(line_id)
-                -- Get all cargo planning to use the line
-                local lineDemandCargo = #api_helper.getSimCargosForLine(line_id)
+                -- Get all passengers planning to use the line (and cache the data to process later by sampleWaitingCargo())
+                local simPersons = api_helper.getSimPersonsForLine(line_id)
+                lineSimPersonCache[line_id] = simPersons
+                local lineDemandPassengers = #simPersons
+                -- Get all cargo planning to use the line (and cache the data to process later by sampleWaitingCargo())
+                local simCargos = api_helper.getSimCargosForLine(line_id)
+                lineSimCargoCache[line_id] = simCargos
+                local lineDemandCargo = #simCargos
 
                 -- Use the most demanded type as the lineType
                 if lineDemandPassengers > lineDemandCargo then
@@ -330,12 +402,12 @@ local function prepareLineData()
                 elseif lineDemandCargo > lineDemandPassengers then
                     lineType = "CARGO"
                     lineDemand = lineDemandCargo
-                -- If neither of the previous rules have stuck, then re-use previous type (if set to a sensible value)
-                elseif stateLineData[line_id] and stateLineData[line_id].type and (stateLineData[line_id].type == "PASSENGER" or stateLineData[line_id].type == "CARGO") then
+                -- If neither of the previous rules have stuck (either no cargo, or the same amount of cargo for each type), then re-use previous type if data exists
+                elseif stateLineData[line_id] then
                     lineType = stateLineData[line_id].type
-                -- If all else fails, set to PASSENGER to have a starting point
+                -- If all else fails, set to PASSENGER to have a starting point (avoid lines being indicated as ignored when there's no current demand)
                 else
-                    lineType = "PASSENGER" -- Use this as a default to avoid lines being indicated as ignored when there's no current demand
+                    lineType = "PASSENGER"
                 end
 
                 lineName = api_helper.getEntityName(line_id)
@@ -350,8 +422,14 @@ local function prepareLineData()
                     lineRuleManual = true
                 end
 
-                -- RATE and FREQUENCY
-                lineRate, lineFrequency = api_helper.getLineRateAndFrequency(line_id)
+                -- RATE, FREQUENCY, TRANSPORTED_LAST_MONTH, TRANSPORTED_LAST_YEAR, STOPS
+                local lineInformation = api_helper.getLineInformation(line_id)
+
+                lineRate = lineInformation.rate
+                lineFrequency = lineInformation.frequency
+                lineStops = lineInformation.stops
+                lineTransportedLastMonth = lineInformation.transported_last_month
+                lineTransportedLastYear = lineInformation.transported_last_year
 
                 -- Convert frequency to seconds
                 if lineFrequency > 0 then -- Check if lineFrequency is actually set, otherwise it'll be 'inf' after the conversion
@@ -385,6 +463,10 @@ local function prepareLineData()
                     processed_vehicles = processed_vehicles + 1
                 end
 
+                if #lineVehicles > 0 and lineCapacity > 0 then
+                    lineCapacityPerVehicle = lineCapacity / #lineVehicles
+                end
+
                 -- USAGE
                 lineUsage = roundPercentage(lineOccupancy, lineCapacity)
 
@@ -395,7 +477,7 @@ local function prepareLineData()
                 lineHasProblem = lineVehiclesInDepot > 0 or checkIfLineHasProblem(line_id, lineVehicles)
 
                 sampledLineData[line_id] = {
-                    TO_BE_MERGED = true, -- This is used by mergeLineData() to confirm this item needs processing
+                    SAMPLE_WAITING_CARGO = true, -- Set marker for next step (this will be used by mergeLineData() to confirm this item needs processing)
                     name = lineName,
                     carrier = lineCarrier,
                     type = lineType,
@@ -406,26 +488,125 @@ local function prepareLineData()
                     target = lineTarget,
                     vehicles = #lineVehicles,
                     capacity = lineCapacity,
+                    capacity_per_vehicle = lineCapacityPerVehicle,
                     occupancy = lineOccupancy,
                     demand = lineDemand,
                     usage = lineUsage,
                     managed = lineManaged,
                     has_problem = lineHasProblem,
+                    stops = lineStops,
+                    transported_last_month = lineTransportedLastMonth,
+                    transported_last_year = lineTransportedLastYear,
                 }
 
                 -- Update counters
                 processed_lines = processed_lines + 1
             end
 
+            finished = false -- This state can't be completed (for sure) if we reached this, run it one more time
+
             -- Stop the processing if processing limit has been reached.
             if processed_lines >= MAX_LINES_TO_PROCESS_PER_RUN or processed_vehicles >= MAX_VEHICLES_TO_PROCESS_PER_RUN then
-                finished = false -- This state can't be completed if we reached this
+                log.debug("sampling: prepareLineData() processing limit reached, stopping")
                 break
             end
         end
     end
 
     log.debug("sampling: prepareLineData() processed " .. processed_lines .. " lines and " .. processed_vehicles .. " vehicles")
+    return finished
+end
+
+---this functions samples the waiting cargo for each lines and adds the information to the sampled line data
+local function sampleWaitingCargo()
+    log.debug("sampling: sampleWaitingCargo() starting")
+    local finished = true
+    local stopProcessing = false
+    local processedItems = 0
+    local lineWaiting = 0
+    local lineWaitingPeak = 0
+
+    for line_id, line_data in pairs(sampledLineData) do
+        if line_data.SAMPLE_WAITING_CARGO then -- Check for marker
+            local waitingEntitiesPerStop = {}
+            local lineEntities = {}
+
+            -- Start by setting the lineEntities as per already cached data
+            if line_data.type == "PASSENGER" and lineSimPersonCache[line_id] then
+                lineEntities = lineSimPersonCache[line_id]
+            elseif line_data.type == "CARGO" and lineSimCargoCache[line_id] then
+                lineEntities = lineSimCargoCache[line_id]
+            end
+
+            if #lineEntities > 0 then
+                for _, value in pairs(lineEntities) do -- i = 1, #lineEntities do
+                    local currentEntityId = value
+
+                    -- Get the SIM_ENTITY_AT_TERMINAL unless already cached
+                    if not simEntityAtTerminalCache[currentEntityId] then
+                        local entity_at_terminal = api_helper.getEntityAtTerminal(currentEntityId)
+                        if entity_at_terminal ~= nil then
+                            simEntityAtTerminalCache[currentEntityId] = entity_at_terminal
+                        else
+                            simEntityAtTerminalCache[currentEntityId] = NO_ENTITY -- Set a value in case the entity is not at terminal (nil returned)
+                        end
+
+                        -- Check if we've processed too many items, then stop and restart next tick
+                        processedItems = processedItems + 1
+                        if processedItems >= MAX_ENTITIES_TO_PROCESS_PER_RUN then
+                            log.debug("sampling: sampleWaitingCargo() processing limit reached, stopping")
+                            finished = false
+                            stopProcessing = true
+                            break
+                        end
+                    end
+
+                    -- Process the entity for the line, if it exists in the cache
+                    if simEntityAtTerminalCache[currentEntityId] and simEntityAtTerminalCache[currentEntityId] ~= NO_ENTITY then
+                        local currentEntity = simEntityAtTerminalCache[currentEntityId]
+
+                        -- First check if the entity is waiting for this line, process it if so
+                        if currentEntity.line == line_id then
+                            -- If previous entry in the table created, then increase it, otherwise create and initialize it
+                            if waitingEntitiesPerStop[currentEntity.lineStop0] then
+                                waitingEntitiesPerStop[currentEntity.lineStop0] = waitingEntitiesPerStop[currentEntity.lineStop0] + 1
+                            else
+                                waitingEntitiesPerStop[currentEntity.lineStop0] = 1
+                            end
+                        end
+                    end
+                end
+
+                -- If stop processing has been triggered, break this loop here
+                if stopProcessing then
+                    break
+                end
+
+                if #waitingEntitiesPerStop > 0 then
+                    for _, value in pairs(waitingEntitiesPerStop) do
+                        lineWaiting = lineWaiting + value
+                        if value > lineWaitingPeak then
+                            lineWaitingPeak = value
+                        end
+                    end
+                end
+            end
+
+            -- Add sampled data to sampledLineData
+            sampledLineData[line_id].waiting = lineWaiting
+            sampledLineData[line_id].waiting_peak = lineWaitingPeak
+
+            -- Update markers
+            sampledLineData[line_id].SAMPLE_WAITING_CARGO = nil
+            sampledLineData[line_id].MERGE = true
+
+            finished = false -- This state can't be completed (for sure) if we reached this, run it one more time
+
+            -- This is a heavy process (as far as I can tell), therefore we only do one line at a time
+            break
+        end
+    end
+
     return finished
 end
 
@@ -437,39 +618,47 @@ local function mergeLineData()
 
     -- Merge existing line_data into the sampled line_data
     for line_id, line_data in pairs(sampledLineData) do
-        if line_data and line_data.TO_BE_MERGED then
+        if line_data.MERGE then -- Check for marker
             if stateLineData[line_id] then
                 -- Add to existing samples
                 sampledLineData[line_id].samples = stateLineData[line_id].samples + 1
                 -- Preserve last_action
                 sampledLineData[line_id].last_action = stateLineData[line_id].last_action
-                -- Calculate moving average for demand, usage and rate to even out the numbers.
-                sampledLineData[line_id].demand_average = calculateAverage(stateLineData[line_id].demand, line_data.demand)
-                sampledLineData[line_id].usage_average = calculateAverage(stateLineData[line_id].usage, line_data.usage)
-                sampledLineData[line_id].rate_average = calculateAverage(stateLineData[line_id].rate, line_data.rate)
-                sampledLineData[line_id].frequency_average = calculateAverage(stateLineData[line_id].frequency, line_data.frequency, 0.1) -- Round this to better precision as the numbers tend to be smaller
+                -- Calculate SHORT moving average for demand, usage, rate and frequency.
+                sampledLineData[line_id].demand_average = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].demand_average, line_data.demand, 0.1)
+                sampledLineData[line_id].usage_average = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].usage_average, line_data.usage, 0.1)
+                sampledLineData[line_id].rate_average = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].rate_average, line_data.rate, 0.1)
+                sampledLineData[line_id].frequency_average = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].frequency_average, line_data.frequency, 0.1)
+                -- Calculate LONG moving average for demand, usage, rate and frequency.
+                sampledLineData[line_id].demand_average_long = calculateAverage(SAMPLING_WINDOW_SIZE_LONG, stateLineData[line_id].demand_average_long, line_data.demand, 0.1)
+                sampledLineData[line_id].usage_average_long = calculateAverage(SAMPLING_WINDOW_SIZE_LONG, stateLineData[line_id].usage_average_long, line_data.usage, 0.1)
             else
                 -- If not already existing, then start samples from 1. No need to process the data further.
                 sampledLineData[line_id].samples = 1
                 -- Set a blank last_action
                 sampledLineData[line_id].last_action = ""
-                -- Set averages to the same as currently sampled
+                -- Set SHORT averages to the same as currently sampled
                 sampledLineData[line_id].demand_average = line_data.demand
                 sampledLineData[line_id].usage_average = line_data.usage
                 sampledLineData[line_id].rate_average = line_data.rate
                 sampledLineData[line_id].frequency_average = line_data.frequency
+                -- Set LONG averages to the same as currently sampled
+                sampledLineData[line_id].demand_average_long = line_data.demand
+                sampledLineData[line_id].usage_average_long = line_data.usage
             end
 
             -- Update markers
-            sampledLineData[line_id].TO_BE_MERGED = nil
-            sampledLineData[line_id].TO_APPLY_RULES = true
+            sampledLineData[line_id].MERGE = nil
+            sampledLineData[line_id].APPLY_RULES = true
 
             -- Update counters
             processed_lines = processed_lines + 1
 
+            finished = false -- This state can't be completed (for sure) if we reached this, run it one more time
+
             -- Stop the processing if processing limit has been reached.
             if processed_lines >= MAX_LINES_TO_PROCESS_PER_RUN then
-                finished = false -- This state can't be completed if we reached this
+                log.debug("sampling: mergeLineData() processing limit reached, stopping")
                 break
             end
         end
@@ -479,6 +668,7 @@ local function mergeLineData()
     return finished
 end
 
+---applies rules to the sampled lines and adds an action
 local function applyRules()
     log.debug("sampling: applyRules() starting")
     local finished = true
@@ -486,7 +676,7 @@ local function applyRules()
 
     -- Apply rules to the finalized line_data
     for line_id, line_data in pairs(sampledLineData) do
-        if line_data.TO_APPLY_RULES then
+        if line_data.APPLY_RULES then
             -- Set action to "" by default, then change it as required
             sampledLineData[line_id].action = ""
             -- If line is managed and does not have a problem, then apply rules
@@ -501,7 +691,7 @@ local function applyRules()
             end
 
             -- Update markers
-            sampledLineData[line_id].TO_APPLY_RULES = nil
+            sampledLineData[line_id].APPLY_RULES = nil
 
             -- Update counters
             processed_lines = processed_lines + 1
@@ -524,7 +714,7 @@ end
 ---starts the sampling process (if state is STATE_FINISHED, and parameters are provided)
 function sampling.start(state_line_data, state_auto_settings)
     log.debug("sampling: start()")
-    if (sampling.isStateStopped() or sampling.isStateFinished()) and state_line_data and state_auto_settings then
+    if (isStateStopped() or isStateFinished()) and state_line_data and state_auto_settings then
         stateLineData = state_line_data
         stateAutoSettings = state_auto_settings
         restart() -- Reset all variables and set STATE_WAITING
@@ -543,15 +733,17 @@ end
 
 ---process sampling if required, doing it one step at a time to spread the workload out. This function needs to be called on each update.
 function sampling.process()
+    timer.start()
+
     -- Don't do any processing if state is finished
-    if sampling.isStateStopped() or sampling.isStateFinished() then
+    if isStateStopped() or isStateFinished() then
         return
     end
 
     -- If not finished, work our way through the data preparation until completed
-    if sampling.isStateWaiting() then
+    if isStateWaiting() then
         setStatePreparingInitialData()
-    elseif sampling.isStatePreparingInitialData() then
+    elseif isStatePreparingInitialData() then
         if prepareInitialData() then
             log.debug("sampling: prepareInitialData() completed successfully")
             setStatePreparingLineData()
@@ -559,21 +751,27 @@ function sampling.process()
             log.debug("sampling: prepareInitialData() no data to process yet, stopping sampling")
             setStateStopped()
         end
-    elseif sampling.isStatePreparingLineData() and prepareLineData() then
+    elseif isStatePreparingLineData() and prepareLineData() then
         log.debug("sampling: prepareLineData() completed successfully")
+        setStateSamplingWaitingCargo()
+    elseif isStateSamplingWaitingCargo() and sampleWaitingCargo() then
+        log.debug("sampling: sampleWaitingCargo() completed successfully")
         setStateMergingLineData()
-    elseif sampling.isStateMergingLineData() and mergeLineData() then
+    elseif isStateMergingLineData() and mergeLineData() then
         log.debug("sampling: mergeLineData() completed successfully")
         setStateApplyingRules()
-    elseif sampling.isStateApplyingRules() and applyRules() then
+    elseif isStateApplyingRules() and applyRules() then
         log.debug("sampling: applyRules() completed successfully")
         setStateFinished()
     end
+
+    local time_used = timer.stop()
+    log.debug("sampling: CPU time used: " .. time_used)
 end
 
 ---returns the sampled line data
 function sampling.getSampledLineData()
-    if sampling.isStateFinished() then
+    if isStateFinished() then
         return sampledLineData
     else
         return nil
@@ -588,7 +786,7 @@ function sampling.getEmptiestVehicle(vehicle_ids)
     local emptiestVehicleLoad = 9999999999
     local emptiestVehicleId = nil
 
-    if sampling.isStateFinished() and vehicle_ids and #vehicle_ids > 0 then
+    if isStateFinished() and vehicle_ids and #vehicle_ids > 0 then
         for _, vehicle_id in pairs(vehicle_ids) do
             -- If vehicle is not cached, assume it is because of no load and stop here
             if not vehicleOccupancyCache[vehicle_id] then

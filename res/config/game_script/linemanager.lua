@@ -13,9 +13,7 @@ local sampling = require 'cartok/sampling'
 local lume = require 'cartok/lume'
 
 local firstRun = true -- Keeps track of the first update run (to do some init)
-local skipTick = false -- To skip processing every second tick
-local updateCounter = 0
-local UPDATE_FREQUENCY = 10
+local lastRegularUpdate = -1 -- Keeps track of the last regular update (should run once per second)
 
 local gui_settingsWindow = nil
 local gui_notificationWindow = nil
@@ -23,7 +21,7 @@ local gui_notificationWindow = nil
 -- This is the entire data for the mod, it is stored in the save game as well as loaded in GUI thread for access
 local state = {
     -- The version of the data, this is for compatibility purposes and only meant to be updated when the state data format changes.
-    version = 26,
+    version = 31,
     version_change = true, -- This simply keeps track of whether the state version has changed. This is meant to always default to true, it will be set to false when no longer the case (and then stored in the save game data).
     log_settings = {
         level = 3, -- The log level (3 = INFO)
@@ -66,17 +64,21 @@ sampling.setLog(log)
 -- rule = which line vehicle management rule to apply (see rules.lua)
 -- rule_manual = whether the rule was manually assigned or not
 -- rate = the current transport rate of the line
--- rate_average = the average transport rate of the line
+-- rate_average = the SHORT average transport rate of the line
+-- rate_average_long = the LONG average transport rate of the line
 -- frequency = the current frequency of the line (in seconds)
--- frequency_average = the average frequency of the line (in seconds)
+-- frequency_average = the SHORT average frequency of the line (in seconds)
+-- frequency_average_long = the LONG average frequency of the line (in seconds)
 -- target = the target of any applicable special rule, otherwise 0 (only used by "(R:<number>)" rule at the moment)
 -- vehicles = number of vehicles on the line
 -- capacity = current PASSENGER/CARGO capacity
 -- occupancy = current PASSENGER/CARGO occupancy
 -- demand = current PASSENGER/CARGO demand
--- demand_average = average PASSENGER/CARGO demand
--- usage = current PASSENGER/CARGO usage usage, 0-100 (%)
--- usage_average = average PASSENGER/CARGO usage usage, 0-100 (%)
+-- demand_average = the SHORT average PASSENGER/CARGO demand
+-- demand_average_long = the LONG average PASSENGER/CARGO demand
+-- usage = current PASSENGER/CARGO usage, 0-100 (%)
+-- usage_average = the SHORT average PASSENGER/CARGO usage, 0-100 (%)
+-- usage_average_long = the LONG average PASSENGER/CARGO usage , 0-100 (%)
 -- managed = whether the line should be managed or not by the mod
 -- samples = total number of samples taken for the line since it was last updated (i.e. vehicle added/removed)
 -- action = the evaluated action to take for the line (i.e. add or remove vehicle); "ADD", "REMOVE" or ""
@@ -102,9 +104,9 @@ local function lineInfoString(line_id)
 end
 
 local function lineDataString(line_id)
-    local str  = "Usage: " .. state.line_data[line_id].usage_average .. "% "
-    str = str .. "Demand: " .. state.line_data[line_id].demand_average .. " "
-    str = str .. "Rate: " .. state.line_data[line_id].rate_average .. " "
+    local str  = "Usage: " .. lume.round(state.line_data[line_id].usage_average) .. "% "
+    str = str .. "Demand: " .. lume.round(state.line_data[line_id].demand_average) .. " "
+    str = str .. "Rate: " .. lume.round(state.line_data[line_id].rate_average) .. " "
     str = str .. "Capacity: " .. state.line_data[line_id].capacity .. " "
     str = str .. "Vehicles: " .. state.line_data[line_id].vehicles
     return str
@@ -338,7 +340,7 @@ local function firstRunOnly()
     log.info("linemanager: firstRunOnly() completed successfully")
 end
 
--- This functions runs regularly every UPDATE_FREQUENCY number of ticks
+-- This functions runs regularly every second
 local function regularUpdate()
     log.debug("linemanager: regularUpdate() starting")
     if state.linemanager_settings.reverse_no_path_trains then
@@ -353,19 +355,19 @@ local function regularUpdate()
     log.debug("linemanager: regularUpdate() completed successfully")
 end
 
--- This function runs on each game tick (5 times per second) if the game is not paused
+-- This function runs on each game tick if the game is not paused
 local function everyTickUpdate()
     -- This must be run once per update to ensure sampling processing when triggered
     sampling.process()
 
     -- Check if a sampling has finished (this will only trigger once per completed sampling)
-    if sampling.isStateFinishedOnce() then
+    if sampling.isFinishedOnce() then
         state.line_data = sampling.getSampledLineData()
 
         log.info("============ Updating ============")
         updateLines()
-    -- If sampling is in state finished, check if a new sampling is due
-    elseif sampling.isStateFinished() or sampling.isStateStopped() then
+    -- If sampling is finished or stopped, check if a new sampling is due
+    elseif sampling.isFinished() or sampling.isStopped() then
         local sampling_is_due = false
 
         if state.sampling_settings.time_based_sampling then
@@ -752,29 +754,25 @@ function data()
             end
         end,
         update = function(data)
-            if skipTick then
-                skipTick = false
-            else
-                skipTick = true
-                -- First run
-                if firstRun then
-                    firstRun = false
-                    firstRunOnly()
+            local current_time = os.time()
+
+            -- First run
+            if firstRun then
+                firstRun = false
+                firstRunOnly()
+            end
+            -- If linemanager is enabled and game is not paused
+            if state.linemanager_settings.enabled and game.interface.getGameSpeed() > 0 then
+                -- Regular update
+                if current_time ~= lastRegularUpdate then
+                    lastRegularUpdate = current_time
+                    regularUpdate()
                 end
-                -- If linemanager is enabled and game is not paused
-                if state.linemanager_settings.enabled and game.interface.getGameSpeed() > 0 then
-                    -- Regular update
-                    updateCounter = updateCounter + 1
-                    if updateCounter >= UPDATE_FREQUENCY then
-                        updateCounter = 0
-                        regularUpdate()
-                    end
-                    -- Every tick update
-                    everyTickUpdate()
-                -- If game is paused and we're using os time based sampling, then "freeze" the time of the last sample taken
-                elseif state.sampling_settings.time_based_sampling then
-                    state.sampling_settings.last_sample_time = state.sampling_settings.last_sample_time + (os.time() - state.sampling_settings.last_sample_time)
-                end
+                -- Every tick update
+                everyTickUpdate()
+            -- If game is paused and we're using os time based sampling, then "freeze" the time of the last sample taken
+            elseif state.sampling_settings.time_based_sampling then
+                state.sampling_settings.last_sample_time = state.sampling_settings.last_sample_time + (current_time - state.sampling_settings.last_sample_time)
             end
         end,
         guiInit = function()
