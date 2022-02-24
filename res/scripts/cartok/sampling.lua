@@ -8,14 +8,13 @@ local sampling = {}
 
 local log = nil --require 'cartok/logging'
 
-local SAMPLING_WINDOW_SIZE_SHORT = 4 -- This must be 2 or greater, or...danger. Lower number means quicker changes to data and vice versa.
-local SAMPLING_WINDOW_SIZE_LONG = SAMPLING_WINDOW_SIZE_SHORT * 3 -- This provides a slower average over a longer time
+local SAMPLING_WINDOW_SIZE = 5 -- This must be 2 or greater, or...danger. Lower number means quicker changes to data and vice versa.
 
 local NO_ENTITY = -1
 
-local MAX_LINES_TO_PROCESS_PER_RUN = 10 -- How many lines to process per run
-local MAX_VEHICLES_TO_PROCESS_PER_RUN = 25 -- How many vehicles to process per run
-local MAX_ENTITIES_TO_PROCESS_PER_RUN = 100 -- How many entities to process per run
+local MAX_LINES_TO_PROCESS_PER_RUN = 20 -- Maximum lines to process per run
+local MAX_VEHICLES_TO_PROCESS_PER_RUN = 50 -- Maximum vehicles to process per run
+local MAX_ENTITIES_TO_PROCESS_PER_RUN = 200 -- Maximum entities to process per run
 
 local STATE_STOPPED = 1
 local STATE_WAITING = 2
@@ -503,10 +502,9 @@ local function prepareLineData()
                 processed_lines = processed_lines + 1
             end
 
-            finished = false -- This state can't be completed (for sure) if we reached this, run it one more time
-
             -- Stop the processing if processing limit has been reached.
             if processed_lines >= MAX_LINES_TO_PROCESS_PER_RUN or processed_vehicles >= MAX_VEHICLES_TO_PROCESS_PER_RUN then
+                finished = false -- This state can't be completed (for sure) if we reached this, run it one more time
                 log.debug("sampling: prepareLineData() processing limit reached, stopping")
                 break
             end
@@ -522,7 +520,8 @@ local function sampleWaitingCargo()
     log.debug("sampling: sampleWaitingCargo() starting")
     local finished = true
     local stopProcessing = false
-    local processedItems = 0
+    local processed_lines = 0
+    local processed_items = 0
     local lineWaiting = 0
     local lineWaitingPeak = 0
 
@@ -552,11 +551,11 @@ local function sampleWaitingCargo()
                         end
 
                         -- Check if we've processed too many items, then stop and restart next tick
-                        processedItems = processedItems + 1
-                        if processedItems >= MAX_ENTITIES_TO_PROCESS_PER_RUN then
-                            log.debug("sampling: sampleWaitingCargo() processing limit reached, stopping")
+                        processed_items = processed_items + 1
+                        if processed_items >= MAX_ENTITIES_TO_PROCESS_PER_RUN then
                             finished = false
                             stopProcessing = true
+                            log.debug("sampling: sampleWaitingCargo() processing limit reached, stopping")
                             break
                         end
                     end
@@ -600,13 +599,18 @@ local function sampleWaitingCargo()
             sampledLineData[line_id].SAMPLE_WAITING_CARGO = nil
             sampledLineData[line_id].MERGE = true
 
-            finished = false -- This state can't be completed (for sure) if we reached this, run it one more time
+            -- Update counters
+            processed_lines = processed_lines + 1
 
-            -- This is a heavy process (as far as I can tell), therefore we only do one line at a time
-            break
+            if processed_lines >= MAX_LINES_TO_PROCESS_PER_RUN then
+                finished = false -- This state can't be completed (for sure) if we reached this, run it one more time
+                log.debug("sampling: mergeLineData() processing limit reached, stopping")
+                break
+            end
         end
     end
 
+    log.debug("sampling: sampleWaitingCargo() processed " .. processed_lines .. " lines and " .. processed_items .. " new items")
     return finished
 end
 
@@ -624,35 +628,18 @@ local function mergeLineData()
                 sampledLineData[line_id].samples = stateLineData[line_id].samples + 1
                 -- Preserve last_action
                 sampledLineData[line_id].last_action = stateLineData[line_id].last_action
-                -- Calculate SHORT moving average for demand, usage, rate and frequency.
-                sampledLineData[line_id].demand_average = calculateAverage(SAMPLING_WINDOW_SIZE_SHORT, stateLineData[line_id].demand_average, line_data.demand, 0.1)
-                sampledLineData[line_id].usage_average = calculateAverage(SAMPLING_WINDOW_SIZE_SHORT, stateLineData[line_id].usage_average, line_data.usage, 0.1)
-                sampledLineData[line_id].rate_average = calculateAverage(SAMPLING_WINDOW_SIZE_SHORT, stateLineData[line_id].rate_average, line_data.rate, 0.1)
-                sampledLineData[line_id].frequency_average = calculateAverage(SAMPLING_WINDOW_SIZE_SHORT, stateLineData[line_id].frequency_average, line_data.frequency, 0.1)
-                sampledLineData[line_id].waiting_average = calculateAverage(SAMPLING_WINDOW_SIZE_SHORT, stateLineData[line_id].waiting_average, line_data.waiting, 0.1)
-                sampledLineData[line_id].waiting_peak_average = calculateAverage(SAMPLING_WINDOW_SIZE_SHORT, stateLineData[line_id].waiting_peak_average, line_data.waiting_peak, 0.1)
-                -- Calculate LONG moving average for demand, usage, rate and frequency.
-                sampledLineData[line_id].demand_average_long = calculateAverage(SAMPLING_WINDOW_SIZE_LONG, stateLineData[line_id].demand_average_long, line_data.demand, 0.1)
-                sampledLineData[line_id].usage_average_long = calculateAverage(SAMPLING_WINDOW_SIZE_LONG, stateLineData[line_id].usage_average_long, line_data.usage, 0.1)
-                sampledLineData[line_id].waiting_average_long = calculateAverage(SAMPLING_WINDOW_SIZE_LONG, stateLineData[line_id].waiting_average_long, line_data.waiting, 0.1)
-                sampledLineData[line_id].waiting_peak_average_long = calculateAverage(SAMPLING_WINDOW_SIZE_LONG, stateLineData[line_id].waiting_peak_average_long, line_data.waiting_peak, 0.1)
+                -- Calculate averages for demand, usage, rate, frequency, waiting, and waiting_peak.
+                sampledLineData[line_id].demand = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].demand, line_data.demand, 0.1)
+                sampledLineData[line_id].usage = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].usage, line_data.usage, 0.1)
+                sampledLineData[line_id].rate = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].rate, line_data.rate, 0.1)
+                sampledLineData[line_id].frequency = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].frequency, line_data.frequency, 0.1)
+                sampledLineData[line_id].waiting = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].waiting, line_data.waiting, 0.1)
+                sampledLineData[line_id].waiting_peak = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].waiting_peak, line_data.waiting_peak, 0.1)
             else
                 -- If not already existing, then start samples from 1. No need to process the data further.
                 sampledLineData[line_id].samples = 1
                 -- Set a blank last_action
                 sampledLineData[line_id].last_action = ""
-                -- Set SHORT averages to the same as currently sampled
-                sampledLineData[line_id].demand_average = line_data.demand
-                sampledLineData[line_id].usage_average = line_data.usage
-                sampledLineData[line_id].rate_average = line_data.rate
-                sampledLineData[line_id].frequency_average = line_data.frequency
-                sampledLineData[line_id].waiting_average = line_data.waiting
-                sampledLineData[line_id].waiting_peak_average = line_data.waiting_peak
-                -- Set LONG averages to the same as currently sampled
-                sampledLineData[line_id].demand_average_long = line_data.demand
-                sampledLineData[line_id].usage_average_long = line_data.usage
-                sampledLineData[line_id].waiting_average_long = line_data.waiting
-                sampledLineData[line_id].waiting_peak_average_long = line_data.waiting_peak
             end
 
             -- Update markers
@@ -662,10 +649,9 @@ local function mergeLineData()
             -- Update counters
             processed_lines = processed_lines + 1
 
-            finished = false -- This state can't be completed (for sure) if we reached this, run it one more time
-
             -- Stop the processing if processing limit has been reached.
             if processed_lines >= MAX_LINES_TO_PROCESS_PER_RUN then
+                finished = false -- This state can't be completed (for sure) if we reached this, run it one more time
                 log.debug("sampling: mergeLineData() processing limit reached, stopping")
                 break
             end

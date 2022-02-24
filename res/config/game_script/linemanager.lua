@@ -57,33 +57,6 @@ local state = {
 
 sampling.setLog(log)
 
--- LineData structure (all of this is set by sampling.lua):
--- name = the name of the line
--- carrier = "ROAD", "TRAM", "RAIL", "WATER" or "AIR"
--- type = string, what kind of cargo the line transports; "PASSENGER" or "CARGO"
--- rule = which line vehicle management rule to apply (see rules.lua)
--- rule_manual = whether the rule was manually assigned or not
--- rate = the current transport rate of the line
--- rate_average = the SHORT average transport rate of the line
--- rate_average_long = the LONG average transport rate of the line
--- frequency = the current frequency of the line (in seconds)
--- frequency_average = the SHORT average frequency of the line (in seconds)
--- frequency_average_long = the LONG average frequency of the line (in seconds)
--- target = the target of any applicable special rule, otherwise 0 (only used by "(R:<number>)" rule at the moment)
--- vehicles = number of vehicles on the line
--- capacity = current PASSENGER/CARGO capacity
--- occupancy = current PASSENGER/CARGO occupancy
--- demand = current PASSENGER/CARGO demand
--- demand_average = the SHORT average PASSENGER/CARGO demand
--- demand_average_long = the LONG average PASSENGER/CARGO demand
--- usage = current PASSENGER/CARGO usage, 0-100 (%)
--- usage_average = the SHORT average PASSENGER/CARGO usage, 0-100 (%)
--- usage_average_long = the LONG average PASSENGER/CARGO usage , 0-100 (%)
--- managed = whether the line should be managed or not by the mod
--- samples = total number of samples taken for the line since it was last updated (i.e. vehicle added/removed)
--- action = the evaluated action to take for the line (i.e. add or remove vehicle); "ADD", "REMOVE" or ""
--- last_action = the last action taken for this line; "ADD", "REMOVE" (or "" if no previous action exists)
-
 local function lineInfoString(line_id)
     local managed = "(AUTOMATIC)"
     if state.line_data[line_id].rule_manual then
@@ -104,9 +77,9 @@ local function lineInfoString(line_id)
 end
 
 local function lineDataString(line_id)
-    local str  = "Usage: " .. lume.round(state.line_data[line_id].usage_average) .. "% "
-    str = str .. "Demand: " .. lume.round(state.line_data[line_id].demand_average) .. " "
-    str = str .. "Rate: " .. lume.round(state.line_data[line_id].rate_average) .. " "
+    local str  = "Usage: " .. lume.round(state.line_data[line_id].usage) .. "% "
+    str = str .. "Demand: " .. lume.round(state.line_data[line_id].demand) .. " "
+    str = str .. "Rate: " .. lume.round(state.line_data[line_id].rate) .. " "
     str = str .. "Capacity: " .. state.line_data[line_id].capacity .. " "
     str = str .. "Vehicles: " .. state.line_data[line_id].vehicles
     return str
