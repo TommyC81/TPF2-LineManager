@@ -8,8 +8,8 @@ local sampling = {}
 
 local log = nil --require 'cartok/logging'
 
-local SAMPLING_WINDOW_SIZE = 4 -- This must be 2 or greater, or...danger. Lower number means quicker changes to data and vice versa.
-local SAMPLING_WINDOW_SIZE_LONG = SAMPLING_WINDOW_SIZE * 3 -- This provides a slower average over a longer time
+local SAMPLING_WINDOW_SIZE_SHORT = 4 -- This must be 2 or greater, or...danger. Lower number means quicker changes to data and vice versa.
+local SAMPLING_WINDOW_SIZE_LONG = SAMPLING_WINDOW_SIZE_SHORT * 3 -- This provides a slower average over a longer time
 
 local NO_ENTITY = -1
 
@@ -35,8 +35,8 @@ local problemLineCache = nil
 local problemVehicleCache = nil
 
 local simEntityAtTerminalCache = nil -- Holder for all SIM_ENTITY_AT_TERMINAL: api.engine.getComponent(entity_id, api.type.ComponentType.SIM_ENTITY_AT_TERMINAL)
-local lineSimPersonCache = nil -- Holder for line SimPerson: api.engine.system.simPersonSystem.getSimPersonsForLine(line_id)
-local lineSimCargoCache = nil -- Holder for line SimCargo: api.engine.system.simCargoSystem.getSimCargosForLine(line_id)
+local lineSimPersonCache = nil -- Holder for line specific SimPerson: api.engine.system.simPersonSystem.getSimPersonsForLine(line_id)
+local lineSimCargoCache = nil -- Holder for line specific SimCargo: api.engine.system.simCargoSystem.getSimCargosForLine(line_id)
 
 local sampledLineData = nil
 
@@ -625,13 +625,17 @@ local function mergeLineData()
                 -- Preserve last_action
                 sampledLineData[line_id].last_action = stateLineData[line_id].last_action
                 -- Calculate SHORT moving average for demand, usage, rate and frequency.
-                sampledLineData[line_id].demand_average = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].demand_average, line_data.demand, 0.1)
-                sampledLineData[line_id].usage_average = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].usage_average, line_data.usage, 0.1)
-                sampledLineData[line_id].rate_average = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].rate_average, line_data.rate, 0.1)
-                sampledLineData[line_id].frequency_average = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].frequency_average, line_data.frequency, 0.1)
+                sampledLineData[line_id].demand_average = calculateAverage(SAMPLING_WINDOW_SIZE_SHORT, stateLineData[line_id].demand_average, line_data.demand, 0.1)
+                sampledLineData[line_id].usage_average = calculateAverage(SAMPLING_WINDOW_SIZE_SHORT, stateLineData[line_id].usage_average, line_data.usage, 0.1)
+                sampledLineData[line_id].rate_average = calculateAverage(SAMPLING_WINDOW_SIZE_SHORT, stateLineData[line_id].rate_average, line_data.rate, 0.1)
+                sampledLineData[line_id].frequency_average = calculateAverage(SAMPLING_WINDOW_SIZE_SHORT, stateLineData[line_id].frequency_average, line_data.frequency, 0.1)
+                sampledLineData[line_id].waiting_average = calculateAverage(SAMPLING_WINDOW_SIZE_SHORT, stateLineData[line_id].waiting_average, line_data.waiting, 0.1)
+                sampledLineData[line_id].waiting_peak_average = calculateAverage(SAMPLING_WINDOW_SIZE_SHORT, stateLineData[line_id].waiting_peak_average, line_data.waiting_peak, 0.1)
                 -- Calculate LONG moving average for demand, usage, rate and frequency.
                 sampledLineData[line_id].demand_average_long = calculateAverage(SAMPLING_WINDOW_SIZE_LONG, stateLineData[line_id].demand_average_long, line_data.demand, 0.1)
                 sampledLineData[line_id].usage_average_long = calculateAverage(SAMPLING_WINDOW_SIZE_LONG, stateLineData[line_id].usage_average_long, line_data.usage, 0.1)
+                sampledLineData[line_id].waiting_average_long = calculateAverage(SAMPLING_WINDOW_SIZE_LONG, stateLineData[line_id].waiting_average_long, line_data.waiting, 0.1)
+                sampledLineData[line_id].waiting_peak_average_long = calculateAverage(SAMPLING_WINDOW_SIZE_LONG, stateLineData[line_id].waiting_peak_average_long, line_data.waiting_peak, 0.1)
             else
                 -- If not already existing, then start samples from 1. No need to process the data further.
                 sampledLineData[line_id].samples = 1
@@ -642,9 +646,13 @@ local function mergeLineData()
                 sampledLineData[line_id].usage_average = line_data.usage
                 sampledLineData[line_id].rate_average = line_data.rate
                 sampledLineData[line_id].frequency_average = line_data.frequency
+                sampledLineData[line_id].waiting_average = line_data.waiting
+                sampledLineData[line_id].waiting_peak_average = line_data.waiting_peak
                 -- Set LONG averages to the same as currently sampled
                 sampledLineData[line_id].demand_average_long = line_data.demand
                 sampledLineData[line_id].usage_average_long = line_data.usage
+                sampledLineData[line_id].waiting_average_long = line_data.waiting
+                sampledLineData[line_id].waiting_peak_average_long = line_data.waiting_peak
             end
 
             -- Update markers
