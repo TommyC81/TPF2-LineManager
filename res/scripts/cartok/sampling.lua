@@ -522,11 +522,11 @@ local function sampleWaitingCargo()
     local stopProcessing = false
     local processed_lines = 0
     local processed_items = 0
-    local lineWaiting = 0
-    local lineWaitingPeak = 0
 
     for line_id, line_data in pairs(sampledLineData) do
         if line_data.SAMPLE_WAITING_CARGO then -- Check for marker
+            local lineWaiting = 0
+            local lineWaitingPeak = 0
             local waitingEntitiesPerStop = {}
             local lineEntities = {}
 
@@ -538,7 +538,7 @@ local function sampleWaitingCargo()
             end
 
             if #lineEntities > 0 then
-                for _, value in pairs(lineEntities) do -- i = 1, #lineEntities do
+                for _, value in pairs(lineEntities) do
                     local currentEntityId = value
 
                     -- Get the SIM_ENTITY_AT_TERMINAL unless already cached
@@ -581,12 +581,10 @@ local function sampleWaitingCargo()
                     break
                 end
 
-                if #waitingEntitiesPerStop > 0 then
-                    for _, value in pairs(waitingEntitiesPerStop) do
-                        lineWaiting = lineWaiting + value
-                        if value > lineWaitingPeak then
-                            lineWaitingPeak = value
-                        end
+                for _, value in pairs(waitingEntitiesPerStop) do
+                    lineWaiting = lineWaiting + value
+                    if value > lineWaitingPeak then
+                        lineWaitingPeak = value
                     end
                 end
             end

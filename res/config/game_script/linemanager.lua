@@ -78,9 +78,9 @@ end
 
 local function lineDataString(line_id)
     local str  = "Usage: " .. lume.round(state.line_data[line_id].usage) .. "% "
-    str = str .. "Demand: " .. lume.round(state.line_data[line_id].demand) .. " "
     str = str .. "Rate: " .. lume.round(state.line_data[line_id].rate) .. " "
-    str = str .. "Capacity: " .. state.line_data[line_id].capacity .. " "
+    str = str .. "WaitingPeak: " .. lume.round(state.line_data[line_id].waiting_peak) .. " "
+    str = str .. "CapPerVeh: " .. state.line_data[line_id].capacity_per_vehicle .. " "
     str = str .. "Vehicles: " .. state.line_data[line_id].vehicles
     return str
 end

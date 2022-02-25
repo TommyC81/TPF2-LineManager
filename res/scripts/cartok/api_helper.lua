@@ -11,10 +11,10 @@ end
 ---@param entity_id number : the id of the entity
 ---@return string : entityName
 function api_helper.getEntityName(entity_id)
-    local err, res = pcall(function()
+    local success, res = pcall(function()
         return api.engine.getComponent(entity_id, api.type.ComponentType.NAME)
     end)
-    if err and res and res.name then
+    if success and res and res.name then
         return res.name
     else
         return "ERROR"
@@ -33,10 +33,10 @@ end
 
 ---@return table : details of the entity at terminal
 function api_helper.getEntityAtTerminal(entity_id)
-    local err, res = pcall(function()
+    local success, res = pcall(function()
         return api.engine.getComponent(entity_id, api.type.ComponentType.SIM_ENTITY_AT_TERMINAL)
     end)
-    if err then
+    if success then
         return res
     else
         return nil

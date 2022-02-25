@@ -1,3 +1,5 @@
+local lume = require 'cartok/lume'
+
 local rules = {}
 
 -- If you need to change what identifier delimiters are being used, perhaps for compatibility with another mod, change these
@@ -39,13 +41,6 @@ rules.line_rules = {
         identifier = rules.IDENTIFIER_START .. "R:", -- Default: "[R:"
         uses_target = true, -- Since this is true, the 'rules.IDENTIFIER_END' is not required above (it will be searched for automatically to determine the number in-between the identifier above and the rules.IDENTIFIER_END)
     },
-    U = { -- USAGE
-        name = "USAGE",
-        description = "Ensures that a set usage is achieved. This is configured by adding the target usage behind the colon, like so: '[U:50]' (make sure this number is between 0-100).",
-        -- If a line is incorrectly formatted by the user (i.e. can't interpret the target number), then a warning will be shown in the game console.
-        identifier = rules.IDENTIFIER_START .. "U:", -- Default: "[R:"
-        uses_target = true, -- Since this is true, the 'rules.IDENTIFIER_END' is not required above (it will be searched for automatically to determine the number in-between the identifier above and the rules.IDENTIFIER_END)
-    },
 }
 
 -- The default rules that are applied automatically (when enabled for a category of lines)
@@ -64,8 +59,8 @@ function rules.moreVehicleConditions(line_data_single)
     local frequency = line_data_single.frequency -- *average* line frequency in seconds
     local target = line_data_single.target -- target for whatever has been set
     local vehicles = line_data_single.vehicles -- number of vehicles currently on the line
-    local capacity = line_data_single.capacity -- total capacity of the vehicles on the line
-    local occupancy = line_data_single.occupancy -- total occupancy on the vehicles on the line
+    local capacity = line_data_single.capacity -- total current capacity of the vehicles on the line
+    local occupancy = line_data_single.occupancy -- total current occupancy on the vehicles on the line
     local demand = line_data_single.demand -- *average* line demand i.e. total number of PASSENGER or CARGO intending to use the line, including already on the line
     local usage = line_data_single.usage -- *average* line usage i.e. occupancy/capacity
     local samples = line_data_single.samples -- number of samples collected for the line since last action taken (this is reset after each action)
@@ -74,6 +69,7 @@ function rules.moreVehicleConditions(line_data_single)
     local waiting_peak = line_data_single.waiting_peak -- *average* the highest number of items waiting at a station for this line
     local transported_last_month = line_data_single.transported_last_month -- the amount of items transported last month NOTE: this will only be useful if 1x GameTime is used (otherwise 0, it seems)
     local transported_last_year = line_data_single.transported_last_year -- the amount of items transported last year NOTE: this will only be useful if 1x GameTime is used (otherwise 0, it seems)
+    local capacity_per_vehicle = line_data_single.capacity_per_vehicle -- the average capacity per vehicle on the line
 
     local line_rules = {}
 
@@ -83,13 +79,13 @@ function rules.moreVehicleConditions(line_data_single)
 
         if carrier == "RAIL" or carrier == "AIR" then
             line_rules = {
-                samples > 10 and usage > 60 and demand > rate * 2,
-                samples > 10 and usage > 80 and demand > rate * modifier,
+                samples > 10 and usage > 60 and waiting_peak > capacity_per_vehicle * modifier and demand > rate * 2,
+                samples > 10 and usage > 80 and waiting_peak > capacity_per_vehicle * modifier and demand > rate * modifier,
             }
         else
             line_rules = {
-                samples > 5 and usage > 50 and demand > rate * 2,
-                samples > 5 and usage > 80 and demand > rate * modifier,
+                samples > 5 and usage > 50 and waiting_peak > capacity_per_vehicle * modifier and demand > rate * 2,
+                samples > 5 and usage > 80 and waiting_peak > capacity_per_vehicle * modifier and demand > rate * modifier,
             }
         end
     elseif rule == "PR" then
@@ -98,7 +94,6 @@ function rules.moreVehicleConditions(line_data_single)
         local oneVehicle = 1 / vehicles -- how much would one vehicle change
         local plusOneVehicle = 1 + oneVehicle -- add the rest of the vehicles
         local dv = demand * plusOneVehicle -- exaggerate demand by what one more vehicle could change
-        local averageCapacity = capacity / vehicles
 
         line_rules = {
             samples > 5 and rate < d10, -- get a safety margin of 10% over the real demand
@@ -110,38 +105,28 @@ function rules.moreVehicleConditions(line_data_single)
         -- Make use of default CARGO rules
         local modifier = (vehicles + 1) / vehicles
 
-        -- Be more picky about increasing vehicles on RAIL and AIR lines.
-        if carrier == "RAIL" or carrier == "AIR" then
-            line_rules = {
-                samples > 10 and usage > 45 and (demand > capacity * modifier  or demand > rate * modifier),
-                samples > 5 and usage > 45 and (demand > capacity * modifier * 2 or demand > rate * modifier * 2),
-            }
-        -- CARGO/WATER vehicles are generally slow, divide demand by 2 for rate comparisons. This is not perfect, but a reasonable compromise for now.
-        elseif carrier == "WATER" then
-            line_rules = {
-                samples > 10 and usage > 45 and (demand > capacity * modifier or demand / 2 > rate * modifier),
-                samples > 5 and usage > 45 and (demand > capacity * modifier * 2 or demand / 2 > rate * modifier * 2),
-            }
-        else
-            line_rules = {
-                -- Usage filtering prevents racing in number of vehicles in some (not all) instances when there is blockage on the line.
-                -- The filtering based on usage does however delay the increase of vehicles when a route is starting up until it has stabilized.
-                -- For instance, this won't prevent the addition of more vehicles when existing and fully loaded vehicles are simply stuck in traffic.
-                samples > 5 and usage > 40 and (demand > capacity * modifier or demand > rate * modifier),
-                samples > 5 and usage > 25 and (demand > capacity * modifier * 2 or demand > rate * modifier * 2),
-            }
+        -- If it is a single and fully loaded vehicle, don't buy another one just yet (it will empty the existing vehicle)
+        if vehicles == 1 and capacity == occupancy then
+            return false
         end
+
+        -- Adjust required samples
+        local requiredSamples = 5
+        if carrier == "AIR" or carrier == "RAIL" or carrier == "WATER" then
+            requiredSamples = requiredSamples + 3
+        end
+        if last_action == "REMOVE" then
+            requiredSamples = requiredSamples + 3
+        end
+
+        line_rules = {
+            samples > requiredSamples and usage > 30 and waiting_peak > capacity_per_vehicle and demand > capacity * 2,
+            samples > requiredSamples and usage > 40 and waiting_peak > 1.5 * capacity_per_vehicle,
+        }
     elseif rule == "R" then
         -- Make use of RATE rules
         line_rules = {
             samples > 5 and rate < target,
-        }
-    elseif rule == "U" then
-        -- Make use of USAGE rules
-        local modifier = vehicles / (vehicles + 1)
-
-        line_rules = {
-            samples > 5 and usage * modifier > target,
         }
     end
 
@@ -168,14 +153,17 @@ function rules.lessVehiclesConditions(line_data_single)
     local frequency = line_data_single.frequency -- *average* line frequency in seconds
     local target = line_data_single.target -- target for whatever has been set
     local vehicles = line_data_single.vehicles -- number of vehicles currently on the line
-    local capacity = line_data_single.capacity -- total capacity of the vehicles on the line
-    local occupancy = line_data_single.occupancy -- total occupancy on the vehicles on the line
+    local capacity = line_data_single.capacity -- total current capacity of the vehicles on the line
+    local occupancy = line_data_single.occupancy -- total current occupancy on the vehicles on the line
     local demand = line_data_single.demand -- *average* line demand i.e. total number of PASSENGER or CARGO intending to use the line, including already on the line
     local usage = line_data_single.usage -- *average* line usage i.e. occupancy/capacity
     local samples = line_data_single.samples -- number of samples collected for the line since last action taken (this is reset after each action)
     local last_action = line_data_single.last_action -- the last action taken to manage the line; "ADD" or "REMOVE" (or "" if no previous action exists)
     local waiting = line_data_single.waiting -- *average* total number of items waiting at stations for this line
     local waiting_peak = line_data_single.waiting_peak -- *average* the highest number of items waiting at a station for this line
+    local transported_last_month = line_data_single.transported_last_month -- the amount of items transported last month NOTE: this will only be useful if 1x GameTime is used (otherwise 0, it seems)
+    local transported_last_year = line_data_single.transported_last_year -- the amount of items transported last year NOTE: this will only be useful if 1x GameTime is used (otherwise 0, it seems)
+    local capacity_per_vehicle = line_data_single.capacity_per_vehicle -- the average capacity per vehicle on the line
 
     local line_rules = {}
 
@@ -190,8 +178,8 @@ function rules.lessVehiclesConditions(line_data_single)
         local inverse_modifier = vehicles / (vehicles - 1)
 
         line_rules = {
-            samples > 5 and usage < 70 and demand < rate * modifier and usage * inverse_modifier < 100,
-            samples > 10 and usage < 50 and demand < rate,
+            samples > 5 and usage < 70 and waiting_peak < capacity_per_vehicle * modifier and demand < rate * modifier and usage * inverse_modifier < 100,
+            samples > 10 and usage < 50 and waiting_peak < capacity_per_vehicle and demand < rate,
         }
     elseif rule == "PR" then
         -- Make use of PASSENGER rules by RusteyBucket
@@ -217,18 +205,19 @@ function rules.lessVehiclesConditions(line_data_single)
         -- Make use of default CARGO rules
         local modifier = (vehicles - 1) / vehicles
 
-        -- CARGO/WATER vehicles are generally slow, divide demand by 2 for rate comparisons. This is not perfect, but a reasonable compromise for now.
-        if carrier == "WATER" then
-            line_rules = {
-                samples > 5 and usage < 20,
-                samples > 5 and usage < 40 and demand < capacity * modifier and demand / 2 < rate * modifier,
-            }
-        else
-            line_rules = {
-                samples > 5 and usage < 20,
-                samples > 5 and usage < 40 and demand < capacity * modifier and demand < rate * modifier,
-            }
+        -- Adjust required samples
+        local requiredSamples = 5
+        if carrier == "AIR" or carrier == "RAIL" or carrier == "WATER" then
+            requiredSamples = requiredSamples + 3
         end
+        if last_action == "ADD" then
+            requiredSamples = requiredSamples + 3
+        end
+
+        line_rules = {
+            samples > requiredSamples and usage < 40 and waiting_peak < capacity_per_vehicle and demand < 0.5 * capacity * modifier,
+            samples > requiredSamples and usage < 40 and waiting_peak < capacity_per_vehicle / 3,
+        }
     elseif rule == "R" then
         -- Make use of RATE rules
 
@@ -242,11 +231,6 @@ function rules.lessVehiclesConditions(line_data_single)
                 samples > 5 and rate * modifier > target,
             }
         end
-    elseif rule == "U" then
-        -- Make use of USAGE rules
-        line_rules = {
-            samples > 5 and usage < target,
-        }
     end
 
     -- Check whether at least one condition is fulfilled
