@@ -138,7 +138,7 @@ function rules.moreVehicleConditions(line_data_single)
         line_rules = {
             samples > requiredSamples and frequency > 720, -- This is to ensure a that a minimum sensible frequency is maintained
             samples > requiredSamples and usage > 30 and waiting_peak > capacity_per_vehicle * 2 and demand > capacity * 2, -- This rules is intended to allow for quick initial expansion
-            samples > requiredSamples and usage > math.max(60, 40 + stops_with_waiting * 5) and waiting_peak > capacity_per_vehicle * modifier and demand > math.max(0.5, stops_with_waiting/stops) * capacity * modifier, -- This rule is intended for medium-/long-term tweaking
+            samples > requiredSamples and usage > math.min(60, 40 + stops_with_waiting * 5) and waiting_peak > capacity_per_vehicle * modifier and demand > math.max(0.5, stops_with_waiting/stops) * capacity * modifier, -- This rule is intended for medium-/long-term tweaking
         }
     elseif rule == "R" then
         -- Make use of RATE rules
