@@ -77,7 +77,7 @@ function rules.moreVehicleConditions(line_data_single)
 
     if rule == "P" then
         -- Make use of default PASSENGER rules
-        local modifier = 1.1 * (vehicles + 1) / vehicles
+        local modifier = 1.05 * (vehicles + 1) / vehicles
 
         -- If it is a single and fully loaded vehicle, don't buy another one just yet (it will empty the existing vehicle)
         if vehicles == 1 and capacity == occupancy then
@@ -106,7 +106,7 @@ function rules.moreVehicleConditions(line_data_single)
         }
     elseif rule == "PR" then
         -- Make use of PASSENGER rules by RusteyBucket
-        local d10 = demand * 1.1
+        local d10 = demand * 1.05
         local oneVehicle = 1 / vehicles -- how much would one vehicle change
         local plusOneVehicle = 1 + oneVehicle -- add the rest of the vehicles
         local dv = demand * plusOneVehicle -- exaggerate demand by what one more vehicle could change
@@ -193,8 +193,8 @@ function rules.lessVehiclesConditions(line_data_single)
 
     if rule == "P" then
         -- Make use of default PASSENGER rules
-        local modifier = 0.9 * (vehicles - 1) / vehicles
-        local inverse_modifier = 1.1 * vehicles / (vehicles - 1)
+        local modifier = 0.95 * (vehicles - 1) / vehicles
+        local inverse_modifier = 1.05 * vehicles / (vehicles - 1)
 
         -- Adjust required samples
         local requiredSamples = 5
@@ -213,7 +213,7 @@ function rules.lessVehiclesConditions(line_data_single)
 
         line_rules = {
             samples > requiredSamples and frequency * inverse_modifier < 720 and usage * inverse_modifier < 100 and usage < minimumUsage and waiting_peak < capacity_per_vehicle * modifier and demand < capacity * modifier,
-            samples > 30 and frequency * inverse_modifier < 720 and waiting_peak < capacity_per_vehicle * modifier, -- This is for long-term reduction/tweaking/optimization
+            samples > 23 and frequency * inverse_modifier < 720 and waiting_peak < capacity_per_vehicle * modifier, -- This is for long-term reduction/tweaking/optimization
         }
     elseif rule == "PR" then
         -- Make use of PASSENGER rules by RusteyBucket
@@ -237,8 +237,8 @@ function rules.lessVehiclesConditions(line_data_single)
         }
     elseif rule == "C" then
         -- Make use of default CARGO rules
-        local modifier = 0.9 * (vehicles - 1) / vehicles
-        local inverse_modifier = 1.1 * vehicles / (vehicles - 1)
+        local modifier = 0.95 * (vehicles - 1) / vehicles
+        local inverse_modifier = 1.05 * vehicles / (vehicles - 1)
 
         -- Adjust required samples
         local requiredSamples = 5
@@ -250,8 +250,8 @@ function rules.lessVehiclesConditions(line_data_single)
         end
 
         line_rules = {
-            samples > requiredSamples and frequency * inverse_modifier < 720 and usage < math.max(60, 40 + stops_with_waiting * 5) and waiting_peak < capacity_per_vehicle * modifier and demand < math.max(0.5, stops_with_waiting/stops) * capacity * modifier,
-            samples > 30 and frequency * inverse_modifier < 720 and waiting_peak < capacity_per_vehicle * modifier, -- This is for long-term reduction/tweaking/optimization
+            samples > requiredSamples and frequency * inverse_modifier < 720 and usage < math.min(60, 40 + stops_with_waiting * 5) and waiting_peak < capacity_per_vehicle * modifier and demand < math.max(0.5, stops_with_waiting/stops) * capacity * modifier,
+            samples > 23 and frequency * inverse_modifier < 720 and waiting_peak < capacity_per_vehicle * modifier, -- This is for long-term reduction/tweaking/optimization
         }
     elseif rule == "R" then
         -- Make use of RATE rules

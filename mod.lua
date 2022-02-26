@@ -3,7 +3,7 @@ function data()
         info = {
             name = _("Name"),
             description = _("Description"),
-            minorVersion = 25,
+            minorVersion = 26,
             severityAdd = "NONE",
             severityRemove = "NONE",
             tags = { "Script Mod" },
