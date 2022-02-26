@@ -70,24 +70,40 @@ function rules.moreVehicleConditions(line_data_single)
     local transported_last_month = line_data_single.transported_last_month -- the amount of items transported last month NOTE: this will only be useful if 1x GameTime is used (otherwise 0, it seems)
     local transported_last_year = line_data_single.transported_last_year -- the amount of items transported last year NOTE: this will only be useful if 1x GameTime is used (otherwise 0, it seems)
     local capacity_per_vehicle = line_data_single.capacity_per_vehicle -- the average capacity per vehicle on the line
+    local stops = line_data_single.stops -- number of stops for the line
+    local stops_with_waiting = line_data_single.stops_with_waiting -- *average* number of stops that has waiting entities (i.e. loading)
 
     local line_rules = {}
 
     if rule == "P" then
         -- Make use of default PASSENGER rules
-        local modifier = (vehicles + 1) / vehicles
+        local modifier = 1.1 * (vehicles + 1) / vehicles
 
-        if carrier == "RAIL" or carrier == "AIR" then
-            line_rules = {
-                samples > 10 and usage > 60 and waiting_peak > capacity_per_vehicle * modifier and demand > rate * 2,
-                samples > 10 and usage > 80 and waiting_peak > capacity_per_vehicle * modifier and demand > rate * modifier,
-            }
-        else
-            line_rules = {
-                samples > 5 and usage > 50 and waiting_peak > capacity_per_vehicle * modifier and demand > rate * 2,
-                samples > 5 and usage > 80 and waiting_peak > capacity_per_vehicle * modifier and demand > rate * modifier,
-            }
+        -- If it is a single and fully loaded vehicle, don't buy another one just yet (it will empty the existing vehicle)
+        if vehicles == 1 and capacity == occupancy then
+            return false
         end
+
+        -- Adjust required samples
+        local requiredSamples = 5
+        if carrier == "AIR" or carrier == "RAIL" or carrier == "WATER" then
+            requiredSamples = requiredSamples + 3
+        end
+        if last_action == "REMOVE" then
+            requiredSamples = requiredSamples + 3
+        end
+
+        -- Adjust minimum usage
+        local minimumUsage = 50
+        if carrier == "AIR" or carrier == "RAIL" then
+            minimumUsage = 70
+        end
+
+        line_rules = {
+            samples > requiredSamples and frequency > 720, -- This is to ensure a that a minimum sensible frequency is maintained
+            samples > requiredSamples and usage > minimumUsage and waiting_peak > capacity_per_vehicle * 2 and demand > capacity * 2,
+            samples > requiredSamples and usage > 80 and waiting_peak > capacity_per_vehicle * modifier and demand > capacity * modifier,
+        }
     elseif rule == "PR" then
         -- Make use of PASSENGER rules by RusteyBucket
         local d10 = demand * 1.1
@@ -103,7 +119,7 @@ function rules.moreVehicleConditions(line_data_single)
         }
     elseif rule == "C" then
         -- Make use of default CARGO rules
-        local modifier = (vehicles + 1) / vehicles
+        local modifier = 1.1 * (vehicles + 1) / vehicles
 
         -- If it is a single and fully loaded vehicle, don't buy another one just yet (it will empty the existing vehicle)
         if vehicles == 1 and capacity == occupancy then
@@ -120,8 +136,9 @@ function rules.moreVehicleConditions(line_data_single)
         end
 
         line_rules = {
-            samples > requiredSamples and usage > 30 and waiting_peak > capacity_per_vehicle and demand > capacity * 2,
-            samples > requiredSamples and usage > 40 and waiting_peak > 1.5 * capacity_per_vehicle,
+            samples > requiredSamples and frequency > 720, -- This is to ensure a that a minimum sensible frequency is maintained
+            samples > requiredSamples and usage > 30 and waiting_peak > capacity_per_vehicle * 2 and demand > capacity * 2, -- This rules is intended to allow for quick initial expansion
+            samples > requiredSamples and usage > math.max(60, 40 + stops_with_waiting * 5) and waiting_peak > capacity_per_vehicle * modifier and demand > math.max(0.5, stops_with_waiting/stops) * capacity * modifier, -- This rule is intended for medium-/long-term tweaking
         }
     elseif rule == "R" then
         -- Make use of RATE rules
@@ -164,6 +181,8 @@ function rules.lessVehiclesConditions(line_data_single)
     local transported_last_month = line_data_single.transported_last_month -- the amount of items transported last month NOTE: this will only be useful if 1x GameTime is used (otherwise 0, it seems)
     local transported_last_year = line_data_single.transported_last_year -- the amount of items transported last year NOTE: this will only be useful if 1x GameTime is used (otherwise 0, it seems)
     local capacity_per_vehicle = line_data_single.capacity_per_vehicle -- the average capacity per vehicle on the line
+    local stops = line_data_single.stops -- total number of stops for the line
+    local stops_with_waiting = line_data_single.stops_with_waiting -- *average* number of stops that currently has waiting entities (i.e. loading)
 
     local line_rules = {}
 
@@ -174,12 +193,26 @@ function rules.lessVehiclesConditions(line_data_single)
 
     if rule == "P" then
         -- Make use of default PASSENGER rules
-        local modifier = (vehicles - 1) / vehicles
-        local inverse_modifier = vehicles / (vehicles - 1)
+        local modifier = 0.9 * (vehicles - 1) / vehicles
+        local inverse_modifier = 1.1 * vehicles / (vehicles - 1)
+
+        -- Adjust required samples
+        local requiredSamples = 5
+        if carrier == "AIR" or carrier == "RAIL" or carrier == "WATER" then
+            requiredSamples = requiredSamples + 3
+        end
+        if last_action == "ADD" then
+            requiredSamples = requiredSamples + 3
+        end
+
+        -- Adjust minimum usage
+        local minimumUsage = 60
+        if carrier == "AIR" or carrier == "RAIL" then
+            minimumUsage = 70
+        end
 
         line_rules = {
-            samples > 5 and usage < 70 and waiting_peak < capacity_per_vehicle * modifier and demand < rate * modifier and usage * inverse_modifier < 100,
-            samples > 10 and usage < 50 and waiting_peak < capacity_per_vehicle and demand < rate,
+            samples > requiredSamples and frequency * inverse_modifier < 720 and usage * inverse_modifier < 100 and usage < minimumUsage and waiting_peak < capacity_per_vehicle * modifier and demand < capacity * modifier,
         }
     elseif rule == "PR" then
         -- Make use of PASSENGER rules by RusteyBucket
@@ -203,7 +236,8 @@ function rules.lessVehiclesConditions(line_data_single)
         }
     elseif rule == "C" then
         -- Make use of default CARGO rules
-        local modifier = (vehicles - 1) / vehicles
+        local modifier = 0.9 * (vehicles - 1) / vehicles
+        local inverse_modifier = 1.1 * vehicles / (vehicles - 1)
 
         -- Adjust required samples
         local requiredSamples = 5
@@ -215,8 +249,7 @@ function rules.lessVehiclesConditions(line_data_single)
         end
 
         line_rules = {
-            samples > requiredSamples and usage < 40 and waiting_peak < capacity_per_vehicle and demand < 0.5 * capacity * modifier,
-            samples > requiredSamples and usage < 40 and waiting_peak < capacity_per_vehicle / 3,
+            samples > requiredSamples and frequency * inverse_modifier < 720 and usage < math.max(60, 40 + stops_with_waiting * 5) and waiting_peak < capacity_per_vehicle * modifier and demand < math.max(0.5, stops_with_waiting/stops) * capacity * modifier,
         }
     elseif rule == "R" then
         -- Make use of RATE rules

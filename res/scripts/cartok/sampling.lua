@@ -8,7 +8,7 @@ local sampling = {}
 
 local log = nil --require 'cartok/logging'
 
-local SAMPLING_WINDOW_SIZE = 5 -- This must be 2 or greater, or...danger. Lower number means quicker changes to data and vice versa.
+local SAMPLING_WINDOW_SIZE = 6 -- This must be 2 or greater, or...danger. Lower number means quicker changes to data and vice versa.
 
 local NO_ENTITY = -1
 
@@ -527,6 +527,7 @@ local function sampleWaitingCargo()
         if line_data.SAMPLE_WAITING_CARGO then -- Check for marker
             local lineWaiting = 0
             local lineWaitingPeak = 0
+            local stopsWithWaiting = 0
             local waitingEntitiesPerStop = {}
             local lineEntities = {}
 
@@ -582,6 +583,11 @@ local function sampleWaitingCargo()
                 end
 
                 for _, value in pairs(waitingEntitiesPerStop) do
+                    -- Count number of stops with anything waiting
+                    if value > 0 then
+                        stopsWithWaiting = stopsWithWaiting + 1
+                    end
+
                     lineWaiting = lineWaiting + value
                     if value > lineWaitingPeak then
                         lineWaitingPeak = value
@@ -592,6 +598,7 @@ local function sampleWaitingCargo()
             -- Add sampled data to sampledLineData
             sampledLineData[line_id].waiting = lineWaiting
             sampledLineData[line_id].waiting_peak = lineWaitingPeak
+            sampledLineData[line_id].stops_with_waiting = stopsWithWaiting
 
             -- Update markers
             sampledLineData[line_id].SAMPLE_WAITING_CARGO = nil
@@ -633,6 +640,7 @@ local function mergeLineData()
                 sampledLineData[line_id].frequency = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].frequency, line_data.frequency, 0.1)
                 sampledLineData[line_id].waiting = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].waiting, line_data.waiting, 0.1)
                 sampledLineData[line_id].waiting_peak = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].waiting_peak, line_data.waiting_peak, 0.1)
+                sampledLineData[line_id].stops_with_waiting = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].stops_with_waiting, line_data.stops_with_waiting, 0.01)
             else
                 -- If not already existing, then start samples from 1. No need to process the data further.
                 sampledLineData[line_id].samples = 1
@@ -671,8 +679,8 @@ local function applyRules()
         if line_data.APPLY_RULES then
             -- Set action to "" by default, then change it as required
             sampledLineData[line_id].action = ""
-            -- If line is managed and does not have a problem, then apply rules
-            if line_data.managed and not line_data.has_problem then
+            -- If the line is managed, has stops, and does not have a problem, then apply rules
+            if line_data.managed and line_data.stops > 0 and not line_data.has_problem then
                 -- Check if a vehicle should be added to a Line.
                 if rules.moreVehicleConditions(line_data) then
                     sampledLineData[line_id].action = "ADD"
