@@ -213,6 +213,7 @@ function rules.lessVehiclesConditions(line_data_single)
 
         line_rules = {
             samples > requiredSamples and frequency * inverse_modifier < 720 and usage * inverse_modifier < 100 and usage < minimumUsage and waiting_peak < capacity_per_vehicle * modifier and demand < capacity * modifier,
+            samples > 30 and frequency * inverse_modifier < 720 and waiting_peak < capacity_per_vehicle * modifier, -- This is for long-term reduction/tweaking/optimization
         }
     elseif rule == "PR" then
         -- Make use of PASSENGER rules by RusteyBucket
@@ -250,6 +251,7 @@ function rules.lessVehiclesConditions(line_data_single)
 
         line_rules = {
             samples > requiredSamples and frequency * inverse_modifier < 720 and usage < math.max(60, 40 + stops_with_waiting * 5) and waiting_peak < capacity_per_vehicle * modifier and demand < math.max(0.5, stops_with_waiting/stops) * capacity * modifier,
+            samples > 30 and frequency * inverse_modifier < 720 and waiting_peak < capacity_per_vehicle * modifier, -- This is for long-term reduction/tweaking/optimization
         }
     elseif rule == "R" then
         -- Make use of RATE rules
