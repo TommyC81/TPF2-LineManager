@@ -216,6 +216,7 @@ local function updateLines()
                     -- If succeeded, update line_data to indicate this
                     state.line_data[line_id].samples = 0
                     state.line_data[line_id].last_action = "ADD"
+                    state.line_data[line_id].vehicles = state.line_data[line_id].vehicles + 1
                     vehicleCount = vehicleCount + 1
                 end
             -- Check instead whether a vehicle should be removed from a Line. This has been evaluated as part of the sampling.
@@ -224,6 +225,7 @@ local function updateLines()
                     -- If succeeded, update line_data to indicate this
                     state.line_data[line_id].samples = 0
                     state.line_data[line_id].last_action = "REMOVE"
+                    state.line_data[line_id].vehicles = state.line_data[line_id].vehicles - 1
                     vehicleCount = vehicleCount - 1
                 end
             end
@@ -333,14 +335,16 @@ local function everyTickUpdate()
     -- This must be run once per update to ensure sampling processing when triggered
     sampling.process()
 
-    -- Check if a sampling has finished (this will only trigger once per completed sampling)
-    if sampling.isFinishedOnce() then
+    -- Check if a sampling has finished (and then set sampling to stopped to only trigger this once)
+    if sampling.isFinished() then
+        -- Retrieve the line data first, then set sampling to stopped
         state.line_data = sampling.getSampledLineData()
+        sampling.stop()
 
         log.info("============ Updating ============")
         updateLines()
-    -- If sampling is finished or stopped, check if a new sampling is due
-    elseif sampling.isFinished() or sampling.isStopped() then
+    -- If sampling is stopped, check if a new sampling is due
+    elseif sampling.isStopped() then
         local sampling_is_due = false
 
         if state.sampling_settings.time_based_sampling then

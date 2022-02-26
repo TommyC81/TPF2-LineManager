@@ -64,7 +64,7 @@ function rules.moreVehicleConditions(line_data_single)
     local demand = line_data_single.demand -- *average* line demand i.e. total number of PASSENGER or CARGO intending to use the line, including already on the line
     local usage = line_data_single.usage -- *average* line usage i.e. occupancy/capacity
     local samples = line_data_single.samples -- number of samples collected for the line since last action taken (this is reset after each action)
-    local last_action = line_data_single.last_action -- the last action taken to manage the line; "ADD" or "REMOVE" (or "" if no previous action exists)
+    local last_action = line_data_single.last_action -- the last action taken to manage the line; "ADD", "REMOVE" or "MANUAL" if a vehicle was manually added or removed ("" if no previous action exists)
     local waiting = line_data_single.waiting -- *average* total number of items waiting at stations for this line
     local waiting_peak = line_data_single.waiting_peak -- *average* the highest number of items waiting at a station for this line
     local transported_last_month = line_data_single.transported_last_month -- the amount of items transported last month NOTE: this will only be useful if 1x GameTime is used (otherwise 0, it seems)
@@ -175,7 +175,7 @@ function rules.lessVehiclesConditions(line_data_single)
     local demand = line_data_single.demand -- *average* line demand i.e. total number of PASSENGER or CARGO intending to use the line, including already on the line
     local usage = line_data_single.usage -- *average* line usage i.e. occupancy/capacity
     local samples = line_data_single.samples -- number of samples collected for the line since last action taken (this is reset after each action)
-    local last_action = line_data_single.last_action -- the last action taken to manage the line; "ADD" or "REMOVE" (or "" if no previous action exists)
+    local last_action = line_data_single.last_action -- the last action taken to manage the line; "ADD", "REMOVE" or "MANUAL" if a vehicle was manually added or removed ("" if no previous action exists)
     local waiting = line_data_single.waiting -- *average* total number of items waiting at stations for this line
     local waiting_peak = line_data_single.waiting_peak -- *average* the highest number of items waiting at a station for this line
     local transported_last_month = line_data_single.transported_last_month -- the amount of items transported last month NOTE: this will only be useful if 1x GameTime is used (otherwise 0, it seems)

@@ -27,8 +27,6 @@ local STATE_FINISHED = 8
 
 local sampling_state = STATE_STOPPED -- To track the progress of the sampling
 
-local finishedOnce = nil
-
 local vehicleOccupancyCache = nil
 local problemLineCache = nil
 local problemVehicleCache = nil
@@ -104,7 +102,6 @@ end
 
 local function setStateFinished()
     sampling_state = STATE_FINISHED
-    finishedOnce = true
 end
 
 local function isStateFinished()
@@ -119,16 +116,6 @@ end
 ---checks whether the sampling is currently finished
 function sampling.isFinished()
     return isStateFinished()
-end
-
----checks whether the sampling is currently finished - only returns true on the first check (if finished)
-function sampling.isFinishedOnce()
-    if finishedOnce and sampling_state == STATE_FINISHED then
-        finishedOnce = false
-        return true
-    end
-
-    return false
 end
 
 ---@param dividend number : absolute number
@@ -288,7 +275,6 @@ end
 ---resets all sampling variables and sets STATE_WAITING, thus restarting the sampling process
 local function restart()
     log.debug("sampling: restart()")
-    finishedOnce = false
     vehicleOccupancyCache = {}
     problemLineCache = {}
     problemVehicleCache = {}
@@ -633,6 +619,11 @@ local function mergeLineData()
                 sampledLineData[line_id].samples = stateLineData[line_id].samples + 1
                 -- Preserve last_action
                 sampledLineData[line_id].last_action = stateLineData[line_id].last_action
+                -- Check whether any manual vehicle management happened since last sampling
+                if sampledLineData[line_id].vehicles ~= stateLineData[line_id].vehicles then
+                    sampledLineData[line_id].last_action = "MANUAL"
+                    sampledLineData[line_id].samples = 1
+                end
                 -- Calculate averages for demand, usage, rate, frequency, waiting, and waiting_peak.
                 sampledLineData[line_id].demand = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].demand, line_data.demand, 0.1)
                 sampledLineData[line_id].usage = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].usage, line_data.usage, 0.1)
@@ -733,6 +724,7 @@ end
 
 ---process sampling if required, doing it one step at a time to spread the workload out. This function needs to be called on each update.
 function sampling.process()
+    -- Start debug timer
     timer.start()
 
     -- Don't do any processing if state is finished
@@ -765,6 +757,7 @@ function sampling.process()
         setStateFinished()
     end
 
+    -- Stop debug timer
     local time_used = timer.stop()
     log.debug("sampling: CPU time used: " .. time_used)
 end
@@ -786,7 +779,7 @@ function sampling.getEmptiestVehicle(vehicle_ids)
     local emptiestVehicleLoad = 9999999999
     local emptiestVehicleId = nil
 
-    if isStateFinished() and vehicle_ids and #vehicle_ids > 0 then
+    if vehicleOccupancyCache and vehicle_ids and #vehicle_ids > 0 then
         for _, vehicle_id in pairs(vehicle_ids) do
             -- If vehicle is not cached, assume it is because of no load and stop here
             if not vehicleOccupancyCache[vehicle_id] then
