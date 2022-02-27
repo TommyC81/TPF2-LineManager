@@ -411,7 +411,7 @@ local function gui_initNotificationWindow()
     notification_text = notification_text .. "The LineManager manual is available here (copy the link and paste into your web browser):\n"
     notification_text = notification_text .. "                   https://github.com/TommyC81/TPF2-LineManager\n"
     notification_text = notification_text .. "\n"
-    notification_text = notification_text .. "Note specifically that LineManager now uses brackets to set manual line rules i.e. '[' and ']' (previously, parenthesis were used).\n"
+    notification_text = notification_text .. "Note specifically that LineManager now uses square brackets to set manual line rules i.e. '[' and ']' (previously, parentheses/round brackets were used).\n"
     notification_text = notification_text .. "\n"
     notification_text = notification_text .. "By default, all automatic line management is disabled - it can be enabled as required in the LineManager settings. Depending on your preference and type of game, you may prefer to enable automatic line management for some/all types of lines, or only use manually assigned rules, or a combination thereof. There is no right or wrong.\n"
     notification_text = notification_text .. "\n"
