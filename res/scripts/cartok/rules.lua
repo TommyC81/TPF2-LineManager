@@ -71,7 +71,7 @@ function rules.moreVehicleConditions(line_data_single)
     local transported_last_year = line_data_single.transported_last_year -- the amount of items transported last year NOTE: this will only be useful if 1x GameTime is used (otherwise 0, it seems)
     local capacity_per_vehicle = line_data_single.capacity_per_vehicle -- the average capacity per vehicle on the line
     local stops = line_data_single.stops -- number of stops for the line
-    local stops_with_waiting = line_data_single.stops_with_waiting -- *average* number of stops that has waiting entities (i.e. loading)
+    local stops_with_waiting = line_data_single.stops_with_waiting -- *average* number of stops that has waiting entities for this line
 
     local line_rules = {}
 
@@ -182,7 +182,7 @@ function rules.lessVehiclesConditions(line_data_single)
     local transported_last_year = line_data_single.transported_last_year -- the amount of items transported last year NOTE: this will only be useful if 1x GameTime is used (otherwise 0, it seems)
     local capacity_per_vehicle = line_data_single.capacity_per_vehicle -- the average capacity per vehicle on the line
     local stops = line_data_single.stops -- total number of stops for the line
-    local stops_with_waiting = line_data_single.stops_with_waiting -- *average* number of stops that currently has waiting entities (i.e. loading)
+    local stops_with_waiting = line_data_single.stops_with_waiting -- *average* number of stops that has waiting entities for this line
 
     local line_rules = {}
 
