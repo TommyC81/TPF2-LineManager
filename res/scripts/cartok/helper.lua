@@ -6,6 +6,13 @@
 local helper = {}
 
 local api_helper = require 'cartok/api_helper'
+local lume = require 'cartok/lume'
+
+local log = nil
+
+function helper.setLog(input_log)
+    log = input_log
+end
 
 -------------------------------------------------------------
 --------------------- GENERAL HELPER ------------------------
@@ -33,7 +40,7 @@ function helper.roundPercentage(dividend, divisor)
     if (dividend > 0 and divisor > 0) then
         local factor = dividend / divisor
         local percentage = 100 * factor
-        return math.round(percentage)
+        return lume.round(percentage)
     else
         return 0
     end
@@ -95,6 +102,64 @@ function helper.tableToStringWithLineBreaks(array, prefixSplit, insertLineBreak)
     end
 
     return output
+end
+
+function helper.lineInfoString(line_data, line_id)
+    local rule = line_data[line_id].rule
+    if line_data[line_id].parameters and #line_data[line_id].parameters > 0 then
+        local first = true
+        local text = ""
+        rule = rule .. " ("
+        for i = 1, #line_data[line_id].parameters do
+            if line_data[line_id].parameters[i].value then
+                text = line_data[line_id].parameters[i].value
+            else
+                text = "-"
+            end
+            if first then
+                first = false
+                rule = rule .. text
+            else
+                rule = rule .. " : " .. text
+            end
+        end
+        rule = rule .. ")"
+    end
+
+    local managed = "AUTOMATIC"
+    if line_data[line_id].rule_manual then
+        managed = "MANUAL"
+    end
+
+    local str = line_data[line_id].type
+    str = str .. " - " .. line_data[line_id].carrier
+    str = str .. " - Rule: " .. rule
+    str = str .. " - " .. managed
+    str = str .. " (Samples: " .. line_data[line_id].samples .. ")"
+    return str
+end
+
+function helper.lineDataString(line_data, line_id)
+    local str = "Usage: " .. lume.round(line_data[line_id].usage) .. "%"
+    str = str .. " Rate: " .. lume.round(line_data[line_id].rate)
+    str = str .. " WaitingPeak: " .. lume.round(line_data[line_id].waiting_peak)
+    str = str .. " CapPerVeh: " .. line_data[line_id].capacity_per_vehicle
+    str = str .. " Vehicles: " .. line_data[line_id].vehicles
+    return str
+end
+
+function helper.printSoldVehicleInfo(line_data, line_id, vehicle_id)
+    log.info(" -1 vehicle: " .. line_data[line_id].name)
+    log.info("             " .. helper.lineInfoString(line_data, line_id))
+    log.info("             " .. helper.lineDataString(line_data, line_id))
+    log.debug("vehicle_id: " .. vehicle_id .. " line_id: " .. line_id)
+end
+
+function helper.printBoughtVehicleInfo(line_data, line_id, vehicle_id, depot_id)
+    log.info(" +1 vehicle: " .. line_data[line_id].name)
+    log.info("             " .. helper.lineInfoString(line_data, line_id))
+    log.info("             " .. helper.lineDataString(line_data, line_id))
+    log.debug("vehicle_id: " .. vehicle_id .. " line_id: " .. line_id .. " depot_id: " .. depot_id)
 end
 
 return helper

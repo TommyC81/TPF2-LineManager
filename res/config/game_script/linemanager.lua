@@ -21,7 +21,7 @@ local gui_notificationWindow = nil
 -- This is the entire data for the mod, it is stored in the save game as well as loaded in GUI thread for access
 local state = {
     -- The version of the data, this is for compatibility purposes and only meant to be updated when the state data format changes.
-    version = 33,
+    version = 37,
     version_change = true, -- This simply keeps track of whether the state version has changed. This is meant to always default to true, it will be set to false when no longer the case (and then stored in the save game data).
     log_settings = {
         level = 3, -- The log level (3 = INFO)
@@ -29,18 +29,18 @@ local state = {
     },
     auto_settings = {
         PASSENGER = {
-            ROAD = false,
-            TRAM = false,
-            RAIL = false,
-            AIR = false,
-            WATER = false,
+            ROAD = true,
+            TRAM = true,
+            RAIL = true,
+            AIR = true,
+            WATER = true,
         },
         CARGO = {
-            ROAD = false,
-            TRAM = false,
-            RAIL = false,
-            AIR = false,
-            WATER = false,
+            ROAD = true,
+            TRAM = true,
+            RAIL = true,
+            AIR = true,
+            WATER = true,
         },
     },
     linemanager_settings = {
@@ -50,54 +50,13 @@ local state = {
     sampling_settings = {
         last_sample_time = -1, -- Keeps track of what month (or time) the last sample was taken, in order to re-trigger a new sampling when month (or time) changes.
         time_based_sampling = false, -- If true, then os time is used for sampling rather than in-game months.
-        sample_time_interval = 30, -- If OS time is used for sampling, take a sample every this number of seconds.
+        sample_time_interval = 60, -- If OS time is used for sampling, take a sample every this number of seconds. This is based on using GameSpeed = 1 (normal speed), with faster speeds, this time will be reduced accordingly.
     },
     line_data = {}, -- An up-to-date list (since last sampling...) of the Player lines and associated data.
 }
 
+helper.setLog(log)
 sampling.setLog(log)
-
-local function lineInfoString(line_id)
-    local managed = "(AUTOMATIC)"
-    if state.line_data[line_id].rule_manual then
-        managed = "(MANUAL)"
-    end
-
-    local rule = state.line_data[line_id].rule
-    local target = state.line_data[line_id].target
-    if target > 0 then
-        rule = rule .. ":" .. target
-    end
-
-    local str  = state.line_data[line_id].type .. " - "
-    str = str .. state.line_data[line_id].carrier
-    str = str .. " - Rule: " .. rule .. " "
-    str = str .. managed
-    return str
-end
-
-local function lineDataString(line_id)
-    local str  = "Usage: " .. lume.round(state.line_data[line_id].usage) .. "% "
-    str = str .. "Rate: " .. lume.round(state.line_data[line_id].rate) .. " "
-    str = str .. "WaitingPeak: " .. lume.round(state.line_data[line_id].waiting_peak) .. " "
-    str = str .. "CapPerVeh: " .. state.line_data[line_id].capacity_per_vehicle .. " "
-    str = str .. "Vehicles: " .. state.line_data[line_id].vehicles
-    return str
-end
-
-local function printSoldVehicleInfo(line_id, vehicle_id)
-    log.info(" -1 vehicle: " .. state.line_data[line_id].name)
-    log.info("             " .. lineInfoString(line_id))
-    log.info("             " .. lineDataString(line_id))
-    log.debug("vehicle_id: " .. vehicle_id .. " line_id: " .. line_id)
-end
-
-local function printBoughtVehicleInfo(line_id, vehicle_id, depot_id)
-    log.info(" +1 vehicle: " .. state.line_data[line_id].name)
-    log.info("             " .. lineInfoString(line_id))
-    log.info("             " .. lineDataString(line_id))
-    log.debug("vehicle_id: " .. vehicle_id .. " line_id: " .. line_id .. " depot_id: " .. depot_id)
-end
 
 ---@param line_id number
 ---@return boolean success whether a vehicle was removed
@@ -114,7 +73,7 @@ local function removeVehicleFromLine(line_id)
             -- Remove/sell the oldest vehicle (instantly sells)
             api_helper.sellVehicle(oldestVehicleId)
 
-            printSoldVehicleInfo(line_id, oldestVehicleId)
+            helper.printSoldVehicleInfo(state.line_data, line_id, oldestVehicleId)
 
             success = true
         end
@@ -182,7 +141,7 @@ local function addVehicleToLine(line_id)
 
                 api_helper.sendVehicleToLine(new_vehicle_id, line_id, stop_id)
 
-                printBoughtVehicleInfo(line_id, new_vehicle_id, depot_id)
+                helper.printBoughtVehicleInfo(state.line_data, line_id, new_vehicle_id, depot_id)
 
                 success = true
             else
@@ -219,7 +178,7 @@ local function updateLines()
                     state.line_data[line_id].vehicles = state.line_data[line_id].vehicles + 1
                     vehicleCount = vehicleCount + 1
                 end
-            -- Check instead whether a vehicle should be removed from a Line. This has been evaluated as part of the sampling.
+                -- Check instead whether a vehicle should be removed from a Line. This has been evaluated as part of the sampling.
             elseif state.line_data[line_id].action == "REMOVE" then
                 if removeVehicleFromLine(line_id) then
                     -- If succeeded, update line_data to indicate this
@@ -298,6 +257,7 @@ local function firstRunOnly()
     if (state.sampling_settings.time_based_sampling) then
         log.info("Using os time based sampling.")
         log.info("One sample is taken every " .. state.sampling_settings.sample_time_interval .. " seconds.")
+        state.sampling_settings.last_sample_time = os.time() -- Reset this time to delay first sampling (this potentially avoids some weird os.time stuff if it differs oddly between game starts and thus does not trigger updates when expected)
     else
         log.info("Using in-game month based sampling.")
         log.info("One sample is taken on every change of in-game month.")
@@ -343,7 +303,7 @@ local function everyTickUpdate()
 
         log.info("============ Updating ============")
         updateLines()
-    -- If sampling is stopped, check if a new sampling is due
+        -- If sampling is stopped, check if a new sampling is due
     elseif sampling.isStopped() then
         local sampling_is_due = false
 
@@ -351,7 +311,14 @@ local function everyTickUpdate()
             -- Check if sufficient os time has passed since last sample. If so, trigger another sample.
             local current_os_time = os.time()
             -- Check if time has passed (Note: last_sample_time is "frozen" when game is paused, no need to account for that here - see data.update)
-            if current_os_time - state.sampling_settings.last_sample_time >= state.sampling_settings.sample_time_interval then
+            local game_speed = game.interface.getGameSpeed()
+            local sample_time_interval = state.sampling_settings.sample_time_interval
+
+            if game_speed > 0 then
+                sample_time_interval = sample_time_interval / game_speed
+            end
+
+            if current_os_time - state.sampling_settings.last_sample_time >= sample_time_interval then
                 state.sampling_settings.last_sample_time = current_os_time
                 sampling_is_due = true
             end
@@ -678,7 +645,7 @@ function data()
                         state.sampling_settings.time_based_sampling = param
                         if state.sampling_settings.time_based_sampling then
                             log.info("Using os time based sampling.")
-                            log.info("One sample is taken every " .. state.sampling_settings.sample_time_interval .. " seconds.")
+                            log.info("One sample is taken every " .. state.sampling_settings.sample_time_interval .. " seconds (divided by game speed).")
                         else
                             log.info("Using in-game month based sampling.")
                             log.info("One sample is taken on every change of in-game month.")
@@ -747,7 +714,7 @@ function data()
                 end
                 -- Every tick update
                 everyTickUpdate()
-            -- If game is paused and we're using os time based sampling, then "freeze" the time of the last sample taken
+                -- If game is paused and we're using os time based sampling, then "freeze" the time of the last sample taken
             elseif state.sampling_settings.time_based_sampling then
                 state.sampling_settings.last_sample_time = state.sampling_settings.last_sample_time + (current_time - state.sampling_settings.last_sample_time)
             end

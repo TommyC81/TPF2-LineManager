@@ -6,9 +6,9 @@ local timer = require 'cartok/timer'
 
 local sampling = {}
 
-local log = nil --require 'cartok/logging'
+local log = nil
 
-local SAMPLING_WINDOW_SIZE = 6 -- This must be 2 or greater, or...danger. Lower number means quicker changes to data and vice versa.
+local SAMPLING_WINDOW_SIZE = 8 -- This must be 2 or greater, or...danger. Lower number means quicker changes to data and vice versa.
 
 local NO_ENTITY = -1
 
@@ -42,6 +42,7 @@ local stateLineData = nil
 
 function sampling.setLog(input_log)
     log = input_log
+    rules.setLog(input_log)
 end
 
 local function setStateStopped()
@@ -145,8 +146,9 @@ end
 ---@return string : line rule designator string extracted from line_name
 ---Return the line rule given the name of the line.
 local function getLineRuleFromName(line_name)
-    for key, value in pairs(rules.line_rules) do
-        if value.identifier and string.find(line_name, value.identifier, 1, true) ~= nil then
+    for key, _ in pairs(rules.line_rules) do
+        local line_identifier = rules.IDENTIFIER_START .. key
+        if string.find(line_name, line_identifier, 1, true) ~= nil then
             return key
         end
     end
@@ -169,26 +171,93 @@ local function getLineRuleFromType(line_type)
     return resultRule
 end
 
----@param line_name string : the name of the line for there is the target
----@param identifier string : the identifier to look for to find the target within the line_name
----@return integer : the target
----Returns the target based on line_name and identifier, or 0 if not found or incorrectly formatted.
-local function getTarget(line_name, identifier)
-    if (line_name ~= nil and identifier ~= nil) then
-        local _, identifier_start_end = string.find(line_name, identifier, 1, true)
-        if (identifier_start_end ~= nil) then
-            -- rules.IDENTIFIER_END is the rule ending character(s), what is between the starting identifier and this character(s) is the number we're looking for.
-            local text_end = string.find(line_name, rules.IDENTIFIER_END, identifier_start_end + 1, true)
-            if (text_end ~= nil) then
-                local target = tonumber(string.sub(line_name, identifier_start_end + 1, text_end - 1))
-                if (type(target) == "number") then
-                    return target
+---@param line_rule string : the rule of the line
+---@param line_name string : the name of the line for there are the parameters
+---@return table | nil : table of parameters, or nil if error
+---returns the parameters for the line
+local function getLineParameters(line_name, line_rule)
+    -- Check that parameters have been provided
+    if line_name ~= nil and line_rule ~= nil and rules.line_rules[line_rule] and rules.line_rules[line_rule].parameters then
+        -- Make a copy of the default parameters
+        local has_required_parameters = false
+        local line_parameters = {}
+        for i = 1, #rules.line_rules[line_rule].parameters do
+            line_parameters[i] = {
+                name = rules.line_rules[line_rule].parameters[i].name,
+                required = rules.line_rules[line_rule].parameters[i].required,
+                value = rules.line_rules[line_rule].parameters[i].default,
+                min = rules.line_rules[line_rule].parameters[i].min,
+                max = rules.line_rules[line_rule].parameters[i].max,
+            }
+
+            if line_parameters[i].required then
+                has_required_parameters = true
+            end
+        end
+
+        -- Set search strings
+        local identifier_start_text = rules.IDENTIFIER_START .. line_rule
+        local identifier_end_text = rules.IDENTIFIER_END
+        local parameter_separator_text = rules.PARAMETER_SEPARATOR
+
+        -- Locate identifier beginning and continue processing if found
+        local _, identifier_start_end_pos = string.find(line_name, identifier_start_text, 1, true)
+        if (identifier_start_end_pos ~= nil) then
+            -- Locate identifier ending and continue processing if found
+            local identifier_end_start_pos, _ = string.find(line_name, identifier_end_text, identifier_start_end_pos + 1, true)
+            if (identifier_end_start_pos ~= nil) then
+                -- Check that there's actually space between the starting and ending identifiers
+                -- Use +2 for the starting identifier as there should be a PARAMETER_SEPARATOR first before getting to the first parameter
+                if identifier_start_end_pos + 2 <= identifier_end_start_pos - 1 then
+                    local parameter_string = string.sub(line_name, identifier_start_end_pos + 2, identifier_end_start_pos - 1)
+                    local parsed_string = lume.split(parameter_string, parameter_separator_text)
+                    -- Process the parsed string against the possible number of line parameters (based on the rules)
+                    for i = 1, #line_parameters do
+                        local parsed_value = tonumber(parsed_string[i])
+                        if parsed_string[i] ~= nil and parsed_value == nil then
+                            -- First check if an attempt to enter a number was made unsuccessfully, then fail if so
+                            log.warn("Line '" .. line_name .. "' has incorrectly formatted parameters!")
+                            return nil
+                        elseif type(parsed_value) == "number" then
+                            -- Use parsed value if exists
+                            -- Check first if the value is within range
+                            if (line_parameters[i].min and parsed_value < line_parameters[i].min) or (line_parameters[i].max and parsed_value > line_parameters[i].max) then
+                                log.warn("Line '" .. line_name .. "' parameter #" .. i .. " (" .. line_parameters[i].name .. ") is outside of permitted range: " .. line_parameters[i].min .. "-" .. line_parameters[i].max)
+                                return nil
+                            end
+                            -- Clean up no longer needed parameters and set the parsed_value
+                            line_parameters[i].value = parsed_value
+                        elseif line_parameters[i].required then
+                            -- If parsed value doesn't exist but is required, then fail
+                            log.warn("Line '" .. line_name .. "' is missing required parameter #" .. i .. " (" .. line_parameters[i].name .. ")!")
+                            return nil
+                        end
+                    end
+                    -- All has completed successfully
+                    return line_parameters
+                elseif identifier_start_end_pos + 1 == identifier_end_start_pos then
+                    if has_required_parameters then
+                        -- If the line name is correctly formatted, but simply missing parameters that are required, then fail
+                        log.warn("Line '" .. line_name .. "' is missing required parameters!")
+                        return nil
+                    else
+                        -- Maybe the line only does not have any required parameters and just uses defaults, just return the existing parameters
+                        return line_parameters
+                    end
                 end
             end
         end
+
+        if not has_required_parameters then
+            return line_parameters
+        else
+            -- If we made it here, something is wrong
+            log.warn("Line '" .. line_name .. "' is incorrectly formatted, unable to parse data from the name!")
+            return nil
+        end
     end
 
-    return 0
+    return {}
 end
 
 ---@param rule string : the rule
@@ -222,15 +291,15 @@ end
 ---checks if the line, or any vehicles on the line, has a problem
 local function checkIfLineHasProblem(line_id, line_vehicles)
     -- Check if this is a problem line
-    for i=1, #problemLineCache do
+    for i = 1, #problemLineCache do
         if problemLineCache[i] == line_id then
             return true
         end
     end
 
     -- Check if any of the vehicles on the line has a problem
-    for i=1, #problemVehicleCache do
-        for j=1, #line_vehicles do
+    for i = 1, #problemVehicleCache do
+        for j = 1, #line_vehicles do
             if problemVehicleCache[i] == line_vehicles[j] then
                 return true
             end
@@ -238,38 +307,6 @@ local function checkIfLineHasProblem(line_id, line_vehicles)
     end
 
     return false
-end
-
----@param short_period number : the short period
----@param long_period number : the long period
----@param previous_trend number : (optional) the previous trend value
----@return number : the updated trend value, positive numbers is for how long the short_period has remained above the long_period and vice versa
----checks for how long the short_period has remained above/below the long_period and returns an updated trend value
-local function calculateTrend(short_period, long_period, previous_trend)
-    previous_trend = previous_trend or 0
-    local new_trend = 0
-
-    if previous_trend == 0 then
-        if short_period < long_period then
-            new_trend = -1
-        elseif short_period > long_period then
-            new_trend = 1
-        end
-    elseif previous_trend > 0 then
-        if short_period < long_period then
-            new_trend = -1
-        elseif short_period > long_period then
-            new_trend = previous_trend + 1
-        end
-    elseif previous_trend < 0 then
-        if short_period < long_period then
-            new_trend = previous_trend - 1
-        elseif short_period > long_period then
-            new_trend = 1
-        end
-    end
-
-    return new_trend
 end
 
 ---resets all sampling variables and sets STATE_WAITING, thus restarting the sampling process
@@ -318,7 +355,8 @@ local function prepareInitialData()
         local passengers = #cargo_table[enums.CargoTypes.PASSENGERS] -- = 1, which is PASSENGERS
         local cargoes = 0
 
-        for i = 2, #cargo_table do -- These are all other cargo items, 2-17 by default
+        -- These are all other cargo items, 2-17 by default
+        for i = 2, #cargo_table do
             cargoes = cargoes + #cargo_table[i]
         end
 
@@ -359,7 +397,7 @@ local function prepareLineData()
                 local lineRuleManual = false -- Keeps track if the line rule was assigned manually
                 local lineRate = 0
                 local lineFrequency = 0
-                local lineTarget = 0
+                local lineParameters = {}
                 local lineCapacity = 0
                 local lineCapacityPerVehicle = 0
                 local lineOccupancy = 0
@@ -387,10 +425,10 @@ local function prepareLineData()
                 elseif lineDemandCargo > lineDemandPassengers then
                     lineType = "CARGO"
                     lineDemand = lineDemandCargo
-                -- If neither of the previous rules have stuck (either no cargo, or the same amount of cargo for each type), then re-use previous type if data exists
+                    -- If neither of the previous rules have stuck (either no cargo, or the same amount of cargo for each type), then re-use previous type if data exists
                 elseif stateLineData[line_id] then
                     lineType = stateLineData[line_id].type
-                -- If all else fails, set to PASSENGER to have a starting point (avoid lines being indicated as ignored when there's no current demand)
+                    -- If all else fails, set to PASSENGER to have a starting point (avoid lines being indicated as ignored when there's no current demand)
                 else
                     lineType = "PASSENGER"
                 end
@@ -417,17 +455,17 @@ local function prepareLineData()
                 lineTransportedLastYear = lineInformation.transported_last_year
 
                 -- Convert frequency to seconds
-                if lineFrequency > 0 then -- Check if lineFrequency is actually set, otherwise it'll be 'inf' after the conversion
-                    lineFrequency = lume.round(1/lineFrequency)
+                -- Check first if lineFrequency is actually set, otherwise it'll be 'inf' after the conversion
+                if lineFrequency > 0 then
+                    lineFrequency = lume.round(1 / lineFrequency)
                 end
 
-                -- TARGET (where applicable)
-                if rules.line_rules[lineRule].uses_target then
-                    lineTarget = getTarget(lineName, rules.line_rules[lineRule].identifier)
-
-                    if lineTarget <= 0 then
-                        log.warn("Line '" .. lineName .. "' uses rule '" .. lineRule .. "', but target is incorrectly formatted!")
-                    end
+                -- PARAMETERS (where applicable i.e. a rule uses parameters)
+                lineParameters = getLineParameters(lineName, lineRule)
+                -- If nil was returned then there's a problem
+                if not lineParameters then
+                    lineParameters = "ERROR"
+                    lineHasProblem = true
                 end
 
                 -- CAPACITY and OCCUPANCY
@@ -441,7 +479,8 @@ local function prepareLineData()
                             lineVehiclesInDepot = lineVehiclesInDepot + 1
                         end
                     end
-                    if vehicleOccupancyCache[vehicle_id] then -- Need to check for this, not all vehicles might have had cargo when the data was prepared and thus not exist here
+                    -- Need to check for this, not all vehicles might have had cargo when the data was prepared and thus not exist here
+                    if vehicleOccupancyCache[vehicle_id] then
                         lineOccupancy = lineOccupancy + vehicleOccupancyCache[vehicle_id].TOTAL -- Calculated/prepared in prepareInitialData()
                     end
 
@@ -459,7 +498,7 @@ local function prepareLineData()
                 lineManaged = checkIfManagedLine(lineRule, lineRuleManual, lineType, lineCarrier)
 
                 -- HAS_PROBLEM (if a vehicle is IN_DEPOT or GOING_TO_DEPOT, it is considered a marker for a possible problem)
-                lineHasProblem = lineVehiclesInDepot > 0 or checkIfLineHasProblem(line_id, lineVehicles)
+                lineHasProblem = lineHasProblem or lineVehiclesInDepot > 0 or checkIfLineHasProblem(line_id, lineVehicles)
 
                 sampledLineData[line_id] = {
                     SAMPLE_WAITING_CARGO = true, -- Set marker for next step (this will be used by mergeLineData() to confirm this item needs processing)
@@ -470,7 +509,7 @@ local function prepareLineData()
                     rule_manual = lineRuleManual,
                     rate = lineRate,
                     frequency = lineFrequency,
-                    target = lineTarget,
+                    parameters = lineParameters,
                     vehicles = #lineVehicles,
                     capacity = lineCapacity,
                     capacity_per_vehicle = lineCapacityPerVehicle,
@@ -510,7 +549,8 @@ local function sampleWaitingCargo()
     local processed_items = 0
 
     for line_id, line_data in pairs(sampledLineData) do
-        if line_data.SAMPLE_WAITING_CARGO then -- Check for marker
+        -- Check for marker
+        if line_data.SAMPLE_WAITING_CARGO then
             local lineWaiting = 0
             local lineWaitingPeak = 0
             local stopsWithWaiting = 0
@@ -613,7 +653,9 @@ local function mergeLineData()
 
     -- Merge existing line_data into the sampled line_data
     for line_id, line_data in pairs(sampledLineData) do
-        if line_data.MERGE then -- Check for marker
+        -- Check for marker
+        if line_data.MERGE then
+            -- Check if stateLineData already has this line
             if stateLineData[line_id] then
                 -- Add to existing samples
                 sampledLineData[line_id].samples = stateLineData[line_id].samples + 1
@@ -630,13 +672,17 @@ local function mergeLineData()
                 sampledLineData[line_id].rate = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].rate, line_data.rate, 0.1)
                 sampledLineData[line_id].frequency = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].frequency, line_data.frequency, 0.1)
                 sampledLineData[line_id].waiting = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].waiting, line_data.waiting, 0.1)
-                sampledLineData[line_id].waiting_peak = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].waiting_peak, line_data.waiting_peak, 0.1)
                 sampledLineData[line_id].stops_with_waiting = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].stops_with_waiting, line_data.stops_with_waiting, 0.01)
+                -- Calculate waiting_peak_clamped before waiting_peak
+                sampledLineData[line_id].waiting_peak_clamped = lume.clamp(calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].waiting_peak_clamped, line_data.waiting_peak, 0.1), 0, line_data.capacity_per_vehicle * 1.5)
+                sampledLineData[line_id].waiting_peak = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].waiting_peak, line_data.waiting_peak, 0.1)
             else
                 -- If not already existing, then start samples from 1. No need to process the data further.
                 sampledLineData[line_id].samples = 1
                 -- Set a blank last_action
                 sampledLineData[line_id].last_action = ""
+                -- Set a waiting_peak_clamped
+                sampledLineData[line_id].waiting_peak_clamped = lume.clamp(line_data.waiting_peak, 0, line_data.capacity_per_vehicle * 2)
             end
 
             -- Update markers
@@ -675,7 +721,7 @@ local function applyRules()
                 -- Check if a vehicle should be added to a Line.
                 if rules.moreVehicleConditions(line_data) then
                     sampledLineData[line_id].action = "ADD"
-                -- If not, then check whether a vehicle should be removed from a Line.
+                    -- If not, then check whether a vehicle should be removed from a Line.
                 elseif rules.lessVehiclesConditions(line_data) then
                     sampledLineData[line_id].action = "REMOVE"
                 end
@@ -786,7 +832,7 @@ function sampling.getEmptiestVehicle(vehicle_ids)
                 emptiestVehicleId = vehicle_id
                 emptiestVehicleLoad = 0
                 break
-            -- If vehicle is cached, then use it
+                -- If vehicle is cached, then use it
             elseif vehicleOccupancyCache[vehicle_id] and vehicleOccupancyCache[vehicle_id].TOTAL < emptiestVehicleLoad then
                 emptiestVehicleId = vehicle_id
                 emptiestVehicleLoad = vehicleOccupancyCache[vehicle_id].TOTAL

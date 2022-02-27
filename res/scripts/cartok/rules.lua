@@ -1,45 +1,71 @@
+-- This file is "owned" by sampling.lua and separates out all the rule specific logic into an easily 
 local lume = require 'cartok/lume'
 
 local rules = {}
 
+local log = nil
+
+function rules.setLog(input_log)
+    log = input_log
+end
+
 -- If you need to change what identifier delimiters are being used, perhaps for compatibility with another mod, change these
 rules.IDENTIFIER_START = "["
 rules.IDENTIFIER_END = "]"
+rules.PARAMETER_SEPARATOR = ":"
 
 -- The rule definitions
+-- These must be in order from longest to shortest rule acronym (otherwise only the first shorter acronym will be found i.e. P will be used before PR, so PR must be higher up in the list)
 rules.line_rules = {
     M = { -- Manual management
         name = "MANUAL",
         description = "Manual line management - no automatic line management features will be used for this line.",
-        identifier = rules.IDENTIFIER_START .. "M" .. rules.IDENTIFIER_END, -- Default: "[M]"
-        uses_target = false,
-    },
-    P = { -- PASSENGER
-        name = "PASSENGER",
-        description = "A balanced set of default rules for PASSENGER line management.",
-        identifier = rules.IDENTIFIER_START .. "P" .. rules.IDENTIFIER_END, -- Default: "[P]"
-        uses_target = false,
     },
     PR = { -- PASSENGER (RUSTEYBUCKET)
         name = "PASSENGER (RusteyBucket)",
         description = "PASSENGER line management rules by RusteyBucket.",
-        identifier = rules.IDENTIFIER_START .. "PR" .. rules.IDENTIFIER_END, -- Default: "[PR]"
-        uses_target = false,
+    },
+    P = { -- PASSENGER
+        name = "PASSENGER",
+        description = "A balanced set of default rules for PASSENGER line management.",
+        parameters = {
+            { -- Parameter 1, (aggressiveness) level = how focused the line should be on capacity/rate rather than (economic) balance. Useful for feeder lines for instance.
+                name = "level",
+                default = 0,
+                min = 0,
+                max = 1,
+            },
+        },
     },
     C = { -- CARGO
         name = "CARGO",
         description = "A balanced set of default rules for CARGO line management.",
-        identifier = rules.IDENTIFIER_START .. "C" .. rules.IDENTIFIER_END, -- Default: "[C]"
-        uses_target = false,
+        parameters = {
+            { -- Parameter 1, (aggressiveness) level = how focused the line should be on capacity/rate rather than (economic) balance. Useful for feeder lines for instance.
+                name = "level",
+                default = 0,
+                min = 0,
+                max = 1,
+            },
+        },
     },
     R = { -- RATE
         name = "RATE",
-        description = "Ensures that a set rate is achieved. This is configured by adding the target rate behind the colon, like so: '[R:100]'.",
-        -- This is an example of how a target can be used, make sure to set the identifier with only first part up to where the number is to start.
-        -- Leave out the end identifier, it will be searched for automatically, and the number between the identifier and the end identifier will be used.
-        -- If a line is incorrectly formatted by the user (i.e. can't interpret the target number), then a warning will be shown in the game console.
-        identifier = rules.IDENTIFIER_START .. "R:", -- Default: "[R:"
-        uses_target = true, -- Since this is true, the 'rules.IDENTIFIER_END' is not required above (it will be searched for automatically to determine the number in-between the identifier above and the rules.IDENTIFIER_END)
+        description = "Ensures that a configured minimum rate (or range) is achieved.",
+        parameters = {
+            { -- Parameter 1, the minimum required rate for the line
+                name = "rate_target",
+                required = true, -- Use either this or a default value
+                -- default = 200, -- Only use a default value for non-required parameters or weird things will happen. Kept here for reference only.
+                min = 50, -- Optional, to limit min-value (values lower than this will indicate that the line has a problem and it won't be managed)
+                max = 2000, -- Optional, to limit max-value (values higher than this will indicate that the line has problem and it won't be managed)
+            },
+            { -- Parameter 2, the acceptable max waiting peak % compared to capacity_per_vehicle. This will try to keep the waiting_peak below this level, effectively allowing the line to increase capacity when required (but never decrease below the rate).
+                name = "waiting_peak_max",
+                min = 0,
+                max = 300,
+            },
+        },
     },
 }
 
@@ -51,13 +77,14 @@ rules.defaultCargoLineRule = "C"
 ---@return boolean : whether a vehicle should be added to the line
 function rules.moreVehicleConditions(line_data_single)
     -- Factors that can be used in rules
+    local name = line_data_single.name -- the name of the line
     local carrier = line_data_single.carrier -- "ROAD", "TRAM", "RAIL", "WATER" or "AIR"
     local type = line_data_single.type -- "PASSENGER" or "CARGO" (if the line handles both PASSENGER and CARGO, then the greater demand will determine type). Will default to "PASSENGER" if no demand is detected.
     local rule = line_data_single.rule -- the line rule
     local rule_manual = line_data_single.rule_manual -- whether the line rule was assigned manually (rather than automatically)
     local rate = line_data_single.rate -- *average* line rate
     local frequency = line_data_single.frequency -- *average* line frequency in seconds
-    local target = line_data_single.target -- target for whatever has been set
+    local parameters = line_data_single.parameters -- the parameters for the line (this is indexed as per the rules)
     local vehicles = line_data_single.vehicles -- number of vehicles currently on the line
     local capacity = line_data_single.capacity -- total current capacity of the vehicles on the line
     local occupancy = line_data_single.occupancy -- total current occupancy on the vehicles on the line
@@ -67,6 +94,7 @@ function rules.moreVehicleConditions(line_data_single)
     local last_action = line_data_single.last_action -- the last action taken to manage the line; "ADD", "REMOVE" or "MANUAL" if a vehicle was manually added or removed ("" if no previous action exists)
     local waiting = line_data_single.waiting -- *average* total number of items waiting at stations for this line
     local waiting_peak = line_data_single.waiting_peak -- *average* the highest number of items waiting at a station for this line
+    local waiting_peak_clamped = line_data_single.waiting_peak_clamped -- *average* the highest number of items waiting at a station for this line, but clamped to 0.5 - 1.5 times the capacity_per_vehicle
     local transported_last_month = line_data_single.transported_last_month -- the amount of items transported last month NOTE: this will only be useful if 1x GameTime is used (otherwise 0, it seems)
     local transported_last_year = line_data_single.transported_last_year -- the amount of items transported last year NOTE: this will only be useful if 1x GameTime is used (otherwise 0, it seems)
     local capacity_per_vehicle = line_data_single.capacity_per_vehicle -- the average capacity per vehicle on the line
@@ -77,14 +105,42 @@ function rules.moreVehicleConditions(line_data_single)
 
     if rule == "P" then
         -- Make use of default PASSENGER rules
-        local modifier = 1.05 * (vehicles + 1) / vehicles
+        local level = parameters[1].value
 
-        -- If it is a single and fully loaded vehicle, don't buy another one just yet (it will empty the existing vehicle)
-        if vehicles == 1 and capacity == occupancy then
-            return false
+        -- USAGE SCORE
+        local usageBaseline = {
+            ROAD = 50,
+            TRAM = 50,
+            WATER = 50,
+            RAIL = 60,
+            AIR = 70,
+        }
+
+        -- This will yield a value between 0.0 and 1.2
+        local usageScore = lume.clamp(usage / lume.clamp(100 * stops_with_waiting / stops, usageBaseline[carrier], 85), 0, 1.2)
+
+        -- WAITING SCORE
+        -- This will yield a value between 0 and 1.5 (0 and 1.5 are the waiting_peak_clamped min/max values relative to capacity_per_vehicle)
+        local waitingScore = waiting_peak_clamped / capacity_per_vehicle
+
+        -- FINAL SCORE
+        local usageWeight = 100
+        local waitingWeight = 100
+
+        if level == 1 then
+            usageWeight = 80
+            waitingWeight = 120
         end
 
-        -- Adjust required samples
+        -- Usage equal to the expected and waiting equal to capacity_per_vehicle will yield 100 for each
+        local finalScore = usageScore * usageWeight + waitingScore * waitingWeight
+
+        -- REQUIRED SCORE
+        -- Usage    120 110 100 90  80
+        -- Waiting  110 120 130 140 150
+        local requiredScore = 230
+
+        -- REQUIRED SAMPLES
         local requiredSamples = 5
         if carrier == "AIR" or carrier == "RAIL" or carrier == "WATER" then
             requiredSamples = requiredSamples + 3
@@ -93,16 +149,59 @@ function rules.moreVehicleConditions(line_data_single)
             requiredSamples = requiredSamples + 3
         end
 
-        -- Adjust minimum usage
-        local minimumUsage = 50
-        if carrier == "AIR" or carrier == "RAIL" then
-            minimumUsage = 70
+        line_rules = {
+            samples > requiredSamples and frequency > 720, -- This is to ensure a that a minimum sensible frequency is maintained
+            samples > requiredSamples and finalScore > requiredScore,
+        }
+    elseif rule == "C" then
+        -- Make use of default CARGO rules
+        local level = parameters[1].value
+
+        -- USAGE SCORE
+        local usageBaseline = {
+            ROAD = 50,
+            TRAM = 50,
+            WATER = 50,
+            RAIL = 60,
+            AIR = 70,
+        }
+
+        -- This will yield a value between 0.0 and 1.2
+        local usageScore = lume.clamp(usage / lume.clamp(100 * stops_with_waiting / stops, usageBaseline[carrier], 85), 0, 1.2)
+
+        -- WAITING SCORE
+        -- This will yield a value between 0 and 1.5 (0 and 1.5 are the waiting_peak_clamped min/max values relative to capacity_per_vehicle)
+        local waitingScore = waiting_peak_clamped / capacity_per_vehicle
+
+        -- FINAL SCORE
+        local usageWeight = 100
+        local waitingWeight = 100
+
+        if level == 1 then
+            usageWeight = 80
+            waitingWeight = 120
+        end
+
+        -- Usage equal to the expected and waiting equal to capacity_per_vehicle will yield 100 for each
+        local finalScore = usageScore * usageWeight + waitingScore * waitingWeight
+
+        -- REQUIRED SCORE
+        -- Usage    120 110 100 90  80
+        -- Waiting  110 120 130 140 150
+        local requiredScore = 230
+
+        -- REQUIRED SAMPLES
+        local requiredSamples = 5
+        if carrier == "AIR" or carrier == "RAIL" or carrier == "WATER" then
+            requiredSamples = requiredSamples + 3
+        end
+        if last_action == "REMOVE" then
+            requiredSamples = requiredSamples + 3
         end
 
         line_rules = {
             samples > requiredSamples and frequency > 720, -- This is to ensure a that a minimum sensible frequency is maintained
-            samples > requiredSamples and usage > minimumUsage and waiting_peak > capacity_per_vehicle * 2 and demand > capacity * 2,
-            samples > requiredSamples and usage > 80 and waiting_peak > capacity_per_vehicle * modifier and demand > capacity * modifier,
+            samples > requiredSamples and finalScore > requiredScore,
         }
     elseif rule == "PR" then
         -- Make use of PASSENGER rules by RusteyBucket
@@ -115,16 +214,13 @@ function rules.moreVehicleConditions(line_data_single)
             samples > 5 and rate < d10, -- get a safety margin of 10% over the real demand
             samples > 5 and rate < dv, -- with low vehicle numbers, those 10% might not do the trick
             samples > 5 and usage > 90,
-            samples > 5 and frequency > 720 --limits frequency to at most 12min (720 seconds)
+            samples > 5 and frequency > 720, -- limits frequency to at most 12min (720 seconds)
         }
-    elseif rule == "C" then
-        -- Make use of default CARGO rules
-        local modifier = 1.1 * (vehicles + 1) / vehicles
-
-        -- If it is a single and fully loaded vehicle, don't buy another one just yet (it will empty the existing vehicle)
-        if vehicles == 1 and capacity == occupancy then
-            return false
-        end
+    elseif rule == "R" then
+        -- Make use of RATE rules
+        local modifier = math.max(1.25, 1.1 * (vehicles + 1) / vehicles)
+        local rate_target = parameters[1].value
+        local waiting_peak_target = parameters[2].value or nil
 
         -- Adjust required samples
         local requiredSamples = 5
@@ -135,16 +231,13 @@ function rules.moreVehicleConditions(line_data_single)
             requiredSamples = requiredSamples + 3
         end
 
-        line_rules = {
-            samples > requiredSamples and frequency > 720, -- This is to ensure a that a minimum sensible frequency is maintained
-            samples > requiredSamples and usage > 30 and waiting_peak > capacity_per_vehicle * 2 and demand > capacity * 2, -- This rules is intended to allow for quick initial expansion
-            samples > requiredSamples and usage > math.min(60, 40 + stops_with_waiting * 5) and waiting_peak > capacity_per_vehicle * modifier and demand > math.max(0.5, stops_with_waiting/stops) * capacity * modifier, -- This rule is intended for medium-/long-term tweaking
-        }
-    elseif rule == "R" then
-        -- Make use of RATE rules
-        line_rules = {
-            samples > 5 and rate < target,
-        }
+        -- Always ensure the minimum rate is achieved
+        line_rules[#line_rules + 1] = samples > requiredSamples and rate < rate_target
+
+        -- Add additional rules for peak usage
+        if waiting_peak_target then
+            line_rules[#line_rules + 1] = samples > requiredSamples and waiting_peak / capacity_per_vehicle > modifier * waiting_peak_target / 100
+        end
     end
 
     -- Check whether at least one condition is fulfilled
@@ -162,13 +255,14 @@ end
 ---@return boolean : whether a vehicle should be removed from the line
 function rules.lessVehiclesConditions(line_data_single)
     -- Factors that can be used in rules
+    local name = line_data_single.name -- the name of the line
     local carrier = line_data_single.carrier -- "ROAD", "TRAM", "RAIL", "WATER" or "AIR"
     local type = line_data_single.type -- "PASSENGER" or "CARGO" (if the line handles both PASSENGER and CARGO, then the greater demand will determine type). Will default to "PASSENGER" if no demand is detected.
     local rule = line_data_single.rule -- the line rule
     local rule_manual = line_data_single.rule_manual -- whether the line rule was assigned manually (rather than automatically)
     local rate = line_data_single.rate -- *average* line rate
     local frequency = line_data_single.frequency -- *average* line frequency in seconds
-    local target = line_data_single.target -- target for whatever has been set
+    local parameters = line_data_single.parameters -- the parameters for the line (this is indexed as per the rules)
     local vehicles = line_data_single.vehicles -- number of vehicles currently on the line
     local capacity = line_data_single.capacity -- total current capacity of the vehicles on the line
     local occupancy = line_data_single.occupancy -- total current occupancy on the vehicles on the line
@@ -178,6 +272,7 @@ function rules.lessVehiclesConditions(line_data_single)
     local last_action = line_data_single.last_action -- the last action taken to manage the line; "ADD", "REMOVE" or "MANUAL" if a vehicle was manually added or removed ("" if no previous action exists)
     local waiting = line_data_single.waiting -- *average* total number of items waiting at stations for this line
     local waiting_peak = line_data_single.waiting_peak -- *average* the highest number of items waiting at a station for this line
+    local waiting_peak_clamped = line_data_single.waiting_peak_clamped -- *average* the highest number of items waiting at a station for this line, but clamped to 0.5 - 1.5 times the capacity_per_vehicle
     local transported_last_month = line_data_single.transported_last_month -- the amount of items transported last month NOTE: this will only be useful if 1x GameTime is used (otherwise 0, it seems)
     local transported_last_year = line_data_single.transported_last_year -- the amount of items transported last year NOTE: this will only be useful if 1x GameTime is used (otherwise 0, it seems)
     local capacity_per_vehicle = line_data_single.capacity_per_vehicle -- the average capacity per vehicle on the line
@@ -193,10 +288,43 @@ function rules.lessVehiclesConditions(line_data_single)
 
     if rule == "P" then
         -- Make use of default PASSENGER rules
-        local modifier = 0.95 * (vehicles - 1) / vehicles
-        local inverse_modifier = 1.05 * vehicles / (vehicles - 1)
+        local level = parameters[1].value
+        local inverse_modifier = math.max(1.5, 1.25 * vehicles / (vehicles - 1))
 
-        -- Adjust required samples
+        -- USAGE SCORE
+        local usageBaseline = {
+            ROAD = 50,
+            TRAM = 50,
+            WATER = 50,
+            RAIL = 60,
+            AIR = 70,
+        }
+
+        -- This will yield a value between 0.0 and 1.2
+        local usageScore = lume.clamp(usage / lume.clamp(100 * stops_with_waiting / stops, usageBaseline[carrier], 85), 0, 1.2)
+
+        -- WAITING SCORE
+        -- This will yield a value between 0 and 1.5 (0 and 1.5 are the waiting_peak_clamped min/max values relative to capacity_per_vehicle)
+        local waitingScore = waiting_peak_clamped / capacity_per_vehicle
+
+        -- FINAL SCORE
+        local usageWeight = 100
+        local waitingWeight = 100
+
+        if level == 1 then
+            usageWeight = 80
+            waitingWeight = 120
+        end
+
+        -- Usage equal to the expected and waiting equal to capacity_per_vehicle will yield 100 for each
+        local finalScore = usageScore * usageWeight + waitingScore * waitingWeight
+
+        -- REQUIRED SCORE
+        -- Usage    10  20  30 40 50 60 70 80 90 100 110
+        -- Waiting  110 100 90 80 70 60 50 40 30 20  10
+        local requiredScore = 120
+
+        -- REQUIRED SAMPLES
         local requiredSamples = 5
         if carrier == "AIR" or carrier == "RAIL" or carrier == "WATER" then
             requiredSamples = requiredSamples + 3
@@ -205,16 +333,55 @@ function rules.lessVehiclesConditions(line_data_single)
             requiredSamples = requiredSamples + 3
         end
 
-        -- Adjust minimum usage
-        local minimumUsage = 60
-        if carrier == "AIR" or carrier == "RAIL" then
-            minimumUsage = 70
+        line_rules = { samples > requiredSamples and frequency * inverse_modifier < 720 and finalScore < requiredScore, samples > 3 * requiredSamples and frequency * inverse_modifier < 720 and waiting_peak * inverse_modifier < capacity_per_vehicle }
+    elseif rule == "C" then
+        -- Make use of default CARGO rules
+        local level = parameters[1].value
+        local inverse_modifier = math.max(1.5, 1.25 * vehicles / (vehicles - 1))
+
+        -- USAGE SCORE
+        local usageBaseline = {
+            ROAD = 50,
+            TRAM = 50,
+            WATER = 50,
+            RAIL = 60,
+            AIR = 70,
+        }
+
+        -- This will yield a value between 0.0 and 1.2
+        local usageScore = lume.clamp(usage / lume.clamp(100 * stops_with_waiting / stops, usageBaseline[carrier], 85), 0, 1.2)
+
+        -- WAITING SCORE
+        -- This will yield a value between 0 and 1.5 (0 and 1.5 are the waiting_peak_clamped min/max values relative to capacity_per_vehicle)
+        local waitingScore = waiting_peak_clamped / capacity_per_vehicle
+
+        -- FINAL SCORE
+        local usageWeight = 100
+        local waitingWeight = 100
+
+        if level == 1 then
+            usageWeight = 80
+            waitingWeight = 120
         end
 
-        line_rules = {
-            samples > requiredSamples and frequency * inverse_modifier < 720 and usage * inverse_modifier < 100 and usage < minimumUsage and waiting_peak < capacity_per_vehicle * modifier and demand < capacity * modifier,
-            samples > 23 and frequency * inverse_modifier < 720 and waiting_peak < capacity_per_vehicle * modifier, -- This is for long-term reduction/tweaking/optimization
-        }
+        -- Usage equal to the expected and waiting equal to capacity_per_vehicle will yield 100 for each
+        local finalScore = usageScore * usageWeight + waitingScore * waitingWeight
+
+        -- REQUIRED SCORE
+        -- Usage    10  20  30 40 50 60 70 80 90 100 110
+        -- Waiting  110 100 90 80 70 60 50 40 30 20  10
+        local requiredScore = 120
+
+        -- REQUIRED SAMPLES
+        local requiredSamples = 5
+        if carrier == "AIR" or carrier == "RAIL" or carrier == "WATER" then
+            requiredSamples = requiredSamples + 3
+        end
+        if last_action == "ADD" then
+            requiredSamples = requiredSamples + 3
+        end
+
+        line_rules = { samples > requiredSamples and frequency * inverse_modifier < 720 and finalScore < requiredScore, samples > 3 * requiredSamples and frequency * inverse_modifier < 720 and waiting_peak * inverse_modifier < capacity_per_vehicle }
     elseif rule == "PR" then
         -- Make use of PASSENGER rules by RusteyBucket
         local newVehicles = vehicles - 1
@@ -227,44 +394,27 @@ function rules.lessVehiclesConditions(line_data_single)
         local plusOneVehicle = 1 + oneVehicle -- add the rest of the vehicles
         local dv = demand * plusOneVehicle -- exaggerate demand by what one more vehicle could change
 
-        line_rules = {
-            samples > 5
-            and usage < 40
-            and d10 < newRate
-            and dv < newRate
-            and newUsage < 80
-            and newRate > averageCapacity
-        }
-    elseif rule == "C" then
-        -- Make use of default CARGO rules
-        local modifier = 0.95 * (vehicles - 1) / vehicles
-        local inverse_modifier = 1.05 * vehicles / (vehicles - 1)
+        line_rules = { samples > 5 and usage < 40 and d10 < newRate and dv < newRate and newUsage < 80 and newRate > averageCapacity }
+    elseif rule == "R" then
+        -- Make use of RATE rules
+        local modifier = math.min(0.75, 0.9 * (vehicles - 1) / vehicles)
+        local rate_target = parameters[1].value
+        local waiting_peak_target = parameters[2].value or nil
 
         -- Adjust required samples
         local requiredSamples = 5
         if carrier == "AIR" or carrier == "RAIL" or carrier == "WATER" then
             requiredSamples = requiredSamples + 3
         end
-        if last_action == "ADD" then
+        if last_action == "REMOVE" then
             requiredSamples = requiredSamples + 3
         end
 
-        line_rules = {
-            samples > requiredSamples and frequency * inverse_modifier < 720 and usage < math.min(60, 40 + stops_with_waiting * 5) and waiting_peak < capacity_per_vehicle * modifier and demand < math.max(0.5, stops_with_waiting/stops) * capacity * modifier,
-            samples > 23 and frequency * inverse_modifier < 720 and waiting_peak < capacity_per_vehicle * modifier, -- This is for long-term reduction/tweaking/optimization
-        }
-    elseif rule == "R" then
-        -- Make use of RATE rules
-
-        -- Only process this if a target has actually been set properly.
-        -- Errors in formatting the rate in the line name can lead to weird results otherwise as target is set to 0 in case of formatting error.
-        -- TODO: Should output a warning in case of formatting error.
-        if (target > 0) then
-            local modifier = (vehicles - 1) / vehicles
-
-            line_rules = {
-                samples > 5 and rate * modifier > target,
-            }
+        -- Prepare appropriate rules
+        if waiting_peak_target then
+            line_rules[#line_rules + 1] = samples > requiredSamples and rate * modifier > rate_target and waiting_peak / capacity_per_vehicle < modifier * waiting_peak_target / 100
+        else
+            line_rules[#line_rules + 1] = samples > requiredSamples and rate * modifier > rate_target
         end
     end
 

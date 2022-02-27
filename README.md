@@ -36,7 +36,7 @@ This mod is inspired by and uses code snippets from:
   at least 1 vehicle remains on each line.
 * Sensible rules for both PASSENGER and CARGO lines are used by default (if automatic vehicle management is enabled for the
   respective category of lines). However, if this doesn't work as desired, see the "Line rules" section below for more information.
-* Using any other in-game date progression than 1x is EXPERIMENTAL - it is very likely that things will break in some way.
+* Using any other in-game date progression (date speed) than 1x is _EXPERIMENTAL_ - it is very likely that things will break in some way.
   Suggest to avoid this unless you know what you are doing and like to dig into the code (including rules.lua) to tweak things.
 
 ### In-game menu
@@ -51,7 +51,7 @@ The following LineManager options area available in the in-game menu:
 * **Use OS time based sampling** - By default, a sample/update is triggered when in-game month changes. This spreads
   sampling/updates out in a reasonable way to collect sensible line data, regardless of in-game speed. However, if you,
   for instance, use a mod that freezes game time, then you can select this option - updates will then be triggered
-  at regular intervals, around every 30 seconds. NOTE: Using any other in-game date progression than 1x is EXPERIMENTAL
+  at regular intervals, around every 30 seconds. NOTE: Using any other in-game date progression (date speed) than 1x is _EXPERIMENTAL_.
 * **PASSENGER/CARGO - ROAD/TRAM/RAIL/WATER/AIR** - Enables/disables automatic line vehicle management for an entire
   category. Select as desired. By default, everything except RAIL is selected.
 * **Debugging** - Enables/disables additional debugging output in the in-game console.
@@ -74,7 +74,10 @@ The following LineManager options area available in the in-game menu:
   the line (anywhere in the line name). LineManager will not amend any vehicles on this line.
 * **`[R:<number>]` - RATE**: Line rate rules, adjusting number of vehicles to ensure line rate meets/exceeds the set rate.
   To use, add `[R:xxx]` to the name of the line (anywhere in the line name). Note that xxx is to be replaced with the
-  desired rate.
+  desired rate. You can optionally add a second parameter by adding an additional number separate by a colon, this
+  second parameter specifies an acceptable station overload in % relative to the average capacity per vehicle servicing the line.
+  This allows capacity to grow upwards in case a station load exceeds this parameter, capacity will however never be reduced
+  below the set rate.
 * **`[PR]` - PASSENGER (RusteyBucket)**: Alternative PASSENGER line rules created by RusteyBucket. These rules will more
   aggressively manage vehicles upwards. This can be useful for unevenly balanced passenger lines. Perhaps a line feeding a
   main route and it is acceptable that it runs less optimally to ensure the main route see maximum load. To use,
@@ -89,6 +92,9 @@ Examples of line naming:
 * Line name "**BUS ABC-1 [M]**" - this line is **MANUALLY** managed (no automatic vehicle management).
 * Line name "**TRUCK ABC-1 [C]**" - this line is managed according to default **(C) - CARGO** line rules.
 * Line name "**TRUCK ABC-1 [R:100]**" - this line is managed according to **(R) - RATE** line rules, to achieve a rate of 100.
+* Line name "**TRUCK ABC-1 [R:100:200]**" - this line is managed according to **(R) - RATE** line rules, to achieve a rate of 100.
+  Additionally, a second (and optional) parameter specifies that capacity should be increased in case a station load exceeds
+  200% of the average capacity per vehicle on the line.
 * Line name "**TRUCK ABC-1 [M]**" - this line is **MANUALLY** managed (no automatic vehicle management).
 
 Other ways to manage vehicles is to disable automatic management of some line categories (or all) and only
