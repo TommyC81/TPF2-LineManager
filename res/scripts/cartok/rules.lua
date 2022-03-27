@@ -88,6 +88,7 @@ function rules.moreVehicleConditions(line_data_single)
     local vehicles = line_data_single.vehicles -- number of vehicles currently on the line
     local capacity = line_data_single.capacity -- total current capacity of the vehicles on the line
     local occupancy = line_data_single.occupancy -- total current occupancy on the vehicles on the line
+--    local peakOccupancy = line_data_single.peakOccupancy -- peak amount of currently in a vehicle
     local demand = line_data_single.demand -- *average* line demand i.e. total number of PASSENGER or CARGO intending to use the line, including already on the line
     local usage = line_data_single.usage -- *average* line usage i.e. occupancy/capacity
     local samples = line_data_single.samples -- number of samples collected for the line since last action taken (this is reset after each action)
@@ -209,12 +210,14 @@ function rules.moreVehicleConditions(line_data_single)
         local oneVehicle = 1 / vehicles -- how much would one vehicle change
         local plusOneVehicle = 1 + oneVehicle -- add the rest of the vehicles
         local dv = demand * plusOneVehicle -- exaggerate demand by what one more vehicle could change
+        local waitFactor=waiting_peak/capacity_per_vehicle -- how likely is it the vehicles can cope with the demand
 
         line_rules = {
             samples > 5 and rate < d10, -- get a safety margin of 10% over the real demand
             samples > 5 and rate < dv, -- with low vehicle numbers, those 10% might not do the trick
             samples > 5 and usage > 90,
             samples > 5 and frequency > 720, -- limits frequency to at most 12min (720 seconds)
+            samples > 5 and waitFactor > 1.1 -- if there's overcrowding, get more vehicles
         }
     elseif rule == "R" then
         -- Make use of RATE rules
@@ -266,6 +269,7 @@ function rules.lessVehiclesConditions(line_data_single)
     local vehicles = line_data_single.vehicles -- number of vehicles currently on the line
     local capacity = line_data_single.capacity -- total current capacity of the vehicles on the line
     local occupancy = line_data_single.occupancy -- total current occupancy on the vehicles on the line
+--    local peakOccupancy=line_data_single.peakOccupancy -- peak amount of passengers in a vehicle
     local demand = line_data_single.demand -- *average* line demand i.e. total number of PASSENGER or CARGO intending to use the line, including already on the line
     local usage = line_data_single.usage -- *average* line usage i.e. occupancy/capacity
     local samples = line_data_single.samples -- number of samples collected for the line since last action taken (this is reset after each action)
@@ -393,8 +397,17 @@ function rules.lessVehiclesConditions(line_data_single)
         local oneVehicle = 1 / vehicles -- how much would one vehicle change
         local plusOneVehicle = 1 + oneVehicle -- add the rest of the vehicles
         local dv = demand * plusOneVehicle -- exaggerate demand by what one more vehicle could change
+        local waitFactor = waiting_peak/capacity_per_vehicle -- no overcrowding
 
-        line_rules = { samples > 5 and usage < 40 and d10 < newRate and dv < newRate and newUsage < 80 and newRate > averageCapacity }
+        line_rules = {
+            samples > 5
+                    and usage < 40
+                    and d10 < newRate
+                    and dv < newRate
+                    and newUsage < 80
+                    and newRate > averageCapacity
+                    and waitFactor < 50
+        }
     elseif rule == "R" then
         -- Make use of RATE rules
         local modifier = math.min(0.75, 0.9 * (vehicles - 1) / vehicles)
