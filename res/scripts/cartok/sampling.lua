@@ -401,7 +401,7 @@ local function prepareLineData()
                 local lineCapacity = 0
                 local lineCapacityPerVehicle = 0
                 local lineOccupancy = 0
-                local linePeakOccupancy = 0
+                local lineOccupancyPeak = 0
                 local lineDemand = 0
                 local lineUsage = 0
                 local lineManaged = false
@@ -483,7 +483,7 @@ local function prepareLineData()
                     -- Need to check for this, not all vehicles might have had cargo when the data was prepared and thus not exist here
                     if vehicleOccupancyCache[vehicle_id] then
                         lineOccupancy = lineOccupancy + vehicleOccupancyCache[vehicle_id].TOTAL -- Calculated/prepared in prepareInitialData()
-                        linePeakOccupancy = math.max(vehicleOccupancyCache[vehicle_id].TOTAL, linePeakOccupancy)
+                        lineOccupancyPeak = math.max(vehicleOccupancyCache[vehicle_id].TOTAL, lineOccupancyPeak)
                     end
 
                     processed_vehicles = processed_vehicles + 1
@@ -516,7 +516,7 @@ local function prepareLineData()
                     capacity = lineCapacity,
                     capacity_per_vehicle = lineCapacityPerVehicle,
                     occupancy = lineOccupancy,
-                    peakOccupancy = linePeakOccupancy,
+                    occupancy_peak = lineOccupancyPeak,
                     demand = lineDemand,
                     usage = lineUsage,
                     managed = lineManaged,
