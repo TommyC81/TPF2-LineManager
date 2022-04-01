@@ -85,17 +85,17 @@ The following LineManager options area available in the in-game menu:
 
 Examples of line naming:
 
-* Line name "**BUS ABC-1**" - none of the specific syntax is used, this line will be automatically managed with default rules.
+* Line name `BUS ABC-1` - none of the specific syntax is used, this line will be automatically managed with default rules.
   If automatic management has been enabled for the type of line.
-* Line name "**BUS ABC-1 [P]**" - this line is managed according to default **(P) - PASSENGER** line rules.
-* Line name "**BUS ABC-1 [PR]**" - this line is managed according to **(PR) - PASSENGER (RusteyBucket)** line rules.
-* Line name "**BUS ABC-1 [M]**" - this line is **MANUALLY** managed (no automatic vehicle management).
-* Line name "**TRUCK ABC-1 [C]**" - this line is managed according to default **(C) - CARGO** line rules.
-* Line name "**TRUCK ABC-1 [R:100]**" - this line is managed according to **(R) - RATE** line rules, to achieve a rate of 100.
-* Line name "**TRUCK ABC-1 [R:100:200]**" - this line is managed according to **(R) - RATE** line rules, to achieve a rate of 100.
+* Line name `BUS ABC-1 [P]` - this line is managed according to default **(P) - PASSENGER** line rules.
+* Line name `BUS ABC-1 [PR]` - this line is managed according to **(PR) - PASSENGER (RusteyBucket)** line rules.
+* Line name `BUS ABC-1 [M]` - this line is **MANUALLY** managed (no automatic vehicle management).
+* Line name `TRUCK ABC-1 [C]` - this line is managed according to default **(C) - CARGO** line rules.
+* Line name `TRUCK ABC-1 [R:100]` - this line is managed according to **(R) - RATE** line rules, to achieve a rate of 100.
+* Line name `TRUCK ABC-1 [R:100:200]` - this line is managed according to **(R) - RATE** line rules, to achieve a rate of 100.
   Additionally, a second (and optional) parameter specifies that capacity should be increased in case a station load exceeds
   200% of the average capacity per vehicle on the line.
-* Line name "**TRUCK ABC-1 [M]**" - this line is **MANUALLY** managed (no automatic vehicle management).
+* Line name `TRUCK ABC-1 [M]` - this line is **MANUALLY** managed (no automatic vehicle management).
 
 Other ways to manage vehicles is to disable automatic management of some line categories (or all) and only
 assign rules manually where needed. Manually assigned rules are always processed, regardless of the automatic setting.
