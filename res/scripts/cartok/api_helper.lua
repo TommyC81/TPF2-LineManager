@@ -31,6 +31,20 @@ function api_helper.getVehicle(vehicle_id)
     return api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
 end
 
+---@param depot_id number : the id of the depot
+---@return table : details of the depot
+function api_helper.getDepot(depot_id)
+    local success, res = pcall(function()
+        return api.engine.getComponent(depot_id, api.type.ComponentType.VEHICLE_DEPOT)
+    end)
+    if success then
+        return res
+    else
+        return nil
+    end
+end
+
+---@param entity_id number : the id of the entity
 ---@return table : details of the entity at terminal
 function api_helper.getEntityAtTerminal(entity_id)
     local success, res = pcall(function()

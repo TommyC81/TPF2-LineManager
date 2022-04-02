@@ -68,6 +68,46 @@ function helper.getOldestVehicleId(vehicle_id_table)
     return oldestVehicleId
 end
 
+---@param line_id number : id of the line
+---@param vehicle_id number : id of the vehicle (optional)
+---@return number depot_id : the id of the depot
+---@return number stop_id : the id of the stop
+---Finds a usable depot and stop for the vehicle.
+function helper.findDepotAndStop(line_id, vehicle_id)
+    log.debug("helper: findDepotAndStop(line_id: " .. tostring(line_id) .. " vehicle_id:" .. tostring(vehicle_id) .. ") starting")
+
+    local depot_id = nil
+    local stop_id = nil
+    local vehicle = nil
+
+    if not vehicle_id then
+        local lineVehicles = api_helper.getLineVehicles(line_id)
+        if #lineVehicles > 0 then
+            vehicle_id = lineVehicles[1]
+        end
+    end
+
+    if vehicle_id then
+        vehicle = api_helper.getVehicle(vehicle_id)
+    end
+
+    if line_id and vehicle then
+        -- Now send the vehicle to depot and then check if it succeeded
+        api_helper.sendVehicleToDepot(vehicle_id)
+        vehicle = api_helper.getVehicle(vehicle_id)
+        if vehicle and api_helper.isVehicleIsGoingToDepot(vehicle) then
+            depot_id = vehicle.depot
+            stop_id = vehicle.stopIndex
+
+            api_helper.sendVehicleToLine(vehicle_id, line_id, stop_id)
+        end
+    end
+
+    log.debug("helper: findDepotAndStop(...) finished. depot_id=" .. tostring(depot_id) .. " stop_id=" .. tostring(stop_id))
+
+    return depot_id, stop_id
+end
+
 -------------------------------------------------------------
 --------------------- PRINT STUFF ---------------------------
 -------------------------------------------------------------

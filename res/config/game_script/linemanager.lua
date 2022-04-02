@@ -15,6 +15,9 @@ local lume = require 'cartok/lume'
 local firstRun = true -- Keeps track of the first update run (to do some init)
 local lastRegularUpdate = -1 -- Keeps track of the last regular update (should run once per second)
 
+local session_cachedDepotHit = 0
+local session_cachedDepotMiss = 0
+
 local gui_settingsWindow = nil
 local gui_notificationWindow = nil
 
@@ -62,6 +65,8 @@ sampling.setLog(log)
 ---@return boolean success whether a vehicle was removed
 ---removes the oldest vehicle from the specified line
 local function removeVehicleFromLine(line_id)
+    log.debug("linemanager: removeVehicleFromLine(" .. tostring(line_id) .. ") starting")
+
     local success = false
     local lineVehicles = api_helper.getLineVehicles(line_id)
 
@@ -70,16 +75,34 @@ local function removeVehicleFromLine(line_id)
         local oldestVehicleId = helper.getOldestVehicleId(lineVehicles)
 
         if oldestVehicleId then
+            -- Reset depot_id and stop_id on vehicle removal - this will hopefully keep the depot_id and stop_id fresh.
+            local depot_id, stop_id = helper.findDepotAndStop(line_id, oldestVehicleId)
+
             -- Remove/sell the oldest vehicle (instantly sells)
             api_helper.sellVehicle(oldestVehicleId)
 
             helper.printSoldVehicleInfo(state.line_data, line_id, oldestVehicleId)
 
             success = true
+
+            -- Update depot_id and stop_id if found, with appropriate debug message.
+            if depot_id and stop_id then
+                -- Store depot_id and stop_id
+                state.line_data[line_id].depot_update_required = nil
+                state.line_data[line_id].depot_id = depot_id
+                state.line_data[line_id].depot_stop_id = stop_id
+            else
+                -- Trigger update of depot_id and stop_id
+                state.line_data[line_id].depot_update_required = true
+                state.line_data[line_id].depot_id = nil
+                state.line_data[line_id].depot_stop_id = nil
+            end
         end
     else
         log.error("Only one vehicle left on line '" .. state.line_data[line_id].name .. "' - Requested vehicle removal cancelled. This message indicates a code error, please report it.")
     end
+
+    log.debug("linemanager: removeVehicleFromLine(" .. tostring(line_id) .. ") finished. success=" .. tostring(success))
 
     return success
 end
@@ -88,43 +111,56 @@ end
 ---@return boolean success whether a vehicle was added
 ---adds a vehicle to the specified line_id by cloning an existing vehicle
 local function addVehicleToLine(line_id)
+    log.debug("linemanager: addVehicleToLine(" .. tostring(line_id) .. ") starting")
+
     local success = false
     local lineVehicles = api_helper.getLineVehicles(line_id)
     local depot_id = nil
     local stop_id = nil
     local vehicleToDuplicate = nil
     local new_vehicle_id = nil
+    local using_cached_depot = false
 
     -- TODO: Test whether enough money is available or don't empty the vehicle when it's hopeless anyway.
     -- TODO: Figure out a better way to find the closest depot (or one at all).
     -- This merely tries to send an existing vehicle on the line to the depot, checks if succeeds then cancel the depot call but uses the depot data.
     -- Unfortunately sending a vehicle to a depot empties the vehicle.
     if #lineVehicles > 0 then
-        -- Find the emptiest vehicle (this will help with the depot testing as the impact will be smallest, although less likely to find a depot)
-        -- Note that there may also be a delay between the cache being set up and sampling completing, so it might no longer be the emptiest vehicle
-        local vehicle_id = sampling.getEmptiestVehicle(lineVehicles)
+        -- If a depot_id has already been identified, use it
+        if not state.line_data[line_id].depot_update_required and state.line_data[line_id].depot_id and api_helper.getDepot(state.line_data[line_id].depot_id) then
+            using_cached_depot = true
 
-        if vehicle_id then
-            -- Start by checking that the vehicle is EN_ROUTE (this prevents some weird routing issues, in particular with RAIL and when at a station)
-            vehicleToDuplicate = api_helper.getVehicle(vehicle_id)
-            if vehicleToDuplicate and api_helper.isVehicleEnRoute(vehicleToDuplicate) then
+            -- Set up data for vehicle to duplicate (use the first vehicle)
+            vehicleToDuplicate = api_helper.getVehicle(lineVehicles[1])
 
-                -- Now send the vehicle to depot and then check if it succeeded
-                api_helper.sendVehicleToDepot(vehicle_id)
+            -- Use existing depot_id
+            depot_id = state.line_data[line_id].depot_id
+
+            -- If a stop_id exists then use it. Otherwise, start from stop_id 0 (first stop of the line).
+            if state.line_data[line_id].depot_stop_id then
+                stop_id = state.line_data[line_id].depot_stop_id
+            else
+                stop_id = 0
+            end
+        else
+            -- Find the emptiest vehicle (this will help with the depot testing as the impact will be smallest, although less likely to find a depot)
+            -- Note that there may also be a delay between the cache being set up and sampling completing, so it might no longer be the emptiest vehicle
+            local vehicle_id = sampling.getEmptiestVehicle(lineVehicles)
+
+            if vehicle_id then
                 vehicleToDuplicate = api_helper.getVehicle(vehicle_id)
-                if vehicleToDuplicate and api_helper.isVehicleIsGoingToDepot(vehicleToDuplicate) then
-                    depot_id = vehicleToDuplicate.depot
-                    stop_id = vehicleToDuplicate.stopIndex
-
-                    api_helper.sendVehicleToLine(vehicle_id, line_id, stop_id)
-                end
+                depot_id, stop_id = helper.findDepotAndStop(line_id, vehicle_id)
             end
         end
     else
         log.error("There are no vehicles on line '" .. state.line_data[line_id].name .. "' - Requested vehicle addition cancelled. This message indicates a code error, please report it.")
     end
 
-    if depot_id then
+    if vehicleToDuplicate and depot_id and stop_id then
+        -- Store depot_id and stop_id
+        state.line_data[line_id].depot_id = depot_id
+        state.line_data[line_id].depot_stop_id = stop_id
+
         local transportVehicleConfig = vehicleToDuplicate.transportVehicleConfig
         local purchaseTime = api_helper.getGameTime()
 
@@ -141,23 +177,49 @@ local function addVehicleToLine(line_id)
 
                 api_helper.sendVehicleToLine(new_vehicle_id, line_id, stop_id)
 
-                helper.printBoughtVehicleInfo(state.line_data, line_id, new_vehicle_id, depot_id)
+                -- Check if vehicle remains in depot despite being sent to a line.
+                -- If it is, then there's a problem - sell the vehicle again.
+                if api_helper.isVehicleInDepot(new_vehicle_id) then
+                    -- Set this to force a manual identification of appropriate depot_id and stop_id next run.
+                    state.line_data[line_id].depot_update_required = true
 
-                success = true
+                    api_helper.sellVehicle(new_vehicle_id)
+
+                    session_cachedDepotMiss = session_cachedDepotMiss + 1
+
+                    log.warn("Unable to add vehicle to line '" .. state.line_data[line_id].name .. "' - Need to identify a new depot.")
+                else
+                    -- Ensure the currently used depot_id and stop_id are retained for next vehicle addition.
+                    state.line_data[line_id].depot_update_required = nil
+
+                    if using_cached_depot then
+                        session_cachedDepotHit = session_cachedDepotHit + 1
+                    else
+                        session_cachedDepotMiss = session_cachedDepotMiss + 1
+                    end
+
+                    helper.printBoughtVehicleInfo(state.line_data, line_id, new_vehicle_id, depot_id)
+                    success = true
+                end
             else
                 log.warn("Unable to add vehicle to line '" .. state.line_data[line_id].name .. "' - Insufficient cash?")
             end
         end)
     else
         log.warn("Unable to add vehicle to line '" .. state.line_data[line_id].name .. "' - Either no available depot, or not possible to find a depot on this update.")
-        log.debug("line_id: " .. line_id)
     end
+
+    log.debug("linemanager: session_cachedDepotHit=" .. session_cachedDepotHit .." session_cachedDepotMiss=" .. session_cachedDepotMiss)
+
+    log.debug("linemanager: addVehicleToLine(" .. tostring(line_id) .. ") finished. success=" .. tostring(success))
 
     return success
 end
 
 --- updates vehicle amount if applicable and line list in general
 local function updateLines()
+    log.debug("linemanager: updateLines() starting")
+
     local lines = api_helper.getPlayerLines()
     local lineCount = 0
     local vehicleCount = 0
@@ -190,6 +252,7 @@ local function updateLines()
             end
 
             if state.line_data[line_id].has_problem then
+                -- TODO: Need to insert code here to clear up any line problems.
                 problemCount = problemCount + 1
             end
         end
@@ -247,6 +310,8 @@ local function updateLines()
             log.info(logOutput)
         end
     end
+
+    log.debug("linemanager: updateLines() finished")
 end
 
 -- This functions runs exactly once (and first) when a game is loaded
@@ -272,7 +337,7 @@ local function firstRunOnly()
         log.info("The state data version is up-to-date.")
     end
 
-    log.info("linemanager: firstRunOnly() completed successfully")
+    log.info("linemanager: firstRunOnly() finished")
 end
 
 -- This functions runs regularly every second
@@ -283,11 +348,13 @@ local function regularUpdate()
         local noPathTrains = api_helper.getNoPathTrains()
 
         for i = 1, #noPathTrains do
-            log.warn("Vehicle " .. noPathTrains[i] .. " has no path, trying to reverse the vehicle to find a new path")
+            local vehicle_name = api_helper.getEntityName(noPathTrains[i])
+            log.warn("Train '" .. vehicle_name .. "' has no path, reversing the train to find a new path")
+            log.debug("vehicle_id: " .. noPathTrains[i])
             api_helper.reverseVehicle(noPathTrains[i])
         end
     end
-    log.debug("linemanager: regularUpdate() completed successfully")
+    log.debug("linemanager: regularUpdate() finished")
 end
 
 -- This function runs on each game tick if the game is not paused

@@ -392,6 +392,7 @@ local function prepareLineData()
             else
                 local lineName = ""
                 local lineCarrier = api_helper.getCarrierFromVehicle(lineVehicles[1]) -- Retrieve the carrier from the first vehicle of the line
+                local lineDepotId = nil
                 local lineType = ""
                 local lineRule = "P" -- Same as above, use this as a default. This will be overwritten below.
                 local lineRuleManual = false -- Keeps track if the line rule was assigned manually
@@ -463,13 +464,15 @@ local function prepareLineData()
 
                 -- PARAMETERS (where applicable i.e. a rule uses parameters)
                 lineParameters = getLineParameters(lineName, lineRule)
-                -- If nil was returned then there's a problem
+                -- If nil was returned then there's a problem (check the getLineParameters function for when nil will be returned)
                 if not lineParameters then
                     lineParameters = "ERROR"
                     lineHasProblem = true
                 end
 
-                -- CAPACITY and OCCUPANCY
+                -- CAPACITY, OCCUPANCY, DEPOT
+                local newestVehiclePurchaseTime = 0
+
                 for _, vehicle_id in pairs(lineVehicles) do
                     local vehicle = api_helper.getVehicle(vehicle_id)
                     if vehicle then
@@ -478,6 +481,11 @@ local function prepareLineData()
                         end
                         if api_helper.isVehicleInDepot(vehicle) or api_helper.isVehicleIsGoingToDepot(vehicle) then
                             lineVehiclesInDepot = lineVehiclesInDepot + 1
+                        end
+                        -- Determine line depot by the newest vehicle (if the depot exists/can be retrieved)
+                        if vehicle.transportVehicleConfig.vehicles[1].purchaseTime > newestVehiclePurchaseTime and api_helper.getDepot(vehicle.depot) then
+                            newestVehiclePurchaseTime = vehicle.transportVehicleConfig.vehicles[1].purchaseTime
+                            lineDepotId = vehicle.depot
                         end
                     end
                     -- Need to check for this, not all vehicles might have had cargo when the data was prepared and thus not exist here
@@ -501,11 +509,15 @@ local function prepareLineData()
 
                 -- HAS_PROBLEM (if a vehicle is IN_DEPOT or GOING_TO_DEPOT, it is considered a marker for a possible problem)
                 lineHasProblem = lineHasProblem or lineVehiclesInDepot > 0 or checkIfLineHasProblem(line_id, lineVehicles)
+                if lineHasProblem then
+                    lineDepotId = nil
+                end
 
                 sampledLineData[line_id] = {
                     SAMPLE_WAITING_CARGO = true, -- Set marker for next step (this will be used by mergeLineData() to confirm this item needs processing)
                     name = lineName,
                     carrier = lineCarrier,
+                    depot_id = lineDepotId,
                     type = lineType,
                     rule = lineRule,
                     rule_manual = lineRuleManual,
@@ -668,6 +680,16 @@ local function mergeLineData()
                 if sampledLineData[line_id].vehicles ~= stateLineData[line_id].vehicles then
                     sampledLineData[line_id].last_action = "MANUAL"
                     sampledLineData[line_id].samples = 1
+                end
+                -- First, preserve depot_update_required if set. If not, then:
+                -- Preserve depot_id and depot_stop_id if depot_stop_id exists.
+                -- If depot_stop_id exists, it is an indication that a depot has been found by sending a vehicle to a depot and checking for success (in linemanager.lua).
+                -- It is more likely that this will be successful for future vehicle additions, so keep the depot_id and depot_stop_id if the depot still exists.
+                if stateLineData[line_id].depot_update_required then
+                    sampledLineData[line_id].depot_update_required = stateLineData[line_id].depot_update_required
+                elseif stateLineData[line_id].depot_stop_id and stateLineData[line_id].depot_id and api_helper.getDepot(stateLineData[line_id].depot_id) then
+                    sampledLineData[line_id].depot_id = stateLineData[line_id].depot_id
+                    sampledLineData[line_id].depot_stop_id = stateLineData[line_id].depot_stop_id
                 end
                 -- Calculate averages for demand, usage, rate, frequency, waiting, and waiting_peak.
                 sampledLineData[line_id].demand = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].demand, line_data.demand, 0.1)
