@@ -67,6 +67,22 @@ rules.line_rules = {
             },
         },
     },
+    F = { -- FREQUENCY
+        name = "FREQUENCY",
+        description = "Ensures that a configured minimum frequency (or range) is achieved.",
+        parameters = {
+            { -- Parameter 1, the minimum required rate for the line
+                name = "freq_target",
+                required = true, -- Use either this or a default value
+                -- default = 200, -- Only use a default value for non-required parameters or weird things will happen. Kept here for reference only.
+            },
+            { -- Parameter 2, the acceptable max waiting peak % compared to capacity_per_vehicle. This will try to keep the waiting_peak below this level, effectively allowing the line to increase capacity when required (but never decrease below the rate).
+                name = "waiting_peak_max",
+                min = 0,
+                max = 300,
+            },
+        },
+    },
 }
 
 -- The default rules that are applied automatically (when enabled for a category of lines)
