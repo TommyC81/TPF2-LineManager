@@ -258,7 +258,7 @@ function rules.moreVehicleConditions(line_data_single)
         end
 
         -- Always ensure the minimum frequency is achieved
-        line_rules[#line_rules + 1] = samples > requiredSamples and frequency < freq_target
+        line_rules[#line_rules + 1] = samples > requiredSamples and frequency > freq_target
 
         -- Add additional rules for peak usage
         if waiting_peak_target then
@@ -470,9 +470,9 @@ function rules.lessVehiclesConditions(line_data_single)
 
         -- Prepare appropriate rules
         if waiting_peak_target then
-            line_rules[#line_rules + 1] = samples > requiredSamples and frequency * modifier > freq_target and waiting_peak / capacity_per_vehicle < modifier * waiting_peak_target / 100
+            line_rules[#line_rules + 1] = samples > requiredSamples and frequency * modifier < freq_target and waiting_peak / capacity_per_vehicle < modifier * waiting_peak_target / 100
         else
-            line_rules[#line_rules + 1] = samples > requiredSamples and frequency * modifier > freq_target
+            line_rules[#line_rules + 1] = samples > requiredSamples and frequency * modifier < freq_target
         end
     end
 

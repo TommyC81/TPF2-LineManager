@@ -77,6 +77,12 @@ The following LineManager options area available in the in-game menu:
   desired rate. You can optionally add a second parameter by adding an additional number separate by a colon, this
   second parameter specifies an acceptable station overload in % relative to the average capacity per vehicle servicing the line.
   This allows capacity to grow upwards in case a station load exceeds this parameter, capacity will however never be reduced
+  below the set rate.*
+* **`[F:<number>]` - FREQUENCY**: Line frequency rules, adjusting number of vehicles to ensure line frequency meets/exceeds the set rate.
+  To use, add `[F:xxx]` to the name of the line (anywhere in the line name). Note that xxx is to be replaced with the
+  desired rate. You can optionally add a second parameter by adding an additional number separate by a colon, this
+  second parameter specifies an acceptable station overload in % relative to the average capacity per vehicle servicing the line.
+  This allows capacity to grow upwards in case a station load exceeds this parameter, capacity will however never be reduced
   below the set rate.
 * **`[PR]` - PASSENGER (RusteyBucket)**: Alternative PASSENGER line rules created by RusteyBucket. These rules will more
   aggressively manage vehicles upwards. This can be useful for unevenly balanced passenger lines. Perhaps a line feeding a
@@ -93,6 +99,10 @@ Examples of line naming:
 * Line name `TRUCK ABC-1 [C]` - this line is managed according to default **(C) - CARGO** line rules.
 * Line name `TRUCK ABC-1 [R:100]` - this line is managed according to **(R) - RATE** line rules, to achieve a rate of 100.
 * Line name `TRUCK ABC-1 [R:100:200]` - this line is managed according to **(R) - RATE** line rules, to achieve a rate of 100.
+  Additionally, a second (and optional) parameter specifies that capacity should be increased in case a station load exceeds
+  200% of the average capacity per vehicle on the line.
+* Line name `TRUCK ABC-1 [F:100]` - this line is managed according to **(F) - FREQUENCY** line rules, to achieve a rate of 100.
+* Line name `TRUCK ABC-1 [F:100:200]` - this line is managed according to **(F) - FREQUENCY** line rules, to achieve a rate of 100.
   Additionally, a second (and optional) parameter specifies that capacity should be increased in case a station load exceeds
   200% of the average capacity per vehicle on the line.
 * Line name `TRUCK ABC-1 [M]` - this line is **MANUALLY** managed (no automatic vehicle management).
