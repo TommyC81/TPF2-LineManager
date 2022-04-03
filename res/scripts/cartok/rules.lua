@@ -241,6 +241,29 @@ function rules.moreVehicleConditions(line_data_single)
         if waiting_peak_target then
             line_rules[#line_rules + 1] = samples > requiredSamples and waiting_peak / capacity_per_vehicle > modifier * waiting_peak_target / 100
         end
+
+    elseif rule == "F" then
+        -- Make use of FREQUENCY rules
+        local modifier = math.max(1.25, 1.1 * (vehicles + 1) / vehicles)
+        local freq_target = parameters[1].value
+        local waiting_peak_target = parameters[2].value or nil
+
+        -- Adjust required samples
+        local requiredSamples = 5
+        if carrier == "AIR" or carrier == "RAIL" or carrier == "WATER" then
+            requiredSamples = requiredSamples + 3
+        end
+        if last_action == "REMOVE" then
+            requiredSamples = requiredSamples + 3
+        end
+
+        -- Always ensure the minimum frequency is achieved
+        line_rules[#line_rules + 1] = samples > requiredSamples and frequency < freq_target
+
+        -- Add additional rules for peak usage
+        if waiting_peak_target then
+            line_rules[#line_rules + 1] = samples > requiredSamples and waiting_peak / capacity_per_vehicle > modifier * waiting_peak_target / 100
+        end
     end
 
     -- Check whether at least one condition is fulfilled
@@ -397,16 +420,16 @@ function rules.lessVehiclesConditions(line_data_single)
         local oneVehicle = 1 / vehicles -- how much would one vehicle change
         local plusOneVehicle = 1 + oneVehicle -- add the rest of the vehicles
         local dv = demand * plusOneVehicle -- exaggerate demand by what one more vehicle could change
-        local waitFactor = waiting_peak/capacity_per_vehicle -- no overcrowding
+        local waitFactor = waiting_peak / capacity_per_vehicle -- no overcrowding
 
         line_rules = {
             samples > 5
-            and usage < 40
-            and d10 < newRate
-            and dv < newRate
-            and newUsage < 80
-            and newRate > averageCapacity
-            and waitFactor < 0.5
+                    and usage < 40
+                    and d10 < newRate
+                    and dv < newRate
+                    and newUsage < 80
+                    and newRate > averageCapacity
+                    and waitFactor < 0.5
         }
     elseif rule == "R" then
         -- Make use of RATE rules
@@ -428,6 +451,28 @@ function rules.lessVehiclesConditions(line_data_single)
             line_rules[#line_rules + 1] = samples > requiredSamples and rate * modifier > rate_target and waiting_peak / capacity_per_vehicle < modifier * waiting_peak_target / 100
         else
             line_rules[#line_rules + 1] = samples > requiredSamples and rate * modifier > rate_target
+        end
+
+    elseif rule == "F" then
+        -- Make use of FREQUENCY rules
+        local modifier = math.min(0.75, 0.9 * (vehicles - 1) / vehicles)
+        local freq_target = parameters[1].value
+        local waiting_peak_target = parameters[2].value or nil
+
+        -- Adjust required samples
+        local requiredSamples = 5
+        if carrier == "AIR" or carrier == "RAIL" or carrier == "WATER" then
+            requiredSamples = requiredSamples + 3
+        end
+        if last_action == "REMOVE" then
+            requiredSamples = requiredSamples + 3
+        end
+
+        -- Prepare appropriate rules
+        if waiting_peak_target then
+            line_rules[#line_rules + 1] = samples > requiredSamples and frequency * modifier > freq_target and waiting_peak / capacity_per_vehicle < modifier * waiting_peak_target / 100
+        else
+            line_rules[#line_rules + 1] = samples > requiredSamples and frequency * modifier > freq_target
         end
     end
 
