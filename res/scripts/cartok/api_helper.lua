@@ -37,7 +37,14 @@ end
 
 ---@return table : details of the vehicle
 function api_helper.getVehicle(vehicle_id)
-    return api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
+    local exists = api_helper.entityExists(vehicle_id)
+
+    if exists then
+        return api.engine.getComponent(vehicle_id, api.type.ComponentType.TRANSPORT_VEHICLE)
+    end
+
+    -- If we made it here, the entity doesn't exist
+    return nil
 end
 
 ---@param depot_id number : the id of the depot
@@ -141,8 +148,7 @@ function api_helper.getGameUpdates()
 end
 
 ---@param line_id number : the id of the line
----@return number : line rate (or 0 if not found)
----@return number : line frequency (or 0 if not found)
+---@return table : line information (rate, frequency, transported_last_month, transported_last_year, stops)
 function api_helper.getLineInformation(line_id)
     local rate = 0
     local frequency = 0
@@ -181,13 +187,25 @@ end
 function api_helper.sendVehicleToDepot(vehicle_id, sell_on_arrival)
     sell_on_arrival = sell_on_arrival or false
 
-    api.cmd.sendCommand(api.cmd.make.sendToDepot(vehicle_id, sell_on_arrival))
+    local success, res = pcall(function()
+        api.cmd.sendCommand(api.cmd.make.sendToDepot(vehicle_id, sell_on_arrival))
+    end)
+
+    if not success then
+        log.debug("api_helper.sendVehicleToDepot: " .. res)
+    end
 end
 
 ---@param vehicle_id number : the id of the vehicle
 ---sells a vehicle
 function api_helper.sellVehicle(vehicle_id)
-    api.cmd.sendCommand(api.cmd.make.sellVehicle(vehicle_id))
+    local success, res = pcall(function()
+        api.cmd.sendCommand(api.cmd.make.sellVehicle(vehicle_id))
+    end)
+
+    if not success then
+        log.debug("api_helper.sellVehicle: " .. res)
+    end
 end
 
 ---@param depot_id number : the id of the depot
@@ -202,7 +220,7 @@ function api_helper.buyVehicle(depot_id, transportVehicleConfig, callback)
     end)
 
     if not success then
-        log.debug(res)
+        log.debug("api_helper.buyVehicle: " .. res)
     end
 end
 
