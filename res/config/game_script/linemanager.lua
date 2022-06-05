@@ -60,6 +60,7 @@ local state = {
 
 helper.setLog(log)
 sampling.setLog(log)
+api_helper.setLog(log)
 
 ---@param line_id number
 ---@return boolean success whether a vehicle was removed
@@ -156,7 +157,7 @@ local function addVehicleToLine(line_id)
         log.error("There are no vehicles on line '" .. state.line_data[line_id].name .. "' - Requested vehicle addition cancelled. This message indicates a code error, please report it.")
     end
 
-    if vehicleToDuplicate and depot_id and stop_id then
+    if vehicleToDuplicate and vehicleToDuplicate.transportVehicleConfig and depot_id and stop_id then
         -- Store depot_id and stop_id
         state.line_data[line_id].depot_id = depot_id
         state.line_data[line_id].depot_stop_id = stop_id
