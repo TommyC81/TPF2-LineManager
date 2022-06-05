@@ -14,7 +14,7 @@ local NO_ENTITY = -1
 
 local MAX_LINES_TO_PROCESS_PER_RUN = 20 -- Maximum lines to process per run
 local MAX_VEHICLES_TO_PROCESS_PER_RUN = 50 -- Maximum vehicles to process per run
-local MAX_ENTITIES_TO_PROCESS_PER_RUN = 200 -- Maximum entities to process per run
+local MAX_ENTITIES_TO_PROCESS_PER_RUN = 300 -- Maximum entities to process per run
 
 local STATE_STOPPED = 1
 local STATE_WAITING = 2
