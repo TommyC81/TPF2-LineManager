@@ -586,7 +586,7 @@ local function sampleWaitingCargo()
                     -- Get the SIM_ENTITY_AT_TERMINAL unless already cached
                     if not simEntityAtTerminalCache[currentEntityId] then
                         local entity_at_terminal = api_helper.getEntityAtTerminal(currentEntityId)
-                        if entity_at_terminal ~= nil then
+                        if entity_at_terminal then
                             simEntityAtTerminalCache[currentEntityId] = entity_at_terminal
                         else
                             simEntityAtTerminalCache[currentEntityId] = NO_ENTITY -- Set a value in case the entity is not at terminal (nil returned)
