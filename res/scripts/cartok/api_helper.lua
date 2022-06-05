@@ -2,6 +2,12 @@ local api_helper = {}
 
 local enums = require 'cartok/enums'
 
+local log = nil
+
+function api_helper.setLog(input_log)
+    log = input_log
+end
+
 ---@param entity_id number : the id of the entity
 ---@return boolean : whether the entity exists
 function api_helper.entityExists(entity_id)
@@ -11,14 +17,17 @@ end
 ---@param entity_id number : the id of the entity
 ---@return string : entityName
 function api_helper.getEntityName(entity_id)
-    local success, res = pcall(function()
-        return api.engine.getComponent(entity_id, api.type.ComponentType.NAME)
-    end)
-    if success and res and res.name then
-        return res.name
-    else
-        return "ERROR"
+    local exists = api_helper.entityExists(entity_id)
+
+    if exists then
+        local entity = api.engine.getComponent(entity_id, api.type.ComponentType.NAME)
+        if entity and entity.name then
+            return entity.name
+        end
     end
+
+    -- If we made it here, the entity doesn't exist or doesn't have a name - thus return an "ERROR" name to indicate this
+    return "ERROR"
 end
 
 ---@return table : all lines for the Player
@@ -34,24 +43,23 @@ end
 ---@param depot_id number : the id of the depot
 ---@return table : details of the depot
 function api_helper.getDepot(depot_id)
-    local success, res = pcall(function()
+    local exists = api_helper.entityExists(depot_id)
+
+    if exists then
         return api.engine.getComponent(depot_id, api.type.ComponentType.VEHICLE_DEPOT)
-    end)
-    if success then
-        return res
-    else
-        return nil
     end
+
+    -- If we made it here, the entity doesn't exist
+    return nil
 end
 
 ---@param entity_id number : the id of the entity
 ---@return table : details of the entity at terminal
 function api_helper.getEntityAtTerminal(entity_id)
-    local success, res = pcall(function()
+    local exists = api_helper.entityExists(entity_id)
+
+    if exists then
         return api.engine.getComponent(entity_id, api.type.ComponentType.SIM_ENTITY_AT_TERMINAL)
-    end)
-    if success then
-        return res
     else
         return nil
     end
@@ -187,8 +195,15 @@ end
 ---@param callback function : the callback to be used for the function, uses parameters 'cmd' and 'res'
 ---buys a vehicle
 function api_helper.buyVehicle(depot_id, transportVehicleConfig, callback)
-    local buyCommand = api.cmd.make.buyVehicle(api.engine.util.getPlayer(), depot_id, transportVehicleConfig)
-    api.cmd.sendCommand(buyCommand, callback)
+    -- A bug was reported for a reason I'm not able to determine, thus do a pcall here and do a debug log if it goes wrong.
+    local success, res = pcall(function()
+        local buyCommand = api.cmd.make.buyVehicle(api.engine.util.getPlayer(), depot_id, transportVehicleConfig)
+        api.cmd.sendCommand(buyCommand, callback)
+    end)
+
+    if not success then
+        log.debug(res)
+    end
 end
 
 ---@param vehicle_id number : the id of the vehicle
