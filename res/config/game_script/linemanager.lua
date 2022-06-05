@@ -181,9 +181,6 @@ local function addVehicleToLine(line_id)
                 -- Check if vehicle remains in depot despite being sent to a line.
                 -- If it is, then there's a problem - sell the vehicle again.
                 if api_helper.isVehicleInDepot(new_vehicle_id) then
-                    -- Set this to force a manual identification of appropriate depot_id and stop_id next run.
-                    state.line_data[line_id].depot_update_required = true
-
                     api_helper.sellVehicle(new_vehicle_id)
 
                     session_cachedDepotMiss = session_cachedDepotMiss + 1
@@ -213,6 +210,12 @@ local function addVehicleToLine(line_id)
     log.debug("linemanager: session_cachedDepotHit=" .. session_cachedDepotHit .." session_cachedDepotMiss=" .. session_cachedDepotMiss)
 
     log.debug("linemanager: addVehicleToLine(" .. tostring(line_id) .. ") finished. success=" .. tostring(success))
+
+    if not success then
+        -- If this addVehicleToLine() run was not successful for any reason, force an update of depot_id and stop_id on next run.
+        log.debug("linemanager:  Forcing depot update on next run for line '" .. state.line_data[line_id].name  .. "'.")
+        state.line_data[line_id].depot_update_required = true
+    end
 
     return success
 end
