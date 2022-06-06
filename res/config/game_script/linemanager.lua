@@ -158,62 +158,70 @@ local function addVehicleToLine(line_id)
     end
 
     if vehicleToDuplicate and vehicleToDuplicate.transportVehicleConfig and depot_id and stop_id then
-        -- Store depot_id and stop_id
-        state.line_data[line_id].depot_id = depot_id
-        state.line_data[line_id].depot_stop_id = stop_id
+        -- Check that the carrier is the same for both depot and vehicleToDuplicate
+        -- For instance, different types of vehicles can be assigned to the same line (trams and buses, for instance).
+        -- If depot and vehicleToDuplicate carrier is different, you'll get weird results...
+        local depot = api_helper.getDepot(depot_id)
+        if depot and depot.carrier == vehicleToDuplicate.carrier then
+            -- Store depot_id and stop_id
+            state.line_data[line_id].depot_id = depot_id
+            state.line_data[line_id].depot_stop_id = stop_id
 
-        local transportVehicleConfig = vehicleToDuplicate.transportVehicleConfig
-        local purchaseTime = api_helper.getGameTime()
+            local transportVehicleConfig = vehicleToDuplicate.transportVehicleConfig
+            local purchaseTime = api_helper.getGameTime()
 
-        -- Reset applicable parts of the transportVehicleConfig
-        for _, vehicle in pairs(transportVehicleConfig.vehicles) do
-            vehicle.purchaseTime = purchaseTime
-            vehicle.maintenanceState = 1
-        end
-
-        api_helper.buyVehicle(depot_id, transportVehicleConfig, function(cmd, res)
-            if (res and cmd.resultVehicleEntity) then
-
-                new_vehicle_id = cmd.resultVehicleEntity
-
-                api_helper.sendVehicleToLine(new_vehicle_id, line_id, stop_id)
-
-                -- Check if vehicle remains in depot despite being sent to a line.
-                -- If it is, then there's a problem - sell the vehicle again.
-                if api_helper.isVehicleInDepot(new_vehicle_id) then
-                    api_helper.sellVehicle(new_vehicle_id)
-
-                    session_cachedDepotMiss = session_cachedDepotMiss + 1
-
-                    log.warn("Unable to add vehicle to line '" .. state.line_data[line_id].name .. "' - Need to identify a new depot.")
-                else
-                    -- Ensure the currently used depot_id and stop_id are retained for next vehicle addition.
-                    state.line_data[line_id].depot_update_required = nil
-
-                    if using_cached_depot then
-                        session_cachedDepotHit = session_cachedDepotHit + 1
-                    else
-                        session_cachedDepotMiss = session_cachedDepotMiss + 1
-                    end
-
-                    helper.printBoughtVehicleInfo(state.line_data, line_id, new_vehicle_id, depot_id)
-                    success = true
-                end
-            else
-                log.warn("Unable to add vehicle to line '" .. state.line_data[line_id].name .. "' - Insufficient cash?")
+            -- Reset applicable parts of the transportVehicleConfig
+            for _, vehicle in pairs(transportVehicleConfig.vehicles) do
+                vehicle.purchaseTime = purchaseTime
+                vehicle.maintenanceState = 1
             end
-        end)
+
+            api_helper.buyVehicle(depot_id, transportVehicleConfig, function(cmd, res)
+                if (res and cmd.resultVehicleEntity) then
+
+                    new_vehicle_id = cmd.resultVehicleEntity
+
+                    api_helper.sendVehicleToLine(new_vehicle_id, line_id, stop_id)
+
+                    -- Check if vehicle remains in depot despite being sent to a line.
+                    -- If it is, then there's a problem - sell the vehicle again.
+                    if api_helper.isVehicleInDepot(new_vehicle_id) then
+                        api_helper.sellVehicle(new_vehicle_id)
+
+                        session_cachedDepotMiss = session_cachedDepotMiss + 1
+
+                        log.warn("Unable to add vehicle to line '" .. state.line_data[line_id].name .. "' - Need to identify a new depot.")
+                    else
+                        -- Ensure the currently used depot_id and stop_id are retained for next vehicle addition.
+                        state.line_data[line_id].depot_update_required = nil
+
+                        if using_cached_depot then
+                            session_cachedDepotHit = session_cachedDepotHit + 1
+                        else
+                            session_cachedDepotMiss = session_cachedDepotMiss + 1
+                        end
+
+                        helper.printBoughtVehicleInfo(state.line_data, line_id, new_vehicle_id, depot_id)
+                        success = true
+                    end
+                else
+                    log.warn("Unable to add vehicle to line '" .. state.line_data[line_id].name .. "' - Insufficient cash?")
+                end
+            end)
+        else
+            log.warn("Unable to add vehicle to line '" .. state.line_data[line_id].name .. "' - Depot carrier is different than the vehicleToDuplicate.")
+        end
     else
         log.warn("Unable to add vehicle to line '" .. state.line_data[line_id].name .. "' - Either no available depot, or not possible to find a depot on this update.")
     end
 
-    log.debug("linemanager: session_cachedDepotHit=" .. session_cachedDepotHit .." session_cachedDepotMiss=" .. session_cachedDepotMiss)
+    log.debug("linemanager: session_cachedDepotHit=" .. session_cachedDepotHit .. " session_cachedDepotMiss=" .. session_cachedDepotMiss)
 
     log.debug("linemanager: addVehicleToLine(" .. tostring(line_id) .. ") finished. success=" .. tostring(success))
 
     if not success then
         -- If this addVehicleToLine() run was not successful for any reason, force an update of depot_id and stop_id on next run.
-        log.debug("linemanager:  Forcing depot update on next run for line '" .. state.line_data[line_id].name  .. "'.")
+        log.debug("linemanager: Forcing depot update on next run for line '" .. state.line_data[line_id].name .. "' (" .. line_id .. ").")
         state.line_data[line_id].depot_update_required = true
     end
 
