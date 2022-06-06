@@ -192,7 +192,7 @@ function api_helper.sendVehicleToDepot(vehicle_id, sell_on_arrival)
     end)
 
     if not success then
-        log.debug("api_helper.sendVehicleToDepot: " .. res)
+        log.debug("api_helper.sendVehicleToDepot - ERROR: " .. tostring(res))
     end
 end
 
@@ -204,7 +204,7 @@ function api_helper.sellVehicle(vehicle_id)
     end)
 
     if not success then
-        log.debug("api_helper.sellVehicle: " .. res)
+        log.debug("api_helper.sellVehicle - ERROR: " .. tostring(res))
     end
 end
 
@@ -213,14 +213,13 @@ end
 ---@param callback function : the callback to be used for the function, uses parameters 'cmd' and 'res'
 ---buys a vehicle
 function api_helper.buyVehicle(depot_id, transportVehicleConfig, callback)
-    -- A bug was reported for a reason I'm not able to determine, thus do a pcall here and do a debug log if it goes wrong.
     local success, res = pcall(function()
         local buyCommand = api.cmd.make.buyVehicle(api.engine.util.getPlayer(), depot_id, transportVehicleConfig)
         api.cmd.sendCommand(buyCommand, callback)
     end)
 
     if not success then
-        log.debug("api_helper.buyVehicle: " .. res)
+        log.debug("api_helper.buyVehicle - ERROR: " .. tostring(res))
     end
 end
 
@@ -229,7 +228,13 @@ end
 ---@param stop_id number : the id of the stop
 ---sends a vehicle to specified line, starting at a specified stop
 function api_helper.sendVehicleToLine(vehicle_id, line_id, stop_id)
-    api.cmd.sendCommand(api.cmd.make.setLine(vehicle_id, line_id, stop_id))
+    local success, res = pcall(function()
+        api.cmd.sendCommand(api.cmd.make.setLine(vehicle_id, line_id, stop_id))
+    end)
+
+    if not success then
+        log.debug("api_helper.sendVehicleToLine - ERROR: " .. tostring(res))
+    end
 end
 
 ---@param line_id number : the id of the line
