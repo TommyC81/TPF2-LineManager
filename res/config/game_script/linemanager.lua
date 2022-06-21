@@ -124,6 +124,8 @@ local function addVehicleToLine(line_id)
 
     -- TODO: Test whether enough money is available or don't empty the vehicle when it's hopeless anyway.
     -- TODO: Figure out a better way to find the closest depot (or one at all).
+    -- TODO: Try all stations if the preferred station isn't available to send the vehicle to.
+    -- TODO: Implement an option that sells an unallocatable vehicle instead of letting it rot in a random depot that probably won't be checked for a long time.
     -- This merely tries to send an existing vehicle on the line to the depot, checks if succeeds then cancel the depot call but uses the depot data.
     -- Unfortunately sending a vehicle to a depot empties the vehicle.
     if #lineVehicles > 0 then

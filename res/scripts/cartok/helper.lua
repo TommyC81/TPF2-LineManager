@@ -182,6 +182,7 @@ end
 function helper.lineDataString(line_data, line_id)
     local str = "Usage: " .. lume.round(line_data[line_id].usage) .. "%"
     str = str .. " Rate: " .. lume.round(line_data[line_id].rate)
+    str = str .. " Frequency: " .. lume.round(line_data[line_id].frequency)
     str = str .. " WaitingPeak: " .. lume.round(line_data[line_id].waiting_peak)
     str = str .. " CapPerVeh: " .. line_data[line_id].capacity_per_vehicle
     str = str .. " Vehicles: " .. line_data[line_id].vehicles
