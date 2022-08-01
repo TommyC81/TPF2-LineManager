@@ -870,4 +870,25 @@ function sampling.getEmptiestVehicle(vehicle_ids)
 
 end
 
+---@param vehicle_ids table array of VEHICLE ids
+---@return table empty_vehicles_id array of empty VEHICLE ids
+---returns the ids of the (cached) empty vehicles in the provided vehicle_ids
+function sampling.getEmptyVehicles(vehicle_ids)
+    log.debug("sampling: getEmptyVehicles() started")
+    local emptyVehicles = {}
+
+    if vehicleOccupancyCache and vehicle_ids and #vehicle_ids > 0 then
+        for _, vehicle_id in pairs(vehicle_ids) do
+            -- If vehicle is not cached, assume it is because of no load
+            if not vehicleOccupancyCache[vehicle_id] or vehicleOccupancyCache[vehicle_id].TOTAL == 0 then
+                emptyVehicles[#emptyVehicles + 1] = vehicle_id
+            end
+        end
+        log.debug("sampling: getEmptyVehicles() found " .. #emptyVehicles .. " empty vehicles")
+    end
+
+    return emptyVehicles
+
+end
+
 return sampling

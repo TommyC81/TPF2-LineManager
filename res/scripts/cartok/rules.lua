@@ -67,6 +67,12 @@ rules.line_rules = {
             },
         },
     },
+    X = { -- REMOVE
+        name = "REMOVE",
+        description = "This stops the addition of vehicles to the line, and removes all empty vehicles until zero vehicles remain.",
+        parameters = {
+        },
+    },
 }
 
 -- The default rules that are applied automatically (when enabled for a category of lines)
@@ -285,7 +291,17 @@ function rules.lessVehiclesConditions(line_data_single)
 
     local line_rules = {}
 
-    -- Ensure there's always 1 vehicle retained per line.
+    -- If this line is being removed and still has vehicles then return true.
+    -- Note that this is afforded special processing in linemanager.lua, just have to make sure this function returns true when appropriate to activate the processing.
+    if rule == "X" then
+        if vehicles > 0 then
+            return true
+        else
+            return false
+        end
+    end
+
+    -- Otherwise, ensure there's always 1 vehicle retained on the line.
     if vehicles <= 1 then
         return false
     end
@@ -337,7 +353,10 @@ function rules.lessVehiclesConditions(line_data_single)
             requiredSamples = requiredSamples + 3
         end
 
-        line_rules = { samples > requiredSamples and frequency * inverse_modifier < 720 and finalScore < requiredScore, samples > 3 * requiredSamples and frequency * inverse_modifier < 720 and waiting_peak * inverse_modifier < capacity_per_vehicle }
+        line_rules = {
+            samples > requiredSamples and frequency * inverse_modifier < 720 and finalScore < requiredScore,
+            samples > 3 * requiredSamples and frequency * inverse_modifier < 720 and waiting_peak * inverse_modifier < capacity_per_vehicle
+        }
     elseif rule == "C" then
         -- Make use of default CARGO rules
         local level = parameters[1].value
@@ -385,7 +404,10 @@ function rules.lessVehiclesConditions(line_data_single)
             requiredSamples = requiredSamples + 3
         end
 
-        line_rules = { samples > requiredSamples and frequency * inverse_modifier < 720 and finalScore < requiredScore, samples > 3 * requiredSamples and frequency * inverse_modifier < 720 and waiting_peak * inverse_modifier < capacity_per_vehicle }
+        line_rules = {
+            samples > requiredSamples and frequency * inverse_modifier < 720 and finalScore < requiredScore,
+            samples > 3 * requiredSamples and frequency * inverse_modifier < 720 and waiting_peak * inverse_modifier < capacity_per_vehicle
+        }
     elseif rule == "PR" then
         -- Make use of PASSENGER rules by RusteyBucket
         local newVehicles = vehicles - 1
@@ -425,9 +447,15 @@ function rules.lessVehiclesConditions(line_data_single)
 
         -- Prepare appropriate rules
         if waiting_peak_target then
-            line_rules[#line_rules + 1] = samples > requiredSamples and rate * modifier > rate_target and waiting_peak / capacity_per_vehicle < modifier * waiting_peak_target / 100
+            line_rules = {
+                samples > requiredSamples and
+                rate * modifier > rate_target and
+                waiting_peak / capacity_per_vehicle < modifier * waiting_peak_target / 100
+            }
         else
-            line_rules[#line_rules + 1] = samples > requiredSamples and rate * modifier > rate_target
+            line_rules = {
+                samples > requiredSamples and rate * modifier > rate_target
+            }
         end
     end
 

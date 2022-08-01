@@ -104,7 +104,7 @@ end
 
 ---@return table : vehicle indexed cargo map
 function api_helper.getVehicle2Cargo2SimEntitesMap()
-    return api.engine.system.simEntityAtVehicleSystem.getVehicle2Cargo2SimEntitesMap()
+    return api.engine.system.simEntityAtVehicleSystem.getVehicle2Cargo2SimEntitesMap() -- Misspelled, as per the actual API
 end
 
 ---@return table : line indexed vehicle map

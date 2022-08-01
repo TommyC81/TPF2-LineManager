@@ -71,8 +71,19 @@ local function removeVehicleFromLine(line_id)
     local success = false
     local lineVehicles = api_helper.getLineVehicles(line_id)
 
-    -- Find the oldest vehicle on the line
-    if (#lineVehicles > 1) then
+    -- If the rule is X = REMOVE the vehicles on this line, then process this.
+    if #lineVehicles > 0 and state.line_data[line_id].rule == "X" then
+        local emptyVehiclesIds = sampling.getEmptyVehicles(lineVehicles)
+        for _, vehicle_id in pairs(emptyVehiclesIds) do
+            api_helper.sellVehicle(vehicle_id)
+            helper.printSoldVehicleInfo(state.line_data, line_id, vehicle_id)
+        end
+
+        -- Always set this to true if it ran
+        success = true
+
+    elseif #lineVehicles > 1 then
+        -- Find the oldest vehicle on the line
         local oldestVehicleId = helper.getOldestVehicleId(lineVehicles)
 
         if oldestVehicleId then
@@ -259,7 +270,7 @@ local function updateLines()
                     state.line_data[line_id].samples = 0
                     state.line_data[line_id].last_action = "REMOVE"
                     state.line_data[line_id].vehicles = state.line_data[line_id].vehicles - 1
-                    vehicleCount = vehicleCount - 1
+                    vehicleCount = vehicleCount - 1 -- If the line rule happened to be X (REMOVE), then this count could temporarily be wrong as several vehicles could have been removed. Not worth fixing at this time...
                 end
             end
 
