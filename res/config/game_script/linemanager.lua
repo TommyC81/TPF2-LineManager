@@ -70,30 +70,36 @@ local function removeVehicleFromLine(line_id)
 
     local success = false
     local lineVehicles = api_helper.getLineVehicles(line_id)
+    local emptyVehicles = sampling.getEmptyVehicles(lineVehicles)
 
     -- If the rule is X = REMOVE the vehicles on this line, then process this.
-    if #lineVehicles > 0 and state.line_data[line_id].rule == "X" then
-        local emptyVehiclesIds = sampling.getEmptyVehicles(lineVehicles)
-        for _, vehicle_id in pairs(emptyVehiclesIds) do
+    if state.line_data[line_id].rule == "X" then
+        for _, vehicle_id in pairs(emptyVehicles) do
             api_helper.sellVehicle(vehicle_id)
             helper.printSoldVehicleInfo(state.line_data, line_id, vehicle_id)
+            -- Set this to true if any vehicle was removed i.e. this loop runs at least once
+            success = true
+        end
+    -- Else, run this if there's more than one vehicle on the line
+    elseif #lineVehicles > 1 then
+        local vehicleToRemove = nil
+
+        -- If there are empty vehicles on the line, choose the oldest one of those, otherwise just use the oldest vehicle
+        if  #emptyVehicles > 0 then
+            vehicleToRemove = helper.getOldestVehicleId(emptyVehicles)
+        else
+            -- Find the oldest vehicle on the line
+            vehicleToRemove = helper.getOldestVehicleId(lineVehicles)
         end
 
-        -- Always set this to true if it ran
-        success = true
-
-    elseif #lineVehicles > 1 then
-        -- Find the oldest vehicle on the line
-        local oldestVehicleId = helper.getOldestVehicleId(lineVehicles)
-
-        if oldestVehicleId then
+        if vehicleToRemove then
             -- Reset depot_id and stop_id on vehicle removal - this will hopefully keep the depot_id and stop_id fresh.
-            local depot_id, stop_id = helper.findDepotAndStop(line_id, oldestVehicleId)
+            local depot_id, stop_id = helper.findDepotAndStop(line_id, vehicleToRemove)
 
             -- Remove/sell the oldest vehicle (instantly sells)
-            api_helper.sellVehicle(oldestVehicleId)
+            api_helper.sellVehicle(vehicleToRemove)
 
-            helper.printSoldVehicleInfo(state.line_data, line_id, oldestVehicleId)
+            helper.printSoldVehicleInfo(state.line_data, line_id, vehicleToRemove)
 
             success = true
 
@@ -110,6 +116,7 @@ local function removeVehicleFromLine(line_id)
                 state.line_data[line_id].depot_stop_id = nil
             end
         end
+    -- Not rule X and not more than 1 vehicle on the line, then there's simply not sufficient vehicles on the line to remove further vehicles.
     else
         log.error("Only one vehicle left on line '" .. state.line_data[line_id].name .. "' - Requested vehicle removal cancelled. This message indicates a code error, please report it.")
     end

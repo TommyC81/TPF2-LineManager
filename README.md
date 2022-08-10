@@ -32,12 +32,14 @@ This mod is inspired by and uses code snippets from:
   trucks/buses, trams, aircraft, and ships. Additionally in the settings, you can also enable train management.
 * When adding a vehicle to a line, an existing vehicle is (effectively) cloned. There is no evaluation of which vehicle
   will be cloned, so it is therefore recommended to keep a single type of vehicle per line.
-* When removing a vehicle from a line, the oldest vehicle will always be removed. Additionally, the mod will ensure
-  at least 1 vehicle remains on each line.
+* When removing a vehicle from a line, if there are empty vehicles on the line then the oldest of the empty vehicle will be removed,
+  otherwise the oldest vehicle of all vehicles on the line will be removed regardless if it has cargo.
+  Additionally, the mod will ensure at least 1 vehicle remains on each line, unless rule `[X]` is used.
 * Sensible rules for both PASSENGER and CARGO lines are used by default (if automatic vehicle management is enabled for the
   respective category of lines). However, if this doesn't work as desired, see the "Line rules" section below for more information.
-* Using any other in-game date progression (date speed) than 1x is _EXPERIMENTAL_ - it is very likely that things will break in some way.
-  Suggest to avoid this unless you know what you are doing and like to dig into the code (including rules.lua) to tweak things.
+* Using any other in-game date progression (date speed) than 1x is _EXPERIMENTAL_ - it is likely that things will break in some way
+  or simply not work as expected. Suggest to avoid this unless you know what you are doing and like to figure things out
+  including digging into the code (including rules.lua) to tweak things.
 
 ### In-game menu
 
