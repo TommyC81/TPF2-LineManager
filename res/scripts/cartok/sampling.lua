@@ -867,7 +867,6 @@ function sampling.getEmptiestVehicle(vehicle_ids)
     end
 
     return emptiestVehicleId
-
 end
 
 ---@param vehicle_ids table array of VEHICLE ids
@@ -888,7 +887,6 @@ function sampling.getEmptyVehicles(vehicle_ids)
     end
 
     return emptyVehicles
-
 end
 
 return sampling

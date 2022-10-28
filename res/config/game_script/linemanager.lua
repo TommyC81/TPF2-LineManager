@@ -72,7 +72,7 @@ local function removeVehicleFromLine(line_id)
     local lineVehicles = api_helper.getLineVehicles(line_id)
     local emptyVehicles = sampling.getEmptyVehicles(lineVehicles)
 
-    -- If the rule is X = REMOVE the vehicles on this line, then process this.
+    -- If the rule is X (i.e. REMOVE the vehicles on this line), then process that only.
     if state.line_data[line_id].rule == "X" then
         for _, vehicle_id in pairs(emptyVehicles) do
             api_helper.sellVehicle(vehicle_id)
@@ -80,12 +80,12 @@ local function removeVehicleFromLine(line_id)
             -- Set this to true if any vehicle was removed i.e. this loop runs at least once
             success = true
         end
-    -- Else, run this if there's more than one vehicle on the line
+        -- Else, run this if there's more than one vehicle on the line
     elseif #lineVehicles > 1 then
         local vehicleToRemove = nil
 
         -- If there are empty vehicles on the line, choose the oldest one of those, otherwise just use the oldest vehicle
-        if  #emptyVehicles > 0 then
+        if #emptyVehicles > 0 then
             vehicleToRemove = helper.getOldestVehicleId(emptyVehicles)
         else
             -- Find the oldest vehicle on the line
@@ -116,7 +116,7 @@ local function removeVehicleFromLine(line_id)
                 state.line_data[line_id].depot_stop_id = nil
             end
         end
-    -- Not rule X and not more than 1 vehicle on the line, then there's simply not sufficient vehicles on the line to remove further vehicles.
+        -- Not rule X and not more than 1 vehicle on the line, then there's simply not sufficient vehicles on the line to remove further vehicles.
     else
         log.error("Only one vehicle left on line '" .. state.line_data[line_id].name .. "' - Requested vehicle removal cancelled. This message indicates a code error, please report it.")
     end
@@ -347,6 +347,7 @@ end
 -- This functions runs exactly once (and first) when a game is loaded
 local function firstRunOnly()
     log.info("linemanager: firstRunOnly() starting")
+
     log.info("LineManager enabled is set to: " .. tostring(state.linemanager_settings.enabled))
     log.info("Automatically reverse trains with no path is set to: " .. tostring(state.linemanager_settings.reverse_no_path_trains))
     if (state.sampling_settings.time_based_sampling) then
@@ -373,24 +374,6 @@ end
 -- This functions runs regularly every second
 local function regularUpdate()
     log.debug("linemanager: regularUpdate() starting")
-    if state.linemanager_settings.reverse_no_path_trains then
-        -- Reverse direction of no path trains to resolve stuck trains
-        local noPathTrains = api_helper.getNoPathTrains()
-
-        for i = 1, #noPathTrains do
-            local vehicle_name = api_helper.getEntityName(noPathTrains[i])
-            log.warn("Train '" .. vehicle_name .. "' has no path, reversing the train to find a new path")
-            log.debug("vehicle_id: " .. noPathTrains[i])
-            api_helper.reverseVehicle(noPathTrains[i])
-        end
-    end
-    log.debug("linemanager: regularUpdate() finished")
-end
-
--- This function runs on each game tick if the game is not paused
-local function everyTickUpdate()
-    -- This must be run once per update to ensure sampling processing when triggered
-    sampling.process()
 
     -- Check if a sampling has finished (and then set sampling to stopped to only trigger this once)
     if sampling.isFinished() then
@@ -434,6 +417,27 @@ local function everyTickUpdate()
             sampling.start(state.line_data, state.auto_settings)
         end
     end
+
+    -- Take care of train reversing if enabled
+    if state.linemanager_settings.reverse_no_path_trains then
+        -- Reverse direction of no path trains to resolve stuck trains
+        local noPathTrains = api_helper.getNoPathTrains()
+
+        for i = 1, #noPathTrains do
+            local vehicle_name = api_helper.getEntityName(noPathTrains[i])
+            log.warn("Train '" .. vehicle_name .. "' has no path, reversing the train to find a new path")
+            log.debug("vehicle_id: " .. noPathTrains[i])
+            api_helper.reverseVehicle(noPathTrains[i])
+        end
+    end
+
+    log.debug("linemanager: regularUpdate() finished")
+end
+
+-- This function runs on each game tick if the game is not paused
+local function everyTickUpdate()
+    -- This must be run once per update to ensure sampling processing when triggered
+    sampling.process()
 end
 
 -------------------------------------------------------------
@@ -802,6 +806,10 @@ function data()
                 firstRun = false
                 firstRunOnly()
             end
+
+            -- Every tick update
+            everyTickUpdate()
+
             -- If linemanager is enabled and game is not paused
             if state.linemanager_settings.enabled and game.interface.getGameSpeed() > 0 then
                 -- Regular update
@@ -809,8 +817,6 @@ function data()
                     lastRegularUpdate = current_time
                     regularUpdate()
                 end
-                -- Every tick update
-                everyTickUpdate()
                 -- If game is paused and we're using os time based sampling, then "freeze" the time of the last sample taken
             elseif state.sampling_settings.time_based_sampling then
                 state.sampling_settings.last_sample_time = state.sampling_settings.last_sample_time + (current_time - state.sampling_settings.last_sample_time)

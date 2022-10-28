@@ -1,4 +1,4 @@
--- This file is "owned" by sampling.lua and separates out all the rule specific logic into an easily 
+-- This file is "owned" by sampling.lua and separates out all the rule specific logic into an easily
 local lume = require 'cartok/lume'
 
 local rules = {}
@@ -419,7 +419,7 @@ function rules.lessVehiclesConditions(line_data_single)
         local oneVehicle = 1 / vehicles -- how much would one vehicle change
         local plusOneVehicle = 1 + oneVehicle -- add the rest of the vehicles
         local dv = demand * plusOneVehicle -- exaggerate demand by what one more vehicle could change
-        local waitFactor = waiting_peak/capacity_per_vehicle -- no overcrowding
+        local waitFactor = waiting_peak / capacity_per_vehicle -- no overcrowding
 
         line_rules = {
             samples > 5

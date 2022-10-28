@@ -4,10 +4,9 @@ local t = {}
 function t.timestamp(ts)
 	return {
 		clock = os.clock(),
-		date = os.date("%Y-%m-%d  %H:%M:%S", ts and (os.time()-os.clock()+ts) ),
+		date = os.date("%Y-%m-%d  %H:%M:%S", ts and (os.time() - os.clock() + ts)),
 	}
 end
-
 
 local st = 0
 local rnd = 0
@@ -41,12 +40,12 @@ function t.reset()
 	rnd = 0
 end
 
-function t.timefunc(f,n,...)
+function t.timefunc(f, n, ...)
 	t.start()
-	for i=1,(n or 1) do
+	for i = 1, (n or 1) do
 		f(...)
 	end
-	print("Total Time for "..(n or 1).."x: "..t.stop().." s")
+	print("Total Time for " .. (n or 1) .. "x: " .. t.stop() .. " s")
 end
 
 return t

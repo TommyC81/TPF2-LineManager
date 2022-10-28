@@ -40,7 +40,7 @@ end
 ---@param param boolean (optional) whether extended line info should used, default is false
 ---set whether extended line info should be used
 function log.setShowExtendedLineInfo(param)
-    if (param ~= nil ) then
+    if (param ~= nil) then
         showExtendedLineInfo = param
     else
         showExtendedLineInfo = false
