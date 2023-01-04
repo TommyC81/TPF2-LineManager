@@ -55,7 +55,7 @@ The following LineManager options area available in the in-game menu:
   for instance, use a mod that freezes game time, then you can select this option - updates will then be triggered
   at regular intervals, around every 30 seconds. NOTE: Using any other in-game date progression (date speed) than 1x is _EXPERIMENTAL_.
 * **PASSENGER/CARGO - ROAD/TRAM/RAIL/WATER/AIR** - Enables/disables automatic line vehicle management for an entire
-  category. Select as desired. By default, everything except RAIL is selected.
+  category. Select as desired. By default, automatic line vehicle management is enabled for everything.
 * **Debugging** - Enables/disables additional debugging output in the in-game console.
 * **Show extended line info** - Enables/disables additional line information output in the in-game console. This currently
   shows which lines that are either Manually (i.e. line rule set in the line name), Automatically (i.e. management of a category
