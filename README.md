@@ -82,9 +82,9 @@ The following LineManager options area available in the in-game menu:
   below the set rate.
 * **`[PR]` - PASSENGER (RusteyBucket)**: Alternative PASSENGER line rules created by RusteyBucket. These rules will more
   aggressively manage vehicles upwards. This can be useful for unevenly balanced passenger lines. Perhaps a line feeding a
-  main route and it is acceptable that it runs less optimally to ensure the main route see maximum load. To use,
+  main route and it is acceptable that it runs less optimally to ensure the main route has maximum/optimal load. To use,
   add `[PR]` to the name of the line (anywhere in the line name).
-* **`[X]` - REMOVE**: Used to dis-establish a line. Vehicles will no longer be added, and all empty vehicles weill be removed.
+* **`[X]` - REMOVE**: Used to dis-establish a line. Vehicles will no longer be added, and all empty vehicles will be removed.
   For this to function optimally, also manually amend the line to prevent loading of new cargo.
 
 Examples of line naming:
