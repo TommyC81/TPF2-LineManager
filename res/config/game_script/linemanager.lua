@@ -352,7 +352,7 @@ local function firstRunOnly()
     log.info("Automatically reverse trains with no path is set to: " .. tostring(state.linemanager_settings.reverse_no_path_trains))
     if (state.sampling_settings.time_based_sampling) then
         log.info("Using os time based sampling.")
-        log.info("One sample is taken every " .. state.sampling_settings.sample_time_interval .. " seconds.")
+        log.info("One sample is taken every " .. state.sampling_settings.sample_time_interval .. " seconds (divided by game speed).")
         state.sampling_settings.last_sample_time = os.time() -- Reset this time to delay first sampling (this potentially avoids some weird os.time stuff if it differs oddly between game starts and thus does not trigger updates when expected)
     else
         log.info("Using in-game month based sampling.")
