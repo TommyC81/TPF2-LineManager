@@ -445,21 +445,29 @@ end
 -------------------------------------------------------------
 
 local function gui_LMButtonClick()
+    api_helper.sendScriptCommand("debug", "linemanager: gui_LMButtonClick() starting")
+
     if not gui_settingsWindow:isVisible() then
+        api_helper.sendScriptCommand("debug", "linemanager: gui_settingsWindow is NOT visible, show it")
         gui_settingsWindow:setVisible(true, false)
     else
+        api_helper.sendScriptCommand("debug", "linemanager: gui_settingsWindow IS visible, hide it")
         gui_settingsWindow:setVisible(false, false)
     end
+
+    api_helper.sendScriptCommand("debug", "linemanager: gui_LMButtonClick() finished")
 end
 
 local function gui_initNotificationWindow()
     -- TODO: The below is very manual and prone to future errors, make it a bit "smarter".
 
-    -- SETTINGS WINDOW
+    -- NOTIFICATION WINDOW
+    api_helper.sendScriptCommand("debug", "linemanager: gui_initNotificationWindow() starting")
+
     -- Create a BoxLayout to hold all options
     local notificationBox = api.gui.layout.BoxLayout.new("VERTICAL")
 
-    -- Create the SETTINGS window
+    -- Create the NOTIFICATION window
     gui_notificationWindow = api.gui.comp.Window.new("LineManager Notification", notificationBox)
     gui_notificationWindow:setTitle("LineManager Notification")
     gui_notificationWindow:addHideOnCloseHandler()
@@ -471,7 +479,7 @@ local function gui_initNotificationWindow()
     gui_notificationWindow:setPinned(true)
     gui_notificationWindow:setVisible(false, false)
 
-    -- LINEMANAGER NOTIFICATION
+    -- LINEMANAGER NOTIFICATION TEXT
     local notification_text = "This is either the first run using LineManager, or the LineManager data format has been updated.\n"
     notification_text = notification_text .. "This means that LineManager default settings are in use.\n"
     notification_text = notification_text .. "\n"
@@ -499,16 +507,21 @@ local function gui_initNotificationWindow()
     text_LineManagerNotificationText:setSelectable(true)
     notificationBox:addItem(text_LineManagerNotificationText)
 
-    -- Add a force sample button
+    -- Add a button to open settings
     local openSettingsButton = api.gui.comp.Button.new(api.gui.comp.TextView.new("Click here to open LineManager settings"), true)
     openSettingsButton:onClick(function()
         gui_notificationWindow:setVisible(false, false)
         gui_LMButtonClick()
     end)
     notificationBox:addItem(openSettingsButton)
+
+    api_helper.sendScriptCommand("debug", "linemanager: gui_initNotificationWindow() finished")
 end
 
 local function gui_initSettingsWindow()
+    -- SETTINGS WINDOW
+    api_helper.sendScriptCommand("debug", "linemanager: gui_initSettingsWindow() starting")
+
     -- Create LineManager button in the main GUI
     local button = api.gui.comp.Button.new(api.gui.comp.TextView.new("[LM]"), true)
     button:onClick(gui_LMButtonClick)
@@ -709,6 +722,8 @@ local function gui_initSettingsWindow()
         gui_notificationWindow:setVisible(true, false)
     end)
     settingsBox:addItem(showNotificationWindowButton)
+
+    api_helper.sendScriptCommand("debug", "linemanager: gui_initSettingsWindow() finished")
 end
 
 -------------------------------------------------------------
@@ -719,7 +734,9 @@ function data()
     return {
         handleEvent = function(filename, id, name, param)
             if filename == "linemanager.lua" then
-                if id == "settings_gui" then
+                if id == "debug" then
+                    log.debug(name)
+                elseif id == "settings_gui" then
                     if name == "debugging" then
                         if param == true then
                             state.log_settings.level = log.levels.DEBUG
