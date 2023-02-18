@@ -467,18 +467,6 @@ local function gui_initNotificationWindow()
     -- Create a BoxLayout to hold all options
     local notificationBox = api.gui.layout.BoxLayout.new("VERTICAL")
 
-    -- Create the NOTIFICATION window
-    gui_notificationWindow = api.gui.comp.Window.new("LineManager Notification", notificationBox)
-    gui_notificationWindow:setTitle("LineManager Notification")
-    gui_notificationWindow:addHideOnCloseHandler()
-    gui_notificationWindow:setMovable(true)
-    gui_notificationWindow:setPinButtonVisible(true)
-    gui_notificationWindow:setResizable(false)
-    gui_notificationWindow:setSize(api.gui.util.Size.new(785, 540))
-    gui_notificationWindow:setPosition(100, 100)
-    gui_notificationWindow:setPinned(true)
-    gui_notificationWindow:setVisible(false, false)
-
     -- LINEMANAGER NOTIFICATION TEXT
     local notification_text = "This is either the first run using LineManager, or the LineManager data format has been updated.\n"
     notification_text = notification_text .. "This means that LineManager default settings are in use.\n"
@@ -515,6 +503,19 @@ local function gui_initNotificationWindow()
     end)
     notificationBox:addItem(openSettingsButton)
 
+    -- Create the NOTIFICATION window
+    gui_notificationWindow = api.gui.comp.Window.new("LineManager Notification", notificationBox)
+    gui_notificationWindow:setTitle("LineManager Notification")
+    gui_notificationWindow:addHideOnCloseHandler()
+    gui_notificationWindow:setMovable(true)
+    gui_notificationWindow:setPinButtonVisible(true)
+    gui_notificationWindow:setResizable(false)
+    gui_notificationWindow:setSize(api.gui.util.Size.new(785, 540))
+    -- TODO: Setting the position here seems to cause the window to be invisible (our outside the screen, or something...)
+    --gui_notificationWindow:setPosition(100, 100)
+    gui_notificationWindow:setPinned(true)
+    gui_notificationWindow:setVisible(false, false)
+
     api_helper.sendScriptCommand("debug", "linemanager: gui_initNotificationWindow() finished")
 end
 
@@ -533,18 +534,6 @@ local function gui_initSettingsWindow()
     -- SETTINGS WINDOW
     -- Create a BoxLayout to hold all options
     local settingsBox = api.gui.layout.BoxLayout.new("VERTICAL")
-
-    -- Create the SETTINGS window
-    gui_settingsWindow = api.gui.comp.Window.new("LineManager Settings", settingsBox)
-    gui_settingsWindow:setTitle("LineManager Settings")
-    gui_settingsWindow:addHideOnCloseHandler()
-    gui_settingsWindow:setMovable(true)
-    gui_settingsWindow:setPinButtonVisible(true)
-    gui_settingsWindow:setResizable(false)
-    gui_settingsWindow:setSize(api.gui.util.Size.new(300, 480))
-    gui_settingsWindow:setPosition(100, 100)
-    gui_settingsWindow:setPinned(true)
-    gui_settingsWindow:setVisible(false, false)
 
     -- LINEMANAGER OPTIONS
     local header_LineManagerOptions = api.gui.comp.TextView.new("** LineManager options **")
@@ -722,6 +711,19 @@ local function gui_initSettingsWindow()
         gui_notificationWindow:setVisible(true, false)
     end)
     settingsBox:addItem(showNotificationWindowButton)
+
+    -- Create the SETTINGS window
+    gui_settingsWindow = api.gui.comp.Window.new("LineManager Settings", settingsBox)
+    gui_settingsWindow:setTitle("LineManager Settings")
+    gui_settingsWindow:addHideOnCloseHandler()
+    gui_settingsWindow:setMovable(true)
+    gui_settingsWindow:setPinButtonVisible(true)
+    gui_settingsWindow:setResizable(false)
+    gui_settingsWindow:setSize(api.gui.util.Size.new(300, 480))
+    -- TODO: Setting the position here seems to cause the window to be invisible (our outside the screen, or something...)
+    --gui_settingsWindow:setPosition(100, 100)
+    gui_settingsWindow:setPinned(true)
+    gui_settingsWindow:setVisible(false, false)
 
     api_helper.sendScriptCommand("debug", "linemanager: gui_initSettingsWindow() finished")
 end
