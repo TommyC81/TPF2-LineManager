@@ -34,15 +34,15 @@ local state = {
         PASSENGER = {
             ROAD = true,
             TRAM = true,
-            RAIL = true,
-            AIR = true,
-            WATER = true,
+            RAIL = false,
+            AIR = false,
+            WATER = false,
         },
         CARGO = {
             ROAD = true,
             TRAM = true,
-            RAIL = true,
-            AIR = true,
+            RAIL = false,
+            AIR = false,
             WATER = true,
         },
     },
@@ -347,7 +347,6 @@ end
 -- This functions runs exactly once (and first) when a game is loaded
 local function firstRunOnly()
     log.info("linemanager: firstRunOnly() starting")
-
     log.info("LineManager enabled is set to: " .. tostring(state.linemanager_settings.enabled))
     log.info("Automatically reverse trains with no path is set to: " .. tostring(state.linemanager_settings.reverse_no_path_trains))
     if (state.sampling_settings.time_based_sampling) then
@@ -581,8 +580,8 @@ local function gui_initSettingsWindow()
     local selectPassengerRoad = api.gui.comp.CheckBox.new("ROAD")
     local selectPassengerTram = api.gui.comp.CheckBox.new("TRAM")
     local selectPassengerRail = api.gui.comp.CheckBox.new("RAIL")
-    local selectPassengerWater = api.gui.comp.CheckBox.new("WATER")
     local selectPassengerAir = api.gui.comp.CheckBox.new("AIR")
+    local selectPassengerWater = api.gui.comp.CheckBox.new("WATER")
 
     selectPassengerRoad:setSelected(state.auto_settings.PASSENGER.ROAD, false)
     selectPassengerRoad:onToggle(function(selected)
@@ -605,20 +604,20 @@ local function gui_initSettingsWindow()
     selectPassengerWater:setSelected(state.auto_settings.PASSENGER.AIR, false)
     selectPassengerWater:onToggle(function(selected)
         -- Send a script event to say that the debugging setting has been changed.
-        api_helper.sendScriptCommand("settings_gui", "auto_passenger_water", selected)
+        api_helper.sendScriptCommand("settings_gui", "auto_passenger_air", selected)
     end)
 
     selectPassengerAir:setSelected(state.auto_settings.PASSENGER.WATER, false)
     selectPassengerAir:onToggle(function(selected)
         -- Send a script event to say that the debugging setting has been changed.
-        api_helper.sendScriptCommand("settings_gui", "auto_passenger_air", selected)
+        api_helper.sendScriptCommand("settings_gui", "auto_passenger_water", selected)
     end)
 
     passengerOptionBox:addItem(selectPassengerRoad)
     passengerOptionBox:addItem(selectPassengerTram)
     passengerOptionBox:addItem(selectPassengerRail)
-    passengerOptionBox:addItem(selectPassengerWater)
     passengerOptionBox:addItem(selectPassengerAir)
+    passengerOptionBox:addItem(selectPassengerWater)
 
     automaticOptionBox:addItem(passengerOptionBox)
 
@@ -630,8 +629,8 @@ local function gui_initSettingsWindow()
     local selectCargoRoad = api.gui.comp.CheckBox.new("ROAD")
     local selectCargoTram = api.gui.comp.CheckBox.new("TRAM")
     local selectCargoRail = api.gui.comp.CheckBox.new("RAIL")
-    local selectCargoWater = api.gui.comp.CheckBox.new("WATER")
     local selectCargoAir = api.gui.comp.CheckBox.new("AIR")
+    local selectCargoWater = api.gui.comp.CheckBox.new("WATER")
 
     selectCargoRoad:setSelected(state.auto_settings.CARGO.ROAD, false)
     selectCargoRoad:onToggle(function(selected)
@@ -654,20 +653,20 @@ local function gui_initSettingsWindow()
     selectCargoWater:setSelected(state.auto_settings.CARGO.AIR, false)
     selectCargoWater:onToggle(function(selected)
         -- Send a script event to say that the debugging setting has been changed.
-        api_helper.sendScriptCommand("settings_gui", "auto_cargo_water", selected)
+        api_helper.sendScriptCommand("settings_gui", "auto_cargo_air", selected)
     end)
 
     selectCargoAir:setSelected(state.auto_settings.CARGO.WATER, false)
     selectCargoAir:onToggle(function(selected)
         -- Send a script event to say that the debugging setting has been changed.
-        api_helper.sendScriptCommand("settings_gui", "auto_cargo_air", selected)
+        api_helper.sendScriptCommand("settings_gui", "auto_cargo_water", selected)
     end)
 
     cargoOptionBox:addItem(selectCargoRoad)
     cargoOptionBox:addItem(selectCargoTram)
     cargoOptionBox:addItem(selectCargoRail)
-    cargoOptionBox:addItem(selectCargoWater)
     cargoOptionBox:addItem(selectCargoAir)
+    cargoOptionBox:addItem(selectCargoWater)
 
     automaticOptionBox:addItem(cargoOptionBox)
 
