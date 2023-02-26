@@ -602,13 +602,13 @@ local function gui_initSettingsWindow()
         api_helper.sendScriptCommand("settings_gui", "auto_passenger_rail", selected)
     end)
 
-    selectPassengerWater:setSelected(state.auto_settings.PASSENGER.AIR, false)
+    selectPassengerWater:setSelected(state.auto_settings.PASSENGER.WATER, false)
     selectPassengerWater:onToggle(function(selected)
         -- Send a script event to say that the debugging setting has been changed.
         api_helper.sendScriptCommand("settings_gui", "auto_passenger_water", selected)
     end)
 
-    selectPassengerAir:setSelected(state.auto_settings.PASSENGER.WATER, false)
+    selectPassengerAir:setSelected(state.auto_settings.PASSENGER.AIR, false)
     selectPassengerAir:onToggle(function(selected)
         -- Send a script event to say that the debugging setting has been changed.
         api_helper.sendScriptCommand("settings_gui", "auto_passenger_air", selected)
@@ -651,13 +651,13 @@ local function gui_initSettingsWindow()
         api_helper.sendScriptCommand("settings_gui", "auto_cargo_rail", selected)
     end)
 
-    selectCargoWater:setSelected(state.auto_settings.CARGO.AIR, false)
+    selectCargoWater:setSelected(state.auto_settings.CARGO.WATER, false)
     selectCargoWater:onToggle(function(selected)
         -- Send a script event to say that the debugging setting has been changed.
         api_helper.sendScriptCommand("settings_gui", "auto_cargo_water", selected)
     end)
 
-    selectCargoAir:setSelected(state.auto_settings.CARGO.WATER, false)
+    selectCargoAir:setSelected(state.auto_settings.CARGO.AIR, false)
     selectCargoAir:onToggle(function(selected)
         -- Send a script event to say that the debugging setting has been changed.
         api_helper.sendScriptCommand("settings_gui", "auto_cargo_air", selected)
