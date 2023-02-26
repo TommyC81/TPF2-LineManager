@@ -35,15 +35,15 @@ local state = {
             ROAD = true,
             TRAM = true,
             RAIL = true,
-            AIR = true,
             WATER = true,
+            AIR = true,
         },
         CARGO = {
             ROAD = true,
             TRAM = true,
             RAIL = true,
-            AIR = true,
             WATER = true,
+            AIR = true,
         },
     },
     linemanager_settings = {
@@ -511,7 +511,7 @@ local function gui_initNotificationWindow()
     gui_notificationWindow:setPinButtonVisible(true)
     gui_notificationWindow:setResizable(false)
     gui_notificationWindow:setSize(api.gui.util.Size.new(785, 540))
-    -- TODO: Setting the position here seems to cause the window to be invisible (our outside the screen, or something...)
+    -- TODO: Setting the position here seems to cause the window to be invisible (or outside the screen, or something...)
     --gui_notificationWindow:setPosition(100, 100)
     gui_notificationWindow:setPinned(true)
     gui_notificationWindow:setVisible(false, false)
@@ -720,7 +720,7 @@ local function gui_initSettingsWindow()
     gui_settingsWindow:setPinButtonVisible(true)
     gui_settingsWindow:setResizable(false)
     gui_settingsWindow:setSize(api.gui.util.Size.new(300, 480))
-    -- TODO: Setting the position here seems to cause the window to be invisible (our outside the screen, or something...)
+    -- TODO: Setting the position here seems to cause the window to be invisible (or outside the screen, or something...)
     --gui_settingsWindow:setPosition(100, 100)
     gui_settingsWindow:setPinned(true)
     gui_settingsWindow:setVisible(false, false)
