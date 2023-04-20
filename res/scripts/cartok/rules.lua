@@ -17,19 +17,23 @@ rules.PARAMETER_SEPARATOR = ":"
 -- The rule definitions
 -- These must be in order from longest to shortest rule acronym (otherwise only the first shorter acronym will be found i.e. P will be used before PR, so PR must be higher up in the list)
 rules.line_rules = {
-    M = { -- Manual management
+    M = {
+        -- Manual management
         name = "MANUAL",
         description = "Manual line management - no automatic line management features will be used for this line.",
     },
-    PR = { -- PASSENGER (RUSTEYBUCKET)
+    PR = {
+        -- PASSENGER (RUSTEYBUCKET)
         name = "PASSENGER (RusteyBucket)",
         description = "PASSENGER line management rules by RusteyBucket.",
     },
-    P = { -- PASSENGER
+    P = {
+        -- PASSENGER
         name = "PASSENGER",
         description = "A balanced set of default rules for PASSENGER line management.",
         parameters = {
-            { -- Parameter 1, (aggressiveness) level = how focused the line should be on capacity/rate rather than (economic) balance. Useful for feeder lines for instance.
+            {
+                -- Parameter 1, (aggressiveness) level = how focused the line should be on capacity/rate rather than (economic) balance. Useful for feeder lines for instance.
                 name = "level",
                 default = 0,
                 min = 0,
@@ -37,11 +41,13 @@ rules.line_rules = {
             },
         },
     },
-    C = { -- CARGO
+    C = {
+        -- CARGO
         name = "CARGO",
         description = "A balanced set of default rules for CARGO line management.",
         parameters = {
-            { -- Parameter 1, (aggressiveness) level = how focused the line should be on capacity/rate rather than (economic) balance. Useful for feeder lines for instance.
+            {
+                -- Parameter 1, (aggressiveness) level = how focused the line should be on capacity/rate rather than (economic) balance. Useful for feeder lines for instance.
                 name = "level",
                 default = 0,
                 min = 0,
@@ -49,25 +55,29 @@ rules.line_rules = {
             },
         },
     },
-    R = { -- RATE
+    R = {
+        -- RATE
         name = "RATE",
         description = "Ensures that a configured minimum rate (or range) is achieved.",
         parameters = {
-            { -- Parameter 1, the minimum required rate for the line
+            {
+                -- Parameter 1, the minimum required rate for the line
                 name = "rate_target",
                 required = true, -- Use either this or a default value
                 -- default = 200, -- Only use a default value for non-required parameters or weird things will happen. Kept here for reference only.
-                min = 50, -- Optional, to limit min-value (values lower than this will indicate that the line has a problem and it won't be managed)
-                max = 2000, -- Optional, to limit max-value (values higher than this will indicate that the line has problem and it won't be managed)
+                min = 50,        -- Optional, to limit min-value (values lower than this will indicate that the line has a problem and it won't be managed)
+                max = 2000,      -- Optional, to limit max-value (values higher than this will indicate that the line has problem and it won't be managed)
             },
-            { -- Parameter 2, the acceptable max waiting peak % compared to capacity_per_vehicle. This will try to keep the waiting_peak below this level, effectively allowing the line to increase capacity when required (but never decrease below the rate).
+            {
+                -- Parameter 2, the acceptable max waiting peak % compared to capacity_per_vehicle. This will try to keep the waiting_peak below this level, effectively allowing the line to increase capacity when required (but never decrease below the rate).
                 name = "waiting_peak_max",
                 min = 0,
                 max = 300,
             },
         },
     },
-    X = { -- REMOVE
+    X = {
+        -- REMOVE
         name = "REMOVE",
         description = "This stops the addition of vehicles to the line, and removes all empty vehicles until zero vehicles remain.",
         parameters = {
@@ -83,35 +93,36 @@ rules.defaultCargoLineRule = "C"
 ---@return boolean : whether a vehicle should be added to the line
 function rules.moreVehicleConditions(line_data_single)
     -- Factors that can be used in rules
-    local name = line_data_single.name -- the name of the line
-    local carrier = line_data_single.carrier -- "ROAD", "TRAM", "RAIL", "WATER" or "AIR"
-    local type = line_data_single.type -- "PASSENGER" or "CARGO" (if the line handles both PASSENGER and CARGO, then the greater demand will determine type). Will default to "PASSENGER" if no demand is detected.
-    local rule = line_data_single.rule -- the line rule
-    local rule_manual = line_data_single.rule_manual -- whether the line rule was assigned manually (rather than automatically)
-    local rate = line_data_single.rate -- *average* line rate
-    local frequency = line_data_single.frequency -- *average* line frequency in seconds
-    local parameters = line_data_single.parameters -- the parameters for the line (this is indexed as per the rules)
-    local vehicles = line_data_single.vehicles -- number of vehicles currently on the line
-    local capacity = line_data_single.capacity -- total current capacity of the vehicles on the line
-    local occupancy = line_data_single.occupancy -- total current occupancy on the vehicles on the line
-    local occupancy_peak = line_data_single.occupancy_peak -- current peak amount of passengers on any vehicle on the line
-    local demand = line_data_single.demand -- *average* line demand i.e. total number of PASSENGER or CARGO intending to use the line, including already on the line
-    local usage = line_data_single.usage -- *average* line usage i.e. occupancy/capacity
-    local samples = line_data_single.samples -- number of samples collected for the line since last action taken (this is reset after each action)
-    local last_action = line_data_single.last_action -- the last action taken to manage the line; "ADD", "REMOVE" or "MANUAL" if a vehicle was manually added or removed ("" if no previous action exists)
-    local waiting = line_data_single.waiting -- *average* total number of items waiting at stations for this line
-    local waiting_peak = line_data_single.waiting_peak -- *average* the highest number of items waiting at a station for this line
-    local waiting_peak_clamped = line_data_single.waiting_peak_clamped -- *average* the highest number of items waiting at a station for this line, but clamped to 0.5 - 1.5 times the capacity_per_vehicle
+    local name = line_data_single.name                                     -- the name of the line
+    local carrier = line_data_single.carrier                               -- "ROAD", "TRAM", "RAIL", "WATER" or "AIR"
+    local type = line_data_single.type                                     -- "PASSENGER" or "CARGO" (if the line handles both PASSENGER and CARGO, then the greater demand will determine type). Will default to "PASSENGER" if no demand is detected.
+    local rule = line_data_single.rule                                     -- the line rule
+    local rule_manual = line_data_single.rule_manual                       -- whether the line rule was assigned manually (rather than automatically)
+    local rate = line_data_single.rate                                     -- *average* line rate
+    local frequency = line_data_single.frequency                           -- *average* line frequency in seconds
+    local parameters = line_data_single.parameters                         -- the parameters for the line (this is indexed as per the rules)
+    local vehicles = line_data_single.vehicles                             -- number of vehicles currently on the line
+    local capacity = line_data_single.capacity                             -- total current capacity of the vehicles on the line
+    local occupancy = line_data_single.occupancy                           -- total current occupancy on the vehicles on the line
+    local occupancy_peak = line_data_single.occupancy_peak                 -- current peak amount of passengers on any vehicle on the line
+    local demand = line_data_single.demand                                 -- *average* line demand i.e. total number of PASSENGER or CARGO intending to use the line, including already on the line
+    local usage = line_data_single.usage                                   -- *average* line usage i.e. occupancy/capacity (normalized to 0.0 - 100.0 %)
+    local samples = line_data_single.samples                               -- number of samples collected for the line since last action taken (this is reset after each action)
+    local last_action = line_data_single.last_action                       -- the last action taken to manage the line; "ADD", "REMOVE" or "MANUAL" if a vehicle was manually added or removed ("" if no previous action exists)
+    local waiting = line_data_single.waiting                               -- *average* total number of items waiting at stations for this line
+    local waiting_peak = line_data_single.waiting_peak                     -- *average* the highest number of items waiting at a station for this line
+    local waiting_peak_clamped = line_data_single.waiting_peak_clamped     -- *average* the highest number of items waiting at a station for this line, but clamped to 0.5 - 1.5 times the capacity_per_vehicle
     local transported_last_month = line_data_single.transported_last_month -- the amount of items transported last month NOTE: this will only be useful if 1x GameTime is used (otherwise 0, it seems)
-    local transported_last_year = line_data_single.transported_last_year -- the amount of items transported last year NOTE: this will only be useful if 1x GameTime is used (otherwise 0, it seems)
-    local capacity_per_vehicle = line_data_single.capacity_per_vehicle -- the average capacity per vehicle on the line
-    local stops = line_data_single.stops -- number of stops for the line
-    local stops_with_waiting = line_data_single.stops_with_waiting -- *average* number of stops that has waiting entities for this line
+    local transported_last_year = line_data_single.transported_last_year   -- the amount of items transported last year NOTE: this will only be useful if 1x GameTime is used (otherwise 0, it seems)
+    local capacity_per_vehicle = line_data_single.capacity_per_vehicle     -- the average capacity per vehicle on the line
+    local stops = line_data_single.stops                                   -- total number of stops for the line
+    local stops_with_waiting = line_data_single.stops_with_waiting         -- *average* number of stops that has waiting entities for this line
+    local congestion = line_data_single.congestion                         -- *average* congestion on the line i.e. the percentage of EN_ROUTE vehicles that are not moving (normalized to 0.0 - 100.0 %)
 
     local line_rules = {}
 
     if rule == "P" then
-        -- Make use of default PASSENGER rules
+        -- Default PASSENGER rules
         local level = parameters[1].value
 
         -- USAGE SCORE
@@ -157,11 +168,11 @@ function rules.moreVehicleConditions(line_data_single)
         end
 
         line_rules = {
-            samples > requiredSamples and frequency > 720, -- This is to ensure a that a minimum sensible frequency is maintained
-            samples > requiredSamples and finalScore > requiredScore,
+            samples >= requiredSamples and frequency > 720, -- This is to ensure a that a minimum sensible frequency is maintained
+            samples >= requiredSamples and finalScore > requiredScore,
         }
     elseif rule == "C" then
-        -- Make use of default CARGO rules
+        -- Default CARGO rules
         local level = parameters[1].value
 
         -- USAGE SCORE
@@ -207,22 +218,22 @@ function rules.moreVehicleConditions(line_data_single)
         end
 
         line_rules = {
-            samples > requiredSamples and frequency > 720, -- This is to ensure a that a minimum sensible frequency is maintained
-            samples > requiredSamples and finalScore > requiredScore,
+            samples >= requiredSamples and frequency > 720, -- This is to ensure a that a minimum sensible frequency is maintained
+            samples >= requiredSamples and finalScore > requiredScore,
         }
     elseif rule == "PR" then
         -- Make use of PASSENGER rules by RusteyBucket
         local d10 = demand * 1.05
-        local oneVehicle = 1 / vehicles -- how much would one vehicle change
-        local plusOneVehicle = 1 + oneVehicle -- add the rest of the vehicles
-        local dv = demand * plusOneVehicle -- exaggerate demand by what one more vehicle could change
+        local oneVehicle = 1 / vehicles                        -- how much would one vehicle change
+        local plusOneVehicle = 1 + oneVehicle                  -- add the rest of the vehicles
+        local dv = demand * plusOneVehicle                     -- exaggerate demand by what one more vehicle could change
         local waitFactor = waiting_peak / capacity_per_vehicle -- how likely is it the vehicles can cope with the demand
 
         line_rules = {
-            samples > 5 and rate < d10, -- get a safety margin of 10% over the real demand
-            samples > 5 and rate < dv, -- with low vehicle numbers, those 10% might not do the trick
+            samples > 5 and rate < d10,       -- get a safety margin of 10% over the real demand
+            samples > 5 and rate < dv,        -- with low vehicle numbers, those 10% might not do the trick
             samples > 5 and usage > 90,
-            samples > 5 and frequency > 720, -- limits frequency to at most 12min (720 seconds)
+            samples > 5 and frequency > 720,  -- limits frequency to at most 12min (720 seconds)
             samples > 5 and waitFactor > 1.1, -- if there's overcrowding, get more vehicles
         }
     elseif rule == "R" then
@@ -241,11 +252,11 @@ function rules.moreVehicleConditions(line_data_single)
         end
 
         -- Always ensure the minimum rate is achieved
-        line_rules[#line_rules + 1] = samples > requiredSamples and rate < rate_target
+        line_rules[#line_rules + 1] = samples >= requiredSamples and rate < rate_target
 
         -- Add additional rules for peak usage
         if waiting_peak_target then
-            line_rules[#line_rules + 1] = samples > requiredSamples and waiting_peak / capacity_per_vehicle > modifier * waiting_peak_target / 100
+            line_rules[#line_rules + 1] = samples >= requiredSamples and waiting_peak / capacity_per_vehicle > modifier * waiting_peak_target / 100
         end
     end
 
@@ -264,30 +275,31 @@ end
 ---@return boolean : whether a vehicle should be removed from the line
 function rules.lessVehiclesConditions(line_data_single)
     -- Factors that can be used in rules
-    local name = line_data_single.name -- the name of the line
-    local carrier = line_data_single.carrier -- "ROAD", "TRAM", "RAIL", "WATER" or "AIR"
-    local type = line_data_single.type -- "PASSENGER" or "CARGO" (if the line handles both PASSENGER and CARGO, then the greater demand will determine type). Will default to "PASSENGER" if no demand is detected.
-    local rule = line_data_single.rule -- the line rule
-    local rule_manual = line_data_single.rule_manual -- whether the line rule was assigned manually (rather than automatically)
-    local rate = line_data_single.rate -- *average* line rate
-    local frequency = line_data_single.frequency -- *average* line frequency in seconds
-    local parameters = line_data_single.parameters -- the parameters for the line (this is indexed as per the rules)
-    local vehicles = line_data_single.vehicles -- number of vehicles currently on the line
-    local capacity = line_data_single.capacity -- total current capacity of the vehicles on the line
-    local occupancy = line_data_single.occupancy -- total current occupancy on the vehicles on the line
-    local occupancy_peak = line_data_single.occupancy_peak -- current peak amount of passengers on any vehicle on the line
-    local demand = line_data_single.demand -- *average* line demand i.e. total number of PASSENGER or CARGO intending to use the line, including already on the line
-    local usage = line_data_single.usage -- *average* line usage i.e. occupancy/capacity
-    local samples = line_data_single.samples -- number of samples collected for the line since last action taken (this is reset after each action)
-    local last_action = line_data_single.last_action -- the last action taken to manage the line; "ADD", "REMOVE" or "MANUAL" if a vehicle was manually added or removed ("" if no previous action exists)
-    local waiting = line_data_single.waiting -- *average* total number of items waiting at stations for this line
-    local waiting_peak = line_data_single.waiting_peak -- *average* the highest number of items waiting at a station for this line
-    local waiting_peak_clamped = line_data_single.waiting_peak_clamped -- *average* the highest number of items waiting at a station for this line, but clamped to 0.5 - 1.5 times the capacity_per_vehicle
+    local name = line_data_single.name                                     -- the name of the line
+    local carrier = line_data_single.carrier                               -- "ROAD", "TRAM", "RAIL", "WATER" or "AIR"
+    local type = line_data_single.type                                     -- "PASSENGER" or "CARGO" (if the line handles both PASSENGER and CARGO, then the greater demand will determine type). Will default to "PASSENGER" if no demand is detected.
+    local rule = line_data_single.rule                                     -- the line rule
+    local rule_manual = line_data_single.rule_manual                       -- whether the line rule was assigned manually (rather than automatically)
+    local rate = line_data_single.rate                                     -- *average* line rate
+    local frequency = line_data_single.frequency                           -- *average* line frequency in seconds
+    local parameters = line_data_single.parameters                         -- the parameters for the line (this is indexed as per the rules)
+    local vehicles = line_data_single.vehicles                             -- number of vehicles currently on the line
+    local capacity = line_data_single.capacity                             -- total current capacity of the vehicles on the line
+    local occupancy = line_data_single.occupancy                           -- total current occupancy on the vehicles on the line
+    local occupancy_peak = line_data_single.occupancy_peak                 -- current peak amount of passengers on any vehicle on the line
+    local demand = line_data_single.demand                                 -- *average* line demand i.e. total number of PASSENGER or CARGO intending to use the line, including already on the line
+    local usage = line_data_single.usage                                   -- *average* line usage i.e. occupancy/capacity (normalized to 0.0 - 100.0 %)
+    local samples = line_data_single.samples                               -- number of samples collected for the line since last action taken (this is reset after each action)
+    local last_action = line_data_single.last_action                       -- the last action taken to manage the line; "ADD", "REMOVE" or "MANUAL" if a vehicle was manually added or removed ("" if no previous action exists)
+    local waiting = line_data_single.waiting                               -- *average* total number of items waiting at stations for this line
+    local waiting_peak = line_data_single.waiting_peak                     -- *average* the highest number of items waiting at a station for this line
+    local waiting_peak_clamped = line_data_single.waiting_peak_clamped     -- *average* the highest number of items waiting at a station for this line, but clamped to 0.5 - 1.5 times the capacity_per_vehicle
     local transported_last_month = line_data_single.transported_last_month -- the amount of items transported last month NOTE: this will only be useful if 1x GameTime is used (otherwise 0, it seems)
-    local transported_last_year = line_data_single.transported_last_year -- the amount of items transported last year NOTE: this will only be useful if 1x GameTime is used (otherwise 0, it seems)
-    local capacity_per_vehicle = line_data_single.capacity_per_vehicle -- the average capacity per vehicle on the line
-    local stops = line_data_single.stops -- total number of stops for the line
-    local stops_with_waiting = line_data_single.stops_with_waiting -- *average* number of stops that has waiting entities for this line
+    local transported_last_year = line_data_single.transported_last_year   -- the amount of items transported last year NOTE: this will only be useful if 1x GameTime is used (otherwise 0, it seems)
+    local capacity_per_vehicle = line_data_single.capacity_per_vehicle     -- the average capacity per vehicle on the line
+    local stops = line_data_single.stops                                   -- total number of stops for the line
+    local stops_with_waiting = line_data_single.stops_with_waiting         -- *average* number of stops that has waiting entities for this line
+    local congestion = line_data_single.congestion                         -- *average* congestion on the line i.e. the percentage of EN_ROUTE vehicles that are not moving (normalized to 0.0 - 100.0 %)
 
     local line_rules = {}
 
@@ -301,13 +313,13 @@ function rules.lessVehiclesConditions(line_data_single)
         end
     end
 
-    -- Otherwise, ensure there's always 1 vehicle retained on the line.
+    -- Ensure there's always 1 vehicle retained on the line.
     if vehicles <= 1 then
         return false
     end
 
     if rule == "P" then
-        -- Make use of default PASSENGER rules
+        -- Default PASSENGER rules
         local level = parameters[1].value
         local inverse_modifier = math.max(1.5, 1.25 * vehicles / (vehicles - 1))
 
@@ -354,11 +366,11 @@ function rules.lessVehiclesConditions(line_data_single)
         end
 
         line_rules = {
-            samples > requiredSamples and frequency * inverse_modifier < 720 and finalScore < requiredScore,
-            samples > 3 * requiredSamples and frequency * inverse_modifier < 720 and waiting_peak * inverse_modifier < capacity_per_vehicle
+            samples >= requiredSamples and frequency * inverse_modifier < 720 and finalScore < requiredScore,
+            samples >= 3 * requiredSamples and frequency * inverse_modifier < 720 and waiting_peak * inverse_modifier < capacity_per_vehicle,
         }
     elseif rule == "C" then
-        -- Make use of default CARGO rules
+        -- Default CARGO rules
         local level = parameters[1].value
         local inverse_modifier = math.max(1.5, 1.25 * vehicles / (vehicles - 1))
 
@@ -405,8 +417,8 @@ function rules.lessVehiclesConditions(line_data_single)
         end
 
         line_rules = {
-            samples > requiredSamples and frequency * inverse_modifier < 720 and finalScore < requiredScore,
-            samples > 3 * requiredSamples and frequency * inverse_modifier < 720 and waiting_peak * inverse_modifier < capacity_per_vehicle
+            samples >= requiredSamples and frequency * inverse_modifier < 720 and finalScore < requiredScore,
+            samples >= 3 * requiredSamples and frequency * inverse_modifier < 720 and waiting_peak * inverse_modifier < capacity_per_vehicle,
         }
     elseif rule == "PR" then
         -- Make use of PASSENGER rules by RusteyBucket
@@ -416,9 +428,9 @@ function rules.lessVehiclesConditions(line_data_single)
         local newUsage = usage * vehicles / newVehicles
         local averageCapacity = capacity / vehicles
         local d10 = demand * 1.1
-        local oneVehicle = 1 / vehicles -- how much would one vehicle change
-        local plusOneVehicle = 1 + oneVehicle -- add the rest of the vehicles
-        local dv = demand * plusOneVehicle -- exaggerate demand by what one more vehicle could change
+        local oneVehicle = 1 / vehicles                        -- how much would one vehicle change
+        local plusOneVehicle = 1 + oneVehicle                  -- add the rest of the vehicles
+        local dv = demand * plusOneVehicle                     -- exaggerate demand by what one more vehicle could change
         local waitFactor = waiting_peak / capacity_per_vehicle -- no overcrowding
 
         line_rules = {
@@ -445,16 +457,15 @@ function rules.lessVehiclesConditions(line_data_single)
             requiredSamples = requiredSamples + 3
         end
 
+
         -- Prepare appropriate rules
         if waiting_peak_target then
             line_rules = {
-                samples > requiredSamples and
-                rate * modifier > rate_target and
-                waiting_peak / capacity_per_vehicle < modifier * waiting_peak_target / 100
+                samples >= requiredSamples and rate * modifier > rate_target and waiting_peak / capacity_per_vehicle < modifier * waiting_peak_target / 100,
             }
         else
             line_rules = {
-                samples > requiredSamples and rate * modifier > rate_target
+                samples >= requiredSamples and rate * modifier > rate_target,
             }
         end
     end

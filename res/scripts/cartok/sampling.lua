@@ -12,9 +12,9 @@ local SAMPLING_WINDOW_SIZE = 8 -- This must be 2 or greater, or...danger. Lower 
 
 local NO_ENTITY = -1
 
-local MAX_LINES_TO_PROCESS_PER_RUN = 20 -- Maximum lines to process per run
-local MAX_VEHICLES_TO_PROCESS_PER_RUN = 50 -- Maximum vehicles to process per run
-local MAX_ENTITIES_TO_PROCESS_PER_RUN = 300 -- Maximum entities to process per run
+local MAX_LINES_TO_PROCESS_PER_RUN = 20     -- Maximum lines to process per run
+local MAX_VEHICLES_TO_PROCESS_PER_RUN = 50  -- Maximum vehicles to process per run
+local MAX_ENTITIES_TO_PROCESS_PER_RUN = 500 -- Maximum entities to process per run
 
 local STATE_STOPPED = 1
 local STATE_WAITING = 2
@@ -27,13 +27,15 @@ local STATE_FINISHED = 8
 
 local sampling_state = STATE_STOPPED -- To track the progress of the sampling
 
+local CONGESTION_STOPPED_SPEED = 2   -- If speed is less than this, a vehicles is considered to be stopped
+
 local vehicleOccupancyCache = nil
 local problemLineCache = nil
 local problemVehicleCache = nil
 
 local simEntityAtTerminalCache = nil -- Holder for all SIM_ENTITY_AT_TERMINAL: api.engine.getComponent(entity_id, api.type.ComponentType.SIM_ENTITY_AT_TERMINAL)
-local lineSimPersonCache = nil -- Holder for line specific SimPerson: api.engine.system.simPersonSystem.getSimPersonsForLine(line_id)
-local lineSimCargoCache = nil -- Holder for line specific SimCargo: api.engine.system.simCargoSystem.getSimCargosForLine(line_id)
+local lineSimPersonCache = nil       -- Holder for line specific SimPerson: api.engine.system.simPersonSystem.getSimPersonsForLine(line_id)
+local lineSimCargoCache = nil        -- Holder for line specific SimCargo: api.engine.system.simCargoSystem.getSimCargosForLine(line_id)
 
 local sampledLineData = nil
 
@@ -138,6 +140,11 @@ end
 ---@param precision number : optional, how precise the averaged result should be (as per lume.round)
 ---@return number : the average based on the provided numbers
 local function calculateAverage(window_size, existing_value, new_value, precision)
+    -- Make this more error tolerant in case 'existing_value' is nil.
+    if not existing_value then
+        return lume.round(new_value, precision)
+    end
+
     -- This effectively gives weight to previous data equal to '(window_size - 1) /window_size'. If window_size is 4, the previous data get 75% weight. If window_size is 10, the previous data get 90% weight.
     return lume.round(((existing_value * (window_size - 1)) + new_value) / window_size, precision)
 end
@@ -309,6 +316,25 @@ local function checkIfLineHasProblem(line_id, line_vehicles)
     return false
 end
 
+---@param line_vehicles table : the id's of the vehicles on the line
+---@return number : the congestion ration of the vehicles i.e. what ratio of (EN_ROUTE) vehicles that are not moving
+---returns the ratio of stopped EN_ROUTE vehicles of a line
+local function getVehicleCongestion(line_vehicles)
+    local numZeroSpeedVehicles = 0
+
+    for i = 1, #line_vehicles do
+        local is_enroute = api_helper.isVehicleEnRoute(line_vehicles[i])
+        if is_enroute then
+            local speed = api_helper.getVehicleSpeed(line_vehicles[i])
+            if speed and speed < CONGESTION_STOPPED_SPEED then
+                numZeroSpeedVehicles = numZeroSpeedVehicles + 1
+            end
+        end
+    end
+
+    return lume.round(100 * numZeroSpeedVehicles / #line_vehicles, 0.1)
+end
+
 ---resets all sampling variables and sets STATE_WAITING, thus restarting the sampling process
 local function restart()
     log.debug("sampling: restart()")
@@ -384,7 +410,7 @@ local function prepareLineData()
     for line_id, line_data in pairs(sampledLineData) do
         if line_data.TO_BE_PREPARED then
             local lineVehicles = api_helper.getLineVehicles(line_id) -- Start by getting the vehicles to check if any further processing needs to be done at all
-            local lineVehiclesInDepot = 0 -- This is used as an indicator of a line problem
+            local lineVehiclesInDepot = 0                            -- This is used as an indicator of a line problem
 
             -- If no line vehicles, then set this record to nil and continue without further processing
             if #lineVehicles <= 0 then
@@ -394,7 +420,7 @@ local function prepareLineData()
                 local lineCarrier = api_helper.getCarrierFromVehicle(lineVehicles[1]) -- Retrieve the carrier from the first vehicle of the line
                 local lineDepotId = nil
                 local lineType = ""
-                local lineRule = "P" -- Same as above, use this as a default. This will be overwritten below.
+                local lineRule = "P"         -- Same as above, use this as a default. This will be overwritten below.
                 local lineRuleManual = false -- Keeps track if the line rule was assigned manually
                 local lineRate = 0
                 local lineFrequency = 0
@@ -407,6 +433,7 @@ local function prepareLineData()
                 local lineUsage = 0
                 local lineManaged = false
                 local lineHasProblem = false
+                local lineCongestion = 0
                 local lineStops = 0
                 local lineTransportedLastMonth = 0
                 local lineTransportedLastYear = 0
@@ -513,6 +540,9 @@ local function prepareLineData()
                     lineDepotId = nil
                 end
 
+                -- CONGESTION
+                lineCongestion = getVehicleCongestion(lineVehicles)
+
                 sampledLineData[line_id] = {
                     SAMPLE_WAITING_CARGO = true, -- Set marker for next step (this will be used by mergeLineData() to confirm this item needs processing)
                     name = lineName,
@@ -533,6 +563,7 @@ local function prepareLineData()
                     usage = lineUsage,
                     managed = lineManaged,
                     has_problem = lineHasProblem,
+                    congestion = lineCongestion,
                     stops = lineStops,
                     transported_last_month = lineTransportedLastMonth,
                     transported_last_year = lineTransportedLastYear,
@@ -692,15 +723,17 @@ local function mergeLineData()
                     sampledLineData[line_id].depot_stop_id = stateLineData[line_id].depot_stop_id
                 end
                 -- Calculate averages for demand, usage, rate, frequency, waiting, and waiting_peak.
-                sampledLineData[line_id].demand = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].demand, line_data.demand, 0.1)
-                sampledLineData[line_id].usage = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].usage, line_data.usage, 0.1)
-                sampledLineData[line_id].rate = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].rate, line_data.rate, 0.1)
-                sampledLineData[line_id].frequency = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].frequency, line_data.frequency, 0.1)
-                sampledLineData[line_id].waiting = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].waiting, line_data.waiting, 0.1)
+                sampledLineData[line_id].demand = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].demand, line_data.demand, 0.01)
+                sampledLineData[line_id].usage = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].usage, line_data.usage, 0.01)
+                sampledLineData[line_id].rate = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].rate, line_data.rate, 0.01)
+                sampledLineData[line_id].frequency = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].frequency, line_data.frequency, 0.01)
+                sampledLineData[line_id].waiting = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].waiting, line_data.waiting, 0.01)
                 sampledLineData[line_id].stops_with_waiting = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].stops_with_waiting, line_data.stops_with_waiting, 0.01)
                 -- Calculate waiting_peak_clamped before waiting_peak
-                sampledLineData[line_id].waiting_peak_clamped = lume.clamp(calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].waiting_peak_clamped, line_data.waiting_peak, 0.1), 0, line_data.capacity_per_vehicle * 1.5)
-                sampledLineData[line_id].waiting_peak = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].waiting_peak, line_data.waiting_peak, 0.1)
+                sampledLineData[line_id].waiting_peak_clamped = lume.clamp(calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].waiting_peak_clamped, line_data.waiting_peak, 0.01), 0, line_data.capacity_per_vehicle * 1.5)
+                sampledLineData[line_id].waiting_peak = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].waiting_peak, line_data.waiting_peak, 0.01)
+                -- Calculate average congestion
+                sampledLineData[line_id].congestion = calculateAverage(SAMPLING_WINDOW_SIZE, stateLineData[line_id].congestion, line_data.congestion, 0.01)
             else
                 -- If not already existing, then start samples from 1. No need to process the data further.
                 sampledLineData[line_id].samples = 1

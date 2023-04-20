@@ -47,6 +47,21 @@ function api_helper.getVehicle(vehicle_id)
     return nil
 end
 
+---@return number : speed of the vehicle
+function api_helper.getVehicleSpeed(vehicle_id)
+    local exists = api_helper.entityExists(vehicle_id)
+
+    if exists then
+        local vehicle = game.interface.getEntity(vehicle_id)
+        if vehicle.speed then
+            return vehicle.speed
+        end
+    end
+
+    -- If we made it here, the entity doesn't exist
+    return nil
+end
+
 ---@param depot_id number : the id of the depot
 ---@return table : details of the depot
 function api_helper.getDepot(depot_id)
@@ -271,6 +286,7 @@ end
 ---@return table : the id's of the trains with no path
 ---returns the id's of all trains that has no path
 function api_helper.getNoPathTrains()
+    -- TODO: This API function seems to intermittently fail to filter based on carrier. Shouldn't have any significant impact, but something to check later.
     return api.engine.system.transportVehicleSystem.getNoPathVehicles(api.type.enum.Carrier.RAIL)
 end
 

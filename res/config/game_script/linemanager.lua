@@ -12,7 +12,7 @@ local api_helper = require 'cartok/api_helper'
 local sampling = require 'cartok/sampling'
 local lume = require 'cartok/lume'
 
-local firstRun = true -- Keeps track of the first update run (to do some init)
+local firstRun = true        -- Keeps track of the first update run (to do some init)
 local lastRegularUpdate = -1 -- Keeps track of the last regular update (should run once per second)
 
 local session_cachedDepotHit = 0
@@ -24,10 +24,10 @@ local gui_notificationWindow = nil
 -- This is the entire data for the mod, it is stored in the save game as well as loaded in GUI thread for access
 local state = {
     -- The version of the data, this is for compatibility purposes and only meant to be updated when the state data format changes.
-    version = 37,
-    version_change = true, -- This simply keeps track of whether the state version has changed. This is meant to always default to true, it will be set to false when no longer the case (and then stored in the save game data).
+    version = 38,
+    version_change = true,               -- This simply keeps track of whether the state version has changed. This is meant to always default to true, it will be set to false when no longer the case (and then stored in the save game data).
     log_settings = {
-        level = 3, -- The log level (3 = INFO)
+        level = 3,                       -- The log level (3 = INFO)
         show_extended_line_info = false, -- Whether to show extended line info in the console.
     },
     auto_settings = {
@@ -48,14 +48,15 @@ local state = {
     },
     linemanager_settings = {
         enabled = true,
+        congestion_control = true,
         reverse_no_path_trains = true,
     },
     sampling_settings = {
-        last_sample_time = -1, -- Keeps track of what month (or time) the last sample was taken, in order to re-trigger a new sampling when month (or time) changes.
+        last_sample_time = -1,       -- Keeps track of what month (or time) the last sample was taken, in order to re-trigger a new sampling when month (or time) changes.
         time_based_sampling = false, -- If true, then os time is used for sampling rather than in-game months.
-        sample_time_interval = 60, -- If OS time is used for sampling, take a sample every this number of seconds. This is based on using GameSpeed = 1 (normal speed), with faster speeds, this time will be reduced accordingly.
+        sample_time_interval = 60,   -- If OS time is used for sampling, take a sample every this number of seconds. This is based on using GameSpeed = 1 (normal speed), with faster speeds, this time will be reduced accordingly.
     },
-    line_data = {}, -- An up-to-date list (since last sampling...) of the Player lines and associated data.
+    line_data = {},                  -- An up-to-date list (since last sampling...) of the Player lines and associated data.
 }
 
 helper.setLog(log)
@@ -63,24 +64,24 @@ sampling.setLog(log)
 api_helper.setLog(log)
 
 ---@param line_id number
----@return boolean success whether a vehicle was removed
----removes the oldest vehicle from the specified line
+---@return number vehiclesRemoved how many vehicles that were removed
+---removes one or more empty (or oldest) vehicles from the specified line
 local function removeVehicleFromLine(line_id)
     log.debug("linemanager: removeVehicleFromLine(" .. tostring(line_id) .. ") starting")
 
-    local success = false
+    local vehiclesRemoved = 0
     local lineVehicles = api_helper.getLineVehicles(line_id)
     local emptyVehicles = sampling.getEmptyVehicles(lineVehicles)
 
-    -- If the rule is X (i.e. REMOVE the vehicles on this line), then process that only.
+    -- If the rule is X (i.e. REMOVE ALL vehicles from this line), then process that only.
     if state.line_data[line_id].rule == "X" then
         for _, vehicle_id in pairs(emptyVehicles) do
             api_helper.sellVehicle(vehicle_id)
             helper.printSoldVehicleInfo(state.line_data, line_id, vehicle_id)
-            -- Set this to true if any vehicle was removed i.e. this loop runs at least once
-            success = true
+            -- Set this to true if any vehicle was removed i.e. this loop ran at least once
+            vehiclesRemoved = vehiclesRemoved + 1
         end
-        -- Else, run this if there's more than one vehicle on the line
+        -- Else, run this only if there's more than one vehicle on the line.
     elseif #lineVehicles > 1 then
         local vehicleToRemove = nil
 
@@ -101,7 +102,7 @@ local function removeVehicleFromLine(line_id)
 
             helper.printSoldVehicleInfo(state.line_data, line_id, vehicleToRemove)
 
-            success = true
+            vehiclesRemoved = 1
 
             -- Update depot_id and stop_id if found, with appropriate debug message.
             if depot_id and stop_id then
@@ -116,23 +117,23 @@ local function removeVehicleFromLine(line_id)
                 state.line_data[line_id].depot_stop_id = nil
             end
         end
-        -- Not rule X and not more than 1 vehicle on the line, then there's simply not sufficient vehicles on the line to remove further vehicles.
+        -- Not rule X and only 1 vehicle on the line, then don't remove the remaining vehicle as this will cause LineManager to stop working for that line.
     else
-        log.error("Only one vehicle left on line '" .. state.line_data[line_id].name .. "' - Requested vehicle removal cancelled. This message indicates a code error, please report it.")
+        log.error("Only one vehicle left on line '" .. state.line_data[line_id].name .. "' - Requested vehicle removal cancelled.")
     end
 
     log.debug("linemanager: removeVehicleFromLine(" .. tostring(line_id) .. ") finished. success=" .. tostring(success))
 
-    return success
+    return vehiclesRemoved
 end
 
 ---@param line_id number
----@return boolean success whether a vehicle was added
----adds a vehicle to the specified line_id by cloning an existing vehicle
+---@return number vehiclesAdded number of vehicles added
+---adds one or more vehicles to the specified line_id by cloning an existing vehicle
 local function addVehicleToLine(line_id)
     log.debug("linemanager: addVehicleToLine(" .. tostring(line_id) .. ") starting")
 
-    local success = false
+    local vehiclesAdded = 0
     local lineVehicles = api_helper.getLineVehicles(line_id)
     local depot_id = nil
     local stop_id = nil
@@ -196,7 +197,6 @@ local function addVehicleToLine(line_id)
 
             api_helper.buyVehicle(depot_id, transportVehicleConfig, function(cmd, res)
                 if (res and cmd.resultVehicleEntity) then
-
                     new_vehicle_id = cmd.resultVehicleEntity
 
                     api_helper.sendVehicleToLine(new_vehicle_id, line_id, stop_id)
@@ -220,7 +220,7 @@ local function addVehicleToLine(line_id)
                         end
 
                         helper.printBoughtVehicleInfo(state.line_data, line_id, new_vehicle_id, depot_id)
-                        success = true
+                        vehiclesAdded = 1
                     end
                 else
                     log.warn("Unable to add vehicle to line '" .. state.line_data[line_id].name .. "' - Insufficient cash?")
@@ -237,13 +237,13 @@ local function addVehicleToLine(line_id)
 
     log.debug("linemanager: addVehicleToLine(" .. tostring(line_id) .. ") finished. success=" .. tostring(success))
 
-    if not success then
+    if vehiclesAdded < 1 then
         -- If this addVehicleToLine() run was not successful for any reason, force an update of depot_id and stop_id on next run.
         log.debug("linemanager: Forcing depot update on next run for line '" .. state.line_data[line_id].name .. "' (" .. line_id .. ").")
         state.line_data[line_id].depot_update_required = true
     end
 
-    return success
+    return vehiclesAdded
 end
 
 --- updates vehicle amount if applicable and line list in general
@@ -254,36 +254,63 @@ local function updateLines()
     local lineCount = 0
     local vehicleCount = 0
     local problemCount = 0
+    local congestedLines = {}
 
     for _, line_id in pairs(lines) do
-        -- If a line exists in line_data and is managed, then continue
-        if state.line_data[line_id] and state.line_data[line_id].managed then
-            lineCount = lineCount + 1
-            vehicleCount = vehicleCount + state.line_data[line_id].vehicles
+        local lineIsCongested = false
+        local lineIsExtremelyCongested = false
 
-            -- Check if a vehicle should be added to a Line. This has been evaluated as part of the sampling.
-            if state.line_data[line_id].action == "ADD" then
-                if addVehicleToLine(line_id) then
-                    -- If succeeded, update line_data to indicate this
-                    state.line_data[line_id].samples = 0
-                    state.line_data[line_id].last_action = "ADD"
-                    state.line_data[line_id].vehicles = state.line_data[line_id].vehicles + 1
-                    vehicleCount = vehicleCount + 1
+        -- Only proceed if data for the line exists in state.
+        if state.line_data[line_id] then
+            -- CONGESTION CONTROL (Generate messages regardless if congestion control is switched on or off).
+            if state.line_data[line_id].congestion > math.max(15, 48 - 3 * state.line_data[line_id].vehicles) then
+                -- Set this only if congestion control is enabled.
+                if state.linemanager_settings.congestion_control then
+                    lineIsCongested = true
                 end
-                -- Check instead whether a vehicle should be removed from a Line. This has been evaluated as part of the sampling.
-            elseif state.line_data[line_id].action == "REMOVE" then
-                if removeVehicleFromLine(line_id) then
-                    -- If succeeded, update line_data to indicate this
-                    state.line_data[line_id].samples = 0
-                    state.line_data[line_id].last_action = "REMOVE"
-                    state.line_data[line_id].vehicles = state.line_data[line_id].vehicles - 1
-                    vehicleCount = vehicleCount - 1 -- If the line rule happened to be X (REMOVE), then this count could temporarily be wrong as several vehicles could have been removed. Not worth fixing at this time...
+
+                -- If extremely congested, then generate that message otherwise the general congestion warning only.
+                if state.line_data[line_id].congestion > math.max(50, 83 - 3 * state.line_data[line_id].vehicles) then
+                    table.insert(congestedLines, lume.round(state.line_data[line_id].congestion) .. "% !! : " .. state.line_data[line_id].name)
+                    if state.linemanager_settings.congestion_control then
+                        lineIsExtremelyCongested = true
+                    end
+                else
+                    table.insert(congestedLines, lume.round(state.line_data[line_id].congestion) .. "%    : " .. state.line_data[line_id].name)
                 end
             end
 
-            if state.line_data[line_id].has_problem then
-                -- TODO: Need to insert code here to clear up any line problems.
-                problemCount = problemCount + 1
+            -- If a line is managed, then continue
+            if state.line_data[line_id].managed then
+                lineCount = lineCount + 1
+                vehicleCount = vehicleCount + state.line_data[line_id].vehicles
+
+                -- Check if a vehicle should be added to a Line. This has been evaluated as part of the sampling. Do not add if the line is congested (this is set to false/ignored if congestion_control is switched off).
+                if state.line_data[line_id].action == "ADD" and not lineIsCongested then
+                    local vehiclesAdded = addVehicleToLine(line_id)
+                    if vehiclesAdded > 0 then
+                        -- If succeeded, update line_data to indicate this
+                        state.line_data[line_id].samples = 0
+                        state.line_data[line_id].last_action = "ADD"
+                        state.line_data[line_id].vehicles = state.line_data[line_id].vehicles + vehiclesAdded
+                        vehicleCount = vehicleCount + vehiclesAdded
+                    end
+                    -- Check instead whether a vehicle should be removed from a Line. This has been evaluated as part of the sampling. Also run this in case of extreme congestion (this is set to false/ignored if congestion_control is switched off).
+                elseif state.line_data[line_id].action == "REMOVE" or lineIsExtremelyCongested then
+                    local vehiclesRemoved = removeVehicleFromLine(line_id)
+                    if vehiclesRemoved > 0 then
+                        -- If succeeded, update line_data to indicate this
+                        state.line_data[line_id].samples = 0
+                        state.line_data[line_id].last_action = "REMOVE"
+                        state.line_data[line_id].vehicles = state.line_data[line_id].vehicles - vehiclesRemoved
+                        vehicleCount = vehicleCount - vehiclesRemoved
+                    end
+                end
+
+                if state.line_data[line_id].has_problem then
+                    -- TODO: Need to insert code here to clear up any line problems.
+                    problemCount = problemCount + 1
+                end
             end
         end
     end
@@ -292,6 +319,20 @@ local function updateLines()
     log.info("==> SUMMARY: " .. lineCount .. " lines and " .. vehicleCount .. " vehicles managed (" .. ignoredLineCount .. " lines not managed)")
     if problemCount > 0 then
         log.warn(problemCount .. " managed lines had problems and were skipped in this update")
+    end
+
+    if #congestedLines > 0 then
+        local logOutput = ""
+        table.sort(congestedLines)
+        if state.linemanager_settings.congestion_control then
+            logOutput = "Possibly congested lines (vehicle addition inhibited, vehicle removal possible):"
+        else
+            logOutput = "Possibly congested lines (NO congestion control applied):"
+        end
+        for i = 1, #congestedLines do
+            logOutput = logOutput .. "\n" .. "   " .. congestedLines[i]
+        end
+        log.warn(logOutput)
     end
 
     if log.isShowExtendedLineInfo() then
@@ -547,6 +588,14 @@ local function gui_initSettingsWindow()
     end)
     settingsBox:addItem(checkBox_enableLineManager)
 
+    -- Create a toggle for enabling/disabling LineManager
+    local checkBox_congestionControl = api.gui.comp.CheckBox.new("Congestion control enabled")
+    checkBox_congestionControl:setSelected(state.linemanager_settings.congestion_control, false)
+    checkBox_congestionControl:onToggle(function(selected)
+        api_helper.sendScriptCommand("settings_gui", "congestion_control", selected)
+    end)
+    settingsBox:addItem(checkBox_congestionControl)
+
     -- Create a toggle for enabling/disabling automatic reversal of blocked trains
     local checkBox_enableReverseNoPathTrains = api.gui.comp.CheckBox.new("Automatically reverse trains with no path")
     checkBox_enableReverseNoPathTrains:setSelected(state.linemanager_settings.reverse_no_path_trains, false)
@@ -719,7 +768,7 @@ local function gui_initSettingsWindow()
     gui_settingsWindow:setMovable(true)
     gui_settingsWindow:setPinButtonVisible(true)
     gui_settingsWindow:setResizable(false)
-    gui_settingsWindow:setSize(api.gui.util.Size.new(300, 480))
+    gui_settingsWindow:setSize(api.gui.util.Size.new(300, 500))
     -- TODO: Setting the position here seems to cause the window to be invisible (or outside the screen, or something...)
     --gui_settingsWindow:setPosition(100, 100)
     gui_settingsWindow:setPinned(true)
@@ -758,6 +807,9 @@ function data()
                     elseif name == "linemanager_enabled" then
                         state.linemanager_settings.enabled = param
                         log.info("LineManager enabled set to: " .. tostring(param))
+                    elseif name == "congestion_control" then
+                        state.linemanager_settings.congestion_control = param
+                        log.info("Congestion control set to: " .. tostring(param))
                     elseif name == "reverse_no_path_trains" then
                         state.linemanager_settings.reverse_no_path_trains = param
                         log.info("Automatically reverse trains with no path set to: " .. tostring(param))
