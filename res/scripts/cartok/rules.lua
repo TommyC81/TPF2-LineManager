@@ -58,21 +58,21 @@ rules.line_rules = {
     R = {
         -- RATE
         name = "RATE",
-        description = "Ensures that a configured minimum rate (or range) is achieved.",
+        description = "Ensures that a defined minimum rate is achieved.",
         parameters = {
             {
                 -- Parameter 1, the minimum required rate for the line
                 name = "rate_target",
-                required = true, -- Use either this or a default value
-                -- default = 200, -- Only use a default value for non-required parameters or weird things will happen. Kept here for reference only.
-                min = 50,        -- Optional, to limit min-value (values lower than this will indicate that the line has a problem and it won't be managed)
-                max = 2000,      -- Optional, to limit max-value (values higher than this will indicate that the line has problem and it won't be managed)
+                required = true, -- Use EITHER this or a 'default' value
+                -- default = 200, -- Only use a default value for non-required parameters. Kept here for reference only.
+                min = 5,
+                max = 2000,
             },
             {
                 -- Parameter 2, the acceptable max waiting peak % compared to capacity_per_vehicle. This will try to keep the waiting_peak below this level, effectively allowing the line to increase capacity when required (but never decrease below the rate).
                 name = "waiting_peak_max",
                 min = 0,
-                max = 300,
+                max = 500,
             },
         },
     },
