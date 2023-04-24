@@ -263,14 +263,14 @@ local function updateLines()
         -- Only proceed if data for the line exists in state.
         if state.line_data[line_id] then
             -- CONGESTION CONTROL (Generate messages regardless if congestion control is switched on or off).
-            if state.line_data[line_id].congestion > math.max(15, 48 - 3 * state.line_data[line_id].vehicles) then
+            if state.line_data[line_id].congestion > math.max(10, 48 - 3 * state.line_data[line_id].vehicles) then
                 -- Set this only if congestion control is enabled.
                 if state.linemanager_settings.congestion_control then
                     lineIsCongested = true
                 end
 
                 -- If extremely congested, then generate that message otherwise the general congestion warning only.
-                if state.line_data[line_id].congestion > math.max(50, 83 - 3 * state.line_data[line_id].vehicles) then
+                if state.line_data[line_id].congestion > math.max(30, 83 - 3 * state.line_data[line_id].vehicles) then
                     table.insert(congestedLines, lume.round(state.line_data[line_id].congestion) .. "% !! : " .. state.line_data[line_id].name)
                     if state.linemanager_settings.congestion_control then
                         lineIsExtremelyCongested = true
