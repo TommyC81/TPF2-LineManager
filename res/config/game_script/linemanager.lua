@@ -270,7 +270,7 @@ local function updateLines()
                 end
 
                 -- If extremely congested, then generate that message otherwise the general congestion warning only.
-                if state.line_data[line_id].congestion > math.max(30, 83 - 3 * state.line_data[line_id].vehicles) then
+                if state.line_data[line_id].congestion > math.max(20, 63 - 3 * state.line_data[line_id].vehicles) then
                     table.insert(congestedLines, lume.round(state.line_data[line_id].congestion) .. "% !! : " .. state.line_data[line_id].name)
                     if state.linemanager_settings.congestion_control then
                         lineIsExtremelyCongested = true
