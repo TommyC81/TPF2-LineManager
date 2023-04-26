@@ -29,7 +29,7 @@ This mod is inspired by and uses code snippets from:
 * This mod can be added/removed to existing games as desired - it only measures live data and
   adds/removes vehicles on applicable lines accordingly.
 * This mod will by default automatically manage the number of vehicles on all PASSENGER and CARGO lines utilizing
-  trucks/buses, trams, aircraft, and ships. Additionally in the settings, you can also enable train management.
+  trucks/buses, trams, aircraft, trains, and ships.
 * When adding a vehicle to a line, an existing vehicle is (effectively) cloned. There is no evaluation of which vehicle
   will be cloned, so it is therefore recommended to keep a single type of vehicle per line.
 * When removing a vehicle from a line, if there are empty vehicles on the line then the oldest of the empty vehicle will be removed,
@@ -37,6 +37,8 @@ This mod is inspired by and uses code snippets from:
   Additionally, the mod will ensure at least 1 vehicle remains on each line, unless rule `[X]` is used.
 * Sensible rules for both PASSENGER and CARGO lines are used by default (if automatic vehicle management is enabled for the
   respective category of lines). However, if this doesn't work as desired, see the "Line rules" section below for more information.
+* The mod is primarily tested with lines running with "Load if available" station settings i.e. free-running lines. Although good
+  results have been reported for other types of line/station settings, results could vary.
 * Using any other in-game date progression (date speed) than 1x is _EXPERIMENTAL_ - it is likely that things will break in some way
   or simply not work as expected. Suggest to avoid this unless you know what you are doing and like to figure things out
   including digging into the code (including rules.lua) to tweak things.
@@ -47,6 +49,9 @@ The mod has in in-game menu, that can be accessed via the "[LM]" text in the bot
 The following LineManager options area available in the in-game menu:
 
 * **LineManager enabled** - Enables/disables processing of the mod.
+* **Congestion control** - Enables/disables congestion control features. This will stop the automatic addition of vehicles
+  to lines when congestion is detected. In case of extreme congestion, this feature will also remove vehicles to unclog
+  the congestion.
 * **Automatically reverse trains with no path** - When adding trains, the depot finding can sometimes cause a train to
   be unable to find a path (in simple terms). The manual solution of this is to select the train and reverse it
   once or twice to re-trigger route/path finding. But instead of doing it manually, the mod can do it for you automatically!
