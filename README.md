@@ -93,8 +93,8 @@ The following LineManager options area available in the in-game menu:
   For this to function optimally, also manually amend the line to prevent loading of new cargo.
 
 Note 1: If multiple rules have been added to a line, only the first one will be processed.
-Note 2: The default [P] and [C] rules will try to maintain a maximum frequency of 12 minutes. I.e. if the line is long and
-there are insufficient vehicles on the line to maintain a maximum frequency of 12 minutes, then more vehicles will be added.
+Note 2: The default [P] and [C] rules will try to maintain a maximum interval of 12 minutes. I.e. if the line is long and
+there are insufficient vehicles on the line to maintain a maximum interval of 12 minutes, then more vehicles will be added.
 
 Examples of line naming:
 
