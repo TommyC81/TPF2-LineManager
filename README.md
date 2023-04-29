@@ -92,6 +92,10 @@ The following LineManager options area available in the in-game menu:
 * **`[X]` - REMOVE**: Used to dis-establish a line. Vehicles will no longer be added, and all empty vehicles will be removed.
   For this to function optimally, also manually amend the line to prevent loading of new cargo.
 
+Note 1: If multiple rules have been added to a line, only the first one will be processed.
+Note 2: The default [P] and [C] rules will try to maintain a maximum frequency of 12 minutes. I.e. if the line is long and
+there are insufficient vehicles on the line to maintain a maximum frequency of 12 minutes, then more vehicles will be added.
+
 Examples of line naming:
 
 * Line name `BUS ABC-1` - none of the specific syntax is used, this line will be automatically managed with default rules.
@@ -126,7 +130,7 @@ Additionally, you can (relatively) easily dig into the code and create your own 
   categories. At this point you likely have enough money to not rely on very careful and individual decisions on when/where
   to expand/optimize your transport network.
 * Only use one type of vehicle per line (this makes addition of new vehicles more predictable).
-* Don't mix PASSENGER and CARGO on the same line. Although it will work, results may not be optimal.
+* Don't mix PASSENGER and CARGO on the same line. Although it may work, results will most likely not be optimal.
 * If you need to update/upgrade vehicle type on a line, replace all vehicles at the same time (see above
   related item).
 * Using a smaller vehicle size (less capacity per vehicle) can allow for better automatic fine-tuning of the line capacity.
@@ -136,6 +140,10 @@ Additionally, you can (relatively) easily dig into the code and create your own 
   consider adding only about half the vehicles you think are needed to avoid some initial vehicle number oscillations.
 * Avoid using "WAIT FOR FULL LOAD" stops for managed lines, this will potentially disrupt data and calculations and lead to
   less than ideal results. Use **`[M]` - MANUAL** line management (see Information and and options above) if required.
+* Make sure depots are readily available and accessible (from all directions) to ensure depots can be located and new vehicles added.
+  Without accessible depots, no new vehicles.
+* LineManager produces lots of informative console messages, learn how to enable the in-game console and check the messages.
+  It is very likely that for whatever issue you may experience, the cause/solution is captured in the console output.
 
 ## What the mod does
 
