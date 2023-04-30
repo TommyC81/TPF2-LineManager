@@ -134,6 +134,10 @@ Additionally, you can (relatively) easily dig into the code and create your own 
 * If you need to update/upgrade vehicle type on a line, replace all vehicles at the same time (see above
   related item).
 * Using a smaller vehicle size (less capacity per vehicle) can allow for better automatic fine-tuning of the line capacity.
+  For instance; truck/bus lines are relatively easy to manage as adding/removing a vehicle only achieves small changes to capacity.
+  Whereas lines with large trains with big capacities will change capacity significantly when adding or removing a vehicle - the latter
+  can cause oscillations over time as capacity gets adjusted up and down whilst the optimal is somewhere between. Consider managing
+  tricky lines manually (`[M]`), use rate rule (`[R:xxx]`),  or make use of smaller trains to more easily optimize the line.
 * Even though LineManager is managing a lines vehicles, you can still manually buy/sell vehicles to accelerate known required
   vehicle adjustments. For instance, when starting a new line, you may want to buy some "starting" vehicles (at least 1 vehicle
   is required for LineManager to work at all), and then let LineManager adjust from there - when adding "starting" vehicles,
