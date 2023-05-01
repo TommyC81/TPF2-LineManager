@@ -844,7 +844,7 @@ function sampling.process()
             log.debug("sampling: prepareInitialData() completed successfully")
             setStatePreparingLineData()
         else
-            log.debug("sampling: prepareInitialData() no data to process yet, stopping sampling")
+            log.debug("sampling: prepareInitialData() has no data to process, stopping sampling")
             setStateStopped()
         end
     elseif isStatePreparingLineData() and prepareLineData() then

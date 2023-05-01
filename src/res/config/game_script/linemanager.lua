@@ -122,7 +122,7 @@ local function removeVehicleFromLine(line_id)
         log.error("Only one vehicle left on line '" .. state.line_data[line_id].name .. "' - Requested vehicle removal cancelled.")
     end
 
-    log.debug("linemanager: removeVehicleFromLine(" .. tostring(line_id) .. ") finished. success=" .. tostring(success))
+    log.debug("linemanager: removeVehicleFromLine(" .. tostring(line_id) .. ") finished. vehiclesRemoved=" .. tostring(vehiclesRemoved))
 
     return vehiclesRemoved
 end
@@ -144,7 +144,7 @@ local function addVehicleToLine(line_id)
     -- TODO: Test whether enough money is available or don't empty the vehicle when it's hopeless anyway.
     -- TODO: Figure out a better way to find the closest depot (or one at all).
     -- This merely tries to send an existing vehicle on the line to the depot, checks if succeeds then cancel the depot call but uses the depot data.
-    -- Unfortunately sending a vehicle to a depot empties the vehicle.
+    -- Unfortunately sending a vehicle to a depot empties the vehicle...
     if #lineVehicles > 0 then
         -- If a depot_id has already been identified, use it
         if not state.line_data[line_id].depot_update_required and state.line_data[line_id].depot_id and api_helper.getDepot(state.line_data[line_id].depot_id) then
@@ -163,17 +163,25 @@ local function addVehicleToLine(line_id)
                 stop_id = 0
             end
         else
-            -- Find the emptiest vehicle (this will help with the depot testing as the impact will be smallest, although less likely to find a depot)
-            -- Note that there may also be a delay between the cache being set up and sampling completing, so it might no longer be the emptiest vehicle
+            -- If this runs, then there's a cachedDepotMiss.
+            session_cachedDepotMiss = session_cachedDepotMiss + 1
+
+            -- Find the emptiest vehicle to test for vehicles as this will ensure impact is as small as possible (the vehicle gets emptied when checking for depot)
+            -- Note that there may be a delay between the cache being set up and sampling completing, so it might no longer be the emptiest vehicle. At least we tried...
             local vehicle_id = sampling.getEmptiestVehicle(lineVehicles)
 
             if vehicle_id then
                 vehicleToDuplicate = api_helper.getVehicle(vehicle_id)
                 depot_id, stop_id = helper.findDepotAndStop(line_id, vehicle_id)
+
+                -- Set this to nil straight away to avoid endless repeats in case of later failures for other reasons.
+                if depot_id and stop_id then
+                    state.line_data[line_id].depot_update_required = nil
+                end
             end
         end
     else
-        log.error("There are no vehicles on line '" .. state.line_data[line_id].name .. "' - Requested vehicle addition cancelled. This message indicates a code error, please report it.")
+        log.error("There are no vehicles on line '" .. state.line_data[line_id].name .. "' - Unable to clone and add vehicles.")
     end
 
     if vehicleToDuplicate and vehicleToDuplicate.transportVehicleConfig and depot_id and stop_id then
@@ -204,19 +212,14 @@ local function addVehicleToLine(line_id)
                     -- Check if vehicle remains in depot despite being sent to a line.
                     -- If it is, then there's a problem - sell the vehicle again.
                     if api_helper.isVehicleInDepot(new_vehicle_id) then
+                        -- If vehicle is stuck in depot, then sell it again, and find a new depot (this depot cannot access the stop_id of the line.)
                         api_helper.sellVehicle(new_vehicle_id)
-
-                        session_cachedDepotMiss = session_cachedDepotMiss + 1
-
                         log.warn("Unable to add vehicle to line '" .. state.line_data[line_id].name .. "' - Need to identify a new depot.")
+                        state.line_data[line_id].depot_update_required = true
                     else
-                        -- Ensure the currently used depot_id and stop_id are retained for next vehicle addition.
-                        state.line_data[line_id].depot_update_required = nil
-
+                        -- Only if we made it here with using_cached_depot, then we had a cachedDepotHit.
                         if using_cached_depot then
                             session_cachedDepotHit = session_cachedDepotHit + 1
-                        else
-                            session_cachedDepotMiss = session_cachedDepotMiss + 1
                         end
 
                         helper.printBoughtVehicleInfo(state.line_data, line_id, new_vehicle_id, depot_id)
@@ -228,20 +231,20 @@ local function addVehicleToLine(line_id)
             end)
         else
             log.warn("Unable to add vehicle to line '" .. state.line_data[line_id].name .. "' - Depot carrier is different than the vehicleToDuplicate.")
+            state.line_data[line_id].depot_update_required = true
         end
     else
         log.warn("Unable to add vehicle to line '" .. state.line_data[line_id].name .. "' - Either no available depot, or not possible to find a depot on this update.")
+        state.line_data[line_id].depot_update_required = true
     end
 
     log.debug("linemanager: session_cachedDepotHit=" .. session_cachedDepotHit .. " session_cachedDepotMiss=" .. session_cachedDepotMiss)
 
-    log.debug("linemanager: addVehicleToLine(" .. tostring(line_id) .. ") finished. success=" .. tostring(success))
-
-    if vehiclesAdded < 1 then
-        -- If this addVehicleToLine() run was not successful for any reason, force an update of depot_id and stop_id on next run.
+    if state.line_data[line_id].depot_update_required == true then
         log.debug("linemanager: Forcing depot update on next run for line '" .. state.line_data[line_id].name .. "' (" .. line_id .. ").")
-        state.line_data[line_id].depot_update_required = true
     end
+
+    log.debug("linemanager: addVehicleToLine(" .. tostring(line_id) .. ") finished. vehiclesAdded=" .. tostring(vehiclesAdded))
 
     return vehiclesAdded
 end
