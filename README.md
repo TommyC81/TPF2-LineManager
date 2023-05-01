@@ -126,7 +126,7 @@ Additionally, you can (relatively) easily dig into the code and create your own 
 
 * In the early game, it's a good idea to manage lines manually i.e. assign rules manually where required, and avoid automatic
   line management for categories of lines. In general limit the use of LineManager to keep track of your money. Once the number
-  of lines and vehicles start has increased to become time consuming, then start enabling LineManager for different line
+  of lines and vehicles has increased to become time consuming, then start enabling LineManager for different line
   categories. At this point you likely have enough money to not rely on very careful and individual decisions on when/where
   to expand/optimize your transport network.
 * Only use one type of vehicle per line (this makes addition of new vehicles more predictable).
