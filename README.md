@@ -45,8 +45,8 @@ This mod is inspired by and uses code snippets from:
 
 ### In-game menu
 
-The mod has in in-game menu, that can be accessed via the "[LM]" text in the bottom in-game status bar.
-The following LineManager options area available in the in-game menu:
+The mod has an in-game menu, that can be accessed via the "[LM]" text in the bottom in-game status bar.
+The following LineManager options are available in the in-game menu:
 
 * **LineManager enabled** - Enables/disables processing of the mod.
 * **Congestion control** - Enables/disables congestion control features. This will stop the automatic addition of vehicles
