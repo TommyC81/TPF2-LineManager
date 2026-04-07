@@ -300,6 +300,9 @@ local function updateLines()
                     end
                     -- Check instead whether a vehicle should be removed from a Line. This has been evaluated as part of the sampling. Also run this in case of extreme congestion (this is set to false/ignored if congestion_control is switched off).
                 elseif state.line_data[line_id].action == "REMOVE" or lineIsExtremelyCongested then
+                    if lineIsExtremelyCongested then
+                        log.debug("linemanager: extreme congestion removal on line_id " .. tostring(line_id) .. " (congestion: " .. tostring(state.line_data[line_id].congestion) .. "%)")
+                    end
                     local vehiclesRemoved = removeVehicleFromLine(line_id)
                     if vehiclesRemoved > 0 then
                         -- If succeeded, update line_data to indicate this
@@ -315,6 +318,8 @@ local function updateLines()
                     problemCount = problemCount + 1
                 end
             end
+        else
+            log.debug("linemanager: updateLines skipping line_id " .. tostring(line_id) .. ", no data in state.line_data")
         end
     end
 
