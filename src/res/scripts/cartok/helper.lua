@@ -59,7 +59,9 @@ function helper.getOldestVehicleId(vehicle_id_table)
 
     for _, vehicle_id in pairs(vehicle_id_table) do
         local vehicle = api_helper.getVehicle(vehicle_id)
-        if vehicle and vehicle.transportVehicleConfig.vehicles[1].purchaseTime < oldestVehiclePurchaseTime then
+        if vehicle and vehicle.transportVehicleConfig and vehicle.transportVehicleConfig.vehicles
+            and vehicle.transportVehicleConfig.vehicles[1]
+            and vehicle.transportVehicleConfig.vehicles[1].purchaseTime < oldestVehiclePurchaseTime then
             oldestVehiclePurchaseTime = vehicle.transportVehicleConfig.vehicles[1].purchaseTime
             oldestVehicleId = vehicle_id
         end
@@ -82,7 +84,7 @@ function helper.findDepotAndStop(line_id, vehicle_id)
 
     if not vehicle_id then
         local lineVehicles = api_helper.getLineVehicles(line_id)
-        if #lineVehicles > 0 then
+        if lineVehicles and #lineVehicles > 0 then
             vehicle_id = lineVehicles[1]
         end
     end
@@ -118,6 +120,11 @@ end
 ---@param insertLineBreak boolean : (optional) whether to insert line breaks or not, default true
 ---@return string : array + some line breaks if applicable
 function helper.tableToStringWithLineBreaks(array, prefixSplit, insertLineBreak)
+    if not array or type(array) ~= "table" then
+        if log then log.error("tableToStringWithLineBreaks: array is nil or not a table") end
+        return ""
+    end
+	
     prefixSplit = prefixSplit or " "
     insertLineBreak = insertLineBreak or true
 
@@ -129,7 +136,7 @@ function helper.tableToStringWithLineBreaks(array, prefixSplit, insertLineBreak)
         local currentItem = tostring(array[i])
         if (insertLineBreak) then
             local prefixEnd = string.find(currentItem, prefixSplit)
-            local currentPrefix = string.sub(currentItem, 1, prefixEnd)
+            local currentPrefix = prefixEnd and string.sub(currentItem, 1, prefixEnd - 1) or currentItem
             if previousPrefix == currentPrefix then
                 output = output .. ", " .. currentItem
             else
@@ -145,6 +152,11 @@ function helper.tableToStringWithLineBreaks(array, prefixSplit, insertLineBreak)
 end
 
 function helper.lineInfoString(line_data, line_id)
+    if not line_data or not line_data[line_id] then
+        log.error("lineInfoString: missing line_data or entry for line_id " .. tostring(line_id))
+        return ""
+    end
+	
     local rule = line_data[line_id].rule
     if line_data[line_id].parameters and #line_data[line_id].parameters > 0 then
         local first = true
@@ -180,6 +192,11 @@ function helper.lineInfoString(line_data, line_id)
 end
 
 function helper.lineDataString(line_data, line_id)
+    if not line_data or not line_data[line_id] then
+        log.error("lineDataString: missing line_data or entry for line_id " .. tostring(line_id))
+        return ""
+    end
+	
     local str = "Usage: " .. lume.round(line_data[line_id].usage) .. "%"
     str = str .. " Rate: " .. lume.round(line_data[line_id].rate)
     str = str .. " WaitingPeak: " .. lume.round(line_data[line_id].waiting_peak)
@@ -189,6 +206,11 @@ function helper.lineDataString(line_data, line_id)
 end
 
 function helper.printSoldVehicleInfo(line_data, line_id, vehicle_id)
+    if not line_data or not line_data[line_id] then
+        log.error("printSoldVehicleInfo: missing line_data or entry for line_id " .. tostring(line_id))
+        return
+    end
+	
     log.info(" -1 vehicle: " .. line_data[line_id].name)
     log.info("             " .. helper.lineInfoString(line_data, line_id))
     log.info("             " .. helper.lineDataString(line_data, line_id))
@@ -196,6 +218,11 @@ function helper.printSoldVehicleInfo(line_data, line_id, vehicle_id)
 end
 
 function helper.printBoughtVehicleInfo(line_data, line_id, vehicle_id, depot_id)
+    if not line_data or not line_data[line_id] then
+        log.error("printBoughtVehicleInfo: missing line_data or entry for line_id " .. tostring(line_id))
+        return
+    end
+	
     log.info(" +1 vehicle: " .. line_data[line_id].name)
     log.info("             " .. helper.lineInfoString(line_data, line_id))
     log.info("             " .. helper.lineDataString(line_data, line_id))

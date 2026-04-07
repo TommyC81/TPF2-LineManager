@@ -42,3 +42,4 @@ luac.out
 # IDE stuff
 /.idea
 /.vscode
+/.serena
